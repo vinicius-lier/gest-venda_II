@@ -1,0 +1,1373 @@
+{% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Nova Venda - Gestão de Vendas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/autocomplete.css' %}">
+<style>
+    .form-control-custom {
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+    }
+    
+    .form-select-custom {
+        width: 100%;
+        padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 16px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+    
+    textarea.form-control-custom {
+        min-height: 100px;
+    }
+    
+    .cliente-card {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .cliente-card:hover {
+        background-color: #f8f9fa;
+    }
+    .cliente-card.selected {
+        background-color: #e2f0ff;
+        border-color: #0d6efd;
+    }
+    
+    .motos-disponiveis {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+    .moto-item {
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .moto-item:hover {
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .moto-item.selected {
+        background-color: #e2f4e2;
+        border-color: #28a745;
+    }
+    .moto-details {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <h2>Nova Venda</h2>
+        </div>
+    </div>
+    
+    <form method="post" id="vendaForm" action="{% url 'core:venda_create' %}">
+        {% csrf_token %}
+        
+        <!-- Seção de busca de cliente -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Selecionar Cliente</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" class="mb-3" id="formBuscarCliente">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <input type="text" name="termo_busca" class="form-control" placeholder="Digite o nome, CPF ou telefone do cliente" value="{{ termo_busca|default:'' }}">
+                        <button type="submit" name="buscar_cliente" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </form>
+                
+                {% if cliente_selecionado %}
+                    <div class="alert alert-success">
+                        <h6 class="mb-0">Cliente selecionado:</h6>
+                        <p class="mb-0">{{ cliente_selecionado.nome }}</p>
+                        {% if cliente_selecionado.cpf %}
+                            <small>CPF: {{ cliente_selecionado.cpf }}</small><br>
+                        {% endif %}
+                        {% if cliente_selecionado.telefone %}
+                            <small>Telefone: {{ cliente_selecionado.telefone }}</small>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                {% if resultados_busca %}
+                    <h6 class="mb-2">Resultados da busca:</h6>
+                    <div class="row">
+                        {% for cliente in resultados_busca %}
+                            <div class="col-md-4 mb-2">
+                                <div class="card cliente-card {% if cliente_selecionado.id == cliente.id %}selected{% endif %}">
+                                    <div class="card-body p-2">
+                                        <form method="post" class="form-selecionar-cliente">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+                                            <button type="submit" name="selecionar_cliente" class="btn btn-link text-start p-0 w-100">
+                                                <h6 class="mb-0">{{ cliente.nome }}</h6>
+                                                {% if cliente.cpf %}
+                                                    <small>CPF: {{ cliente.cpf }}</small><br>
+                                                {% endif %}
+                                                {% if cliente.telefone %}
+                                                    <small>Tel: {{ cliente.telefone }}</small>
+                                                {% endif %}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <hr>
+                
+                <a href="{% url 'core:cliente_create' %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                    <i class="fas fa-plus"></i> Cadastrar novo cliente
+                </a>
+            </div>
+        </div>
+        
+        <!-- Seção de seleção de moto -->
+        {% if cliente_selecionado %}
+            {% if cliente_tem_motos %}
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Motos do Cliente</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            O cliente selecionado possui {{ motos_cliente.count }} moto(s) registrada(s).
+                        </div>
+                        
+                        <div class="row">
+                            {% for moto in motos_cliente %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="card cliente-card">
+                                        <div class="card-body p-2">
+                                            <form method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="moto_id" value="{{ moto.id }}">
+                                                <input type="hidden" name="cliente_atual" value="{{ cliente_selecionado.id }}">
+                                                <button type="submit" name="selecionar_moto" class="btn btn-link text-start p-0 w-100">
+                                                    <h6 class="mb-0">{{ moto.marca }} {{ moto.modelo }}</h6>
+                                                    <small>Ano: {{ moto.ano }} | Cor: {{ moto.cor }}</small><br>
+                                                    <small>Valor: R$ {{ moto.valor|floatformat:2 }}</small>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+        
+        <!-- Nova seção de busca de motos no estoque -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Buscar Moto no Estoque</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="tipoMotoSelecao" id="tipoMotoExistente" value="existente" checked>
+                            <label class="form-check-label" for="tipoMotoExistente">
+                                Selecionar moto do estoque
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="tipoMotoSelecao" id="tipoMotoNova" value="nova">
+                            <label class="form-check-label" for="tipoMotoNova">
+                                Cadastrar nova moto
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seção para buscar moto existente -->
+                <div id="motoBuscaSection">
+                    <form action="{% url 'core:venda_create' %}" method="GET" id="formBuscarMoto" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" id="buscarMoto" name="termo_moto" class="form-control" placeholder="Buscar moto (marca, modelo, placa, chassi)" required minlength="2" value="{{ request.GET.termo_moto|default:'' }}">
+                            <input type="hidden" name="disponivel" value="true">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="motos-disponiveis">
+                        <div id="motosLista">
+                            {% if resultados_motos %}
+                                {% for moto in resultados_motos %}
+                                <div class="moto-item" data-moto-id="{{ moto.id }}">
+                                    <div class="fw-bold">{{ moto.marca }} {{ moto.modelo }} ({{ moto.ano }})</div>
+                                    <div class="moto-details">
+                                        <span class="badge bg-secondary">{{ moto.cor }}</span>
+                                        {% if moto.placa %}
+                                        <span class="badge bg-info">Placa: {{ moto.placa }}</span>
+                                        {% endif %}
+                                        <div class="mt-1">Chassi: {{ moto.chassi }}</div>
+                                        <div>Valor: R$ {{ moto.valor|floatformat:2 }}</div>
+                                    </div>
+                                    <form method="post" class="mt-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="moto_id" value="{{ moto.id }}">
+                                        <input type="hidden" name="cliente_atual" value="{{ cliente_selecionado.id }}">
+                                        <button type="submit" name="selecionar_moto" class="btn btn-sm btn-outline-primary">
+                                            Selecionar esta moto
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            {% elif request.GET.termo_moto %}
+                                <div class="alert alert-info">Nenhuma moto encontrada com os critérios de busca.</div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <p>Digite para buscar motos disponíveis no sistema</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seção para cadastro rápido -->
+                <div id="motoCadastroRapidoSection" style="display: none;" class="text-center py-3">
+                    <button type="button" class="btn btn-primary" id="btnModalNovaMoto">
+                        <i class="fas fa-plus"></i> Cadastrar Nova Moto
+                    </button>
+                </div>
+                
+                <!-- Campo oculto que armazena o ID da moto selecionada -->
+                <input type="hidden" name="moto_id" id="motoSelecionadaId">
+            </div>
+        </div>
+        
+        <!-- Formulário principal -->
+        <div class="row">
+            <!-- Cliente -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.cliente.id_for_label }}">Cliente</label>
+                    {{ form.cliente }}
+                    <div class="form-text text-muted">
+                        Cliente interessado na compra.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contato -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.contato.id_for_label }}">Contato</label>
+                    {{ form.contato }}
+                    <script>document.getElementById('{{ form.contato.id_for_label }}').classList.add('form-control-custom');</script>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Proprietário -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.proprietario.id_for_label }}">Proprietário</label>
+                    <div class="input-group mb-2">
+                        {{ form.proprietario }}
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#proprietarioBuscaSection">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="proprietarioBuscaSection">
+                        <div class="card card-body">
+                            <form action="{% url 'core:venda_create' %}" method="GET" id="formBuscarProprietario" class="mb-3">
+                                <div class="input-group">
+                                    <input type="text" name="termo_proprietario" class="form-control" placeholder="Buscar proprietário (nome, CPF, telefone)" required minlength="2" value="{{ request.GET.termo_proprietario|default:'' }}">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search"></i> Buscar
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            {% if resultados_proprietarios %}
+                                <div class="mt-3">
+                                    {% for cliente in resultados_proprietarios %}
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <form method="post" class="form-selecionar-pessoa" data-tipo="proprietario">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="proprietario_id" value="{{ cliente.id }}">
+                                                <button type="submit" name="selecionar_proprietario" class="btn btn-link text-start p-0 w-100">
+                                                    <h6 class="mb-0">{{ cliente.nome }}</h6>
+                                                    {% if cliente.cpf %}
+                                                        <small>CPF: {{ cliente.cpf }}</small><br>
+                                                    {% endif %}
+                                                    {% if cliente.telefone %}
+                                                        <small>Tel: {{ cliente.telefone }}</small>
+                                                    {% endif %}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% elif request.GET.termo_proprietario %}
+                                <div class="alert alert-info mt-3">Nenhum proprietário encontrado com os critérios de busca.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-text text-muted">{{ form.proprietario.help_text }}</div>
+                </div>
+            </div>
+            
+            <!-- Fornecedor -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.fornecedor.id_for_label }}">Fornecedor</label>
+                    <div class="input-group mb-2">
+                        {{ form.fornecedor }}
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#fornecedorBuscaSection">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="fornecedorBuscaSection">
+                        <div class="card card-body">
+                            <form action="{% url 'core:venda_create' %}" method="GET" id="formBuscarFornecedor" class="mb-3">
+                                <div class="input-group">
+                                    <input type="text" name="termo_fornecedor" class="form-control" placeholder="Buscar fornecedor (nome, CPF, telefone)" required minlength="2" value="{{ request.GET.termo_fornecedor|default:'' }}">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search"></i> Buscar
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            {% if resultados_fornecedores %}
+                                <div class="mt-3">
+                                    {% for cliente in resultados_fornecedores %}
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <form method="post" class="form-selecionar-pessoa" data-tipo="fornecedor">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="fornecedor_id" value="{{ cliente.id }}">
+                                                <button type="submit" name="selecionar_fornecedor" class="btn btn-link text-start p-0 w-100">
+                                                    <h6 class="mb-0">{{ cliente.nome }}</h6>
+                                                    {% if cliente.cpf %}
+                                                        <small>CPF: {{ cliente.cpf }}</small><br>
+                                                    {% endif %}
+                                                    {% if cliente.telefone %}
+                                                        <small>Tel: {{ cliente.telefone }}</small>
+                                                    {% endif %}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% elif request.GET.termo_fornecedor %}
+                                <div class="alert alert-info mt-3">Nenhum fornecedor encontrado com os critérios de busca.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="form-text text-muted">{{ form.fornecedor.help_text }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Origem -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.origem.id_for_label }}">Origem</label>
+                    {{ form.origem }}
+                    <script>document.getElementById('{{ form.origem.id_for_label }}').classList.add('form-select-custom');</script>
+                </div>
+            </div>
+            
+            <!-- Data Atendimento -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.data_atendimento.id_for_label }}">Data do Atendimento</label>
+                    {{ form.data_atendimento }}
+                </div>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <div class="row">
+            <!-- Moto -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.moto.id_for_label }}">Moto</label>
+                    {{ form.moto }}
+                    <div id="motoStatusAlerta" class="alert alert-warning mt-2" style="display:none;">
+                        <i class="fas fa-exclamation-triangle"></i> <span id="motoStatusMsg"></span>
+                    </div>
+                    {% if moto_selecionada %}
+                        <div class="alert alert-info mt-2 mb-0 py-2">
+                            <small>
+                                Moto selecionada: {{ moto_selecionada.marca }} {{ moto_selecionada.modelo }} ({{ moto_selecionada.ano }})
+                                {% if moto_selecionada.status != 'DISPONIVEL' %}
+                                    <span class="text-danger">- Status: {{ moto_selecionada.status }}</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Modelo Interesse -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.modelo_interesse.id_for_label }}">Modelo de Interesse</label>
+                    {{ form.modelo_interesse }}
+                    <script>document.getElementById('{{ form.modelo_interesse.id_for_label }}').classList.add('form-control-custom');</script>
+                    <div class="form-text text-muted">Se não houver moto no estoque</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Valor Venda -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.valor_venda.id_for_label }}">Valor da Venda</label>
+                    {{ form.valor_venda }}
+                    <script>document.getElementById('{{ form.valor_venda.id_for_label }}').classList.add('form-control-custom');</script>
+                </div>
+            </div>
+            
+            <!-- Forma Pagamento -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.forma_pagamento.id_for_label }}">Forma de Pagamento</label>
+                    {{ form.forma_pagamento }}
+                    <script>document.getElementById('{{ form.forma_pagamento.id_for_label }}').classList.add('form-select-custom');</script>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Data Venda -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.data_venda.id_for_label }}">Data da Venda</label>
+                    {{ form.data_venda }}
+                </div>
+            </div>
+            
+            <!-- Status -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}">Status</label>
+                    {{ form.status }}
+                    <script>document.getElementById('{{ form.status.id_for_label }}').classList.add('form-select-custom');</script>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Vendedor -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.vendedor.id_for_label }}">Vendedor</label>
+                    {{ form.vendedor }}
+                    <script>document.getElementById('{{ form.vendedor.id_for_label }}').classList.add('form-select-custom');</script>
+                </div>
+            </div>
+            
+            <!-- Observações -->
+            <div class="col-md-6 mb-3">
+                <div class="form-group">
+                    <label for="{{ form.observacoes.id_for_label }}">Observações</label>
+                    {{ form.observacoes }}
+                    <script>document.getElementById('{{ form.observacoes.id_for_label }}').classList.add('form-control-custom');</script>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <!-- Campos ocultos de segurança para garantir que o formulário tenha os dados mínimos necessários -->
+            <input type="hidden" name="data_atendimento_fallback" value="{{ hoje|date:'Y-m-d' }}">
+            <input type="hidden" name="vendedor_id_fallback" value="{{ request.user.id }}">
+            <input type="hidden" name="ensure_submit" value="1">
+            
+            <button type="submit" name="salvar_venda" class="btn btn-primary" id="btnSalvarVenda">
+                <i class="fas fa-save me-1"></i>Salvar
+            </button>
+            
+            <!-- Botão alternativo para debug -->
+            <button type="submit" name="salvar_venda_simples" class="btn btn-success ms-2">
+                <i class="fas fa-check me-1"></i>Salvar (Método Alternativo)
+            </button>
+            
+            <!-- Link direto para submissão -->
+            <a href="#" onclick="document.getElementById('vendaForm').submit(); return false;" class="btn btn-warning ms-2">
+                <i class="fas fa-bolt me-1"></i>Salvar (Link Direto)
+            </a>
+            
+            <a href="{% url 'core:venda_list' %}" class="btn btn-secondary">
+                <i class="fas fa-times me-1"></i>Cancelar
+            </a>
+        </div>
+        
+        <!-- Exibir erros de formulário -->
+        {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+            <h5>Erros no formulário:</h5>
+            <ul>
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Modal para cadastro rápido de moto -->
+<div class="modal fade" id="modalNovaMoto" tabindex="-1" aria-labelledby="modalNovaMotoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalNovaMotoLabel">Cadastro Rápido de Moto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNovaMoto">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoMarca" class="form-label">Marca*</label>
+                            <input type="text" class="form-control" id="novaMotoMarca" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoModelo" class="form-label">Modelo*</label>
+                            <input type="text" class="form-control" id="novaMotoModelo" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="novaMotoAno" class="form-label">Ano*</label>
+                            <input type="text" class="form-control" id="novaMotoAno" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="novaMotoCor" class="form-label">Cor*</label>
+                            <input type="text" class="form-control" id="novaMotoCor" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="novaMotoPlaca" class="form-label">Placa</label>
+                            <input type="text" class="form-control" id="novaMotoPlaca">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoChassi" class="form-label">Chassi*</label>
+                            <input type="text" class="form-control" id="novaMotoChassi" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoValor" class="form-label">Valor*</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" class="form-control" id="novaMotoValor" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="novaMotoObservacoes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="novaMotoObservacoes" rows="3"></textarea>
+                    </div>
+                    <input type="hidden" id="novaMotoProprietarioId">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarNovaMoto">Salvar Moto</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulário de teste simplificado -->
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">Formulário de Teste (Debug)</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'core:venda_create' %}" id="formTesteSimples">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Nome do Cliente:</label>
+                    <input type="text" name="nome_cliente" class="form-control" value="Cliente Teste">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Modelo de Interesse:</label>
+                    <input type="text" name="modelo_interesse" class="form-control" value="Moto Teste">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Valor:</label>
+                    <input type="number" name="valor_venda" class="form-control" value="10000">
+                </div>
+                <input type="hidden" name="data_atendimento" value="{{ hoje|date:'Y-m-d' }}">
+                <button type="submit" name="salvar_teste" class="btn btn-warning">Enviar Formulário de Teste</button>
+            </form>
+            
+            <!-- Link direto para submissão, sem JavaScript -->
+            <div class="mt-3">
+                <p class="text-muted">Não está funcionando? Tente o link direto abaixo:</p>
+                <a href="#" onclick="document.getElementById('formTesteSimples').submit(); return false;" class="btn btn-sm btn-outline-warning">
+                    Submeter via JavaScript Link
+                </a>
+                
+                <noscript>
+                    <input type="submit" form="formTesteSimples" value="Submeter sem JavaScript" class="btn btn-sm btn-outline-danger ms-2">
+                </noscript>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'core/js/autocomplete.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // Esconder os botões de busca pois agora a busca é automática
+    $('button[name="buscar_cliente"]').hide();
+    $('button[type="submit"]', '#formBuscarProprietario').hide();
+    $('button[type="submit"]', '#formBuscarFornecedor').hide();
+    
+    // Inicializa comportamento para manter rolagem
+    inicializarControlePosicaoRolagem();
+    
+    // Verificar proprietário no carregamento
+    verificarProprietario();
+    
+    // Configura os campos de autocompletar
+    setupAutocompleteCampos();
+    
+    // Adiciona log para verificar se o documento está carregando
+    console.log("Documento carregado, configurando eventos");
+});
+
+// Função para inicializar controle de posição de rolagem
+function inicializarControlePosicaoRolagem() {
+    // Restaurar a posição de rolagem salva quando a página carrega
+    if (sessionStorage.getItem('scrollPosition')) {
+        setTimeout(function() {
+            $(window).scrollTop(parseInt(sessionStorage.getItem('scrollPosition')));
+        }, 100); // Pequeno delay para garantir que a página foi completamente carregada
+    }
+    
+    // Prevenir que links e submissões de formulário façam a página rolar para o topo
+    $('a, button[type="submit"]').on('click', function(e) {
+        // Salvar a posição atual de rolagem
+        sessionStorage.setItem('scrollPosition', $(window).scrollTop());
+    });
+    
+    // Interceptar todos os formulários da página para salvar a posição de rolagem
+    $('form').on('submit', function(e) {
+        // Não evitar o comportamento padrão aqui, apenas salvar a posição
+        sessionStorage.setItem('scrollPosition', $(window).scrollTop());
+    });
+}
+
+// Evitar que a página role ao selecionar um cliente
+$('.form-selecionar-cliente').on('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const form = $(this);
+    const clienteId = form.find('input[name="cliente_id"]').val();
+    
+    // Salvar posição atual de rolagem
+    const currentScroll = $(window).scrollTop();
+    sessionStorage.setItem('scrollPosition', currentScroll);
+    
+    // Mostrar spinner ou indicador de carregamento
+    const card = form.closest('.cliente-card');
+    const originalContent = card.html();
+    card.html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
+    
+    // Fazer requisição AJAX
+    $.ajax({
+        url: "{% url 'core:venda_create' %}",
+        method: 'POST',
+        data: {
+            'cliente_id': clienteId,
+            'selecionar_cliente': 'true',
+            'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        success: function(response) {
+            // Usar location.replace para evitar adicionar à pilha de histórico
+            window.location.replace("{% url 'core:venda_create' %}");
+        },
+        error: function(xhr) {
+            // Em caso de erro, restaurar o conteúdo original
+            card.html(originalContent);
+            alert('Erro ao selecionar cliente. Por favor, tente novamente.');
+        }
+    });
+    
+    return false;
+});
+
+// Verificações para garantir que o botão está sendo selecionado
+let btnBusca = document.getElementById('btnBuscarMoto');
+console.log("Botão por ID:", btnBusca);
+
+// Alternar entre selecionar moto existente ou cadastrar nova
+$('input[name="tipoMotoSelecao"]').on('change', function() {
+    const tipo = $(this).val();
+    
+    if (tipo === 'existente') {
+        $('#motoBuscaSection').show();
+        $('#motoCadastroRapidoSection').hide();
+    } else {
+        $('#motoBuscaSection').hide();
+        $('#motoCadastroRapidoSection').show();
+    }
+});
+
+// Evitar envio normal do formulário de busca e usar AJAX
+$('#formBuscarMoto').on('submit', function(e) {
+    e.preventDefault();
+    buscarMotosJS();
+});
+
+// Função para buscar motos via JavaScript
+function buscarMotosJS() {
+    console.log("Função buscarMotosJS() chamada");
+    const termo = $('#buscarMoto').val().trim();
+    console.log("Termo de busca:", termo);
+    
+    if (termo.length < 2) {
+        alert('Digite pelo menos 2 caracteres para buscar');
+        return;
+    }
+    
+    const motosLista = $('#motosLista');
+    motosLista.html('<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Buscando motos...</p></div>');
+    
+    // URL da API define o endpoint para a busca
+    const apiUrl = "{% url 'core:api_buscar_motos' %}";
+    console.log("URL da API:", apiUrl);
+    
+    // Usar fetch API em vez de jQuery.ajax
+    fetch(`${apiUrl}?termo=${encodeURIComponent(termo)}&disponivel=true`)
+        .then(response => {
+            console.log("Resposta recebida:", response);
+            if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Dados recebidos:", data);
+            motosLista.empty();
+            
+            if (!data.results || data.results.length === 0) {
+                motosLista.html('<div class="alert alert-info">Nenhuma moto encontrada com os critérios de busca.</div>');
+                return;
+            }
+            
+            // Criar itens para cada moto
+            data.results.forEach(function(moto) {
+                console.log("Processando moto:", moto);
+                const motoItem = $(`
+                    <div class="moto-item" data-moto-id="${moto.id}" data-moto-text="${moto.text}">
+                        <div class="fw-bold">${moto.marca} ${moto.modelo} (${moto.ano})</div>
+                        <div class="moto-details">
+                            <span class="badge bg-secondary">${moto.cor}</span>
+                            ${moto.placa ? `<span class="badge bg-info">Placa: ${moto.placa}</span>` : ''}
+                            <div class="mt-1">Chassi: ${moto.chassi}</div>
+                            <div>Valor: R$ ${parseFloat(moto.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                    </div>
+                `);
+                
+                motosLista.append(motoItem);
+            });
+            
+            // Selecionar moto quando clicada
+            $('.moto-item').on('click', function() {
+                console.log("Moto clicada:", $(this).data('moto-id'));
+                $('.moto-item').removeClass('selected');
+                $(this).addClass('selected');
+                
+                const motoId = $(this).data('moto-id');
+                
+                // Seleciona no dropdown
+                $('#id_moto').val(motoId).trigger('change');
+                
+                // Preenche o campo oculto
+                $('#motoSelecionadaId').val(motoId);
+            });
+        })
+        .catch(error => {
+            console.error("Erro na busca:", error);
+            motosLista.html(`<div class="alert alert-danger">
+                Erro ao buscar motos: ${error.message}<br>
+                <button class="btn btn-sm btn-outline-primary mt-2" onclick="buscarMotosJS()">Tentar novamente</button>
+            </div>`);
+        });
+}
+
+// Verificar status da moto quando uma é selecionada
+$('#id_moto').on('change', function() {
+    const motoId = $(this).val();
+    
+    if (!motoId) {
+        // Se não houver moto selecionada, esconde o alerta
+        $('#motoStatusAlerta').hide();
+        return;
+    }
+    
+    // Busca informações da moto
+    carregarDetalhesMoto(motoId);
+});
+
+// Abrir modal de cadastro rápido
+$('#btnModalNovaMoto').on('click', function() {
+    // Limpa o formulário
+    $('#formNovaMoto')[0].reset();
+    
+    // Define o proprietário como o cliente atual sendo cadastrado (se já tiver ID)
+    const clienteId = $('#id_cliente').val();
+    if (clienteId) {
+        $('#novaMotoProprietarioId').val(clienteId);
+    }
+    
+    // Abre o modal
+    var myModal = new bootstrap.Modal(document.getElementById('modalNovaMoto'));
+    myModal.show();
+});
+
+// Salvar nova moto
+$('#btnSalvarNovaMoto').on('click', function() {
+    // Validação básica
+    const marca = $('#novaMotoMarca').val().trim();
+    const modelo = $('#novaMotoModelo').val().trim();
+    const ano = $('#novaMotoAno').val().trim();
+    const cor = $('#novaMotoCor').val().trim();
+    const chassi = $('#novaMotoChassi').val().trim();
+    const valor = $('#novaMotoValor').val().trim();
+    
+    if (!marca || !modelo || !ano || !cor || !chassi || !valor) {
+        alert('Preencha todos os campos obrigatórios (marcados com *)');
+        return;
+    }
+    
+    // Salvar por AJAX
+    $.ajax({
+        url: '{% url "core:api_criar_moto_rapida" %}',
+        method: 'POST',
+        data: {
+            marca: marca,
+            modelo: modelo,
+            ano: ano,
+            cor: cor,
+            placa: $('#novaMotoPlaca').val().trim(),
+            chassi: chassi,
+            valor: valor,
+            observacoes: $('#novaMotoObservacoes').val().trim(),
+            proprietario_id: $('#novaMotoProprietarioId').val(),
+            csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        success: function(data) {
+            if (data.success) {
+                // Fecha o modal
+                var myModalEl = document.getElementById('modalNovaMoto');
+                var modal = bootstrap.Modal.getInstance(myModalEl);
+                modal.hide();
+                
+                // Seleciona a moto recém-cadastrada
+                const motoId = data.moto.id;
+                $('#motoSelecionadaId').val(motoId);
+                
+                // Preenche o select de moto
+                const motoField = $('#id_moto');
+                if (motoField.length) {
+                    // Adiciona a opção se não existir
+                    if (motoField.find(`option[value="${motoId}"]`).length === 0) {
+                        motoField.append(new Option(data.moto.text, motoId, true, true));
+                    }
+                    motoField.val(motoId).trigger('change');
+                }
+                
+                // Exibe mensagem
+                alert('Moto cadastrada com sucesso!');
+                
+                // Preenche o valor da venda
+                if (data.moto.valor && !$('#id_valor_venda').val()) {
+                    $('#id_valor_venda').val(data.moto.valor);
+                }
+                
+                // Carrega detalhes da moto para verificar proprietário
+                carregarDetalhesMoto(motoId);
+                
+                // Altera para o modo de seleção
+                $('input[name="tipoMotoSelecao"][value="existente"]').prop('checked', true).trigger('change');
+            } else {
+                alert('Erro ao cadastrar moto: ' + data.error);
+            }
+        },
+        error: function(xhr) {
+            alert('Erro ao cadastrar moto. Verifique os dados e tente novamente.');
+            console.error(xhr.responseText);
+        }
+    });
+});
+
+// Função para carregar detalhes da moto
+function carregarDetalhesMoto(motoId) {
+    $.ajax({
+        url: "{% url 'core:moto_detail' 0 %}".replace('0', motoId),
+        method: 'GET',
+        success: function(data) {
+            // Verifica o status da moto
+            if (data.status && (data.status === 'PENDENCIA' || data.status === 'OFICINA' || data.status === 'MANUTENCAO')) {
+                // Mostra alerta se a moto não estiver disponível para venda
+                $('#motoStatusMsg').text(`Esta moto está com status ${data.status} e não pode ser vendida até que seu status seja alterado para DISPONIVEL.`);
+                $('#motoStatusAlerta').show();
+            } else {
+                // Esconde o alerta se a moto estiver disponível
+                $('#motoStatusAlerta').hide();
+            }
+            
+            // Preenche o valor da venda com o valor da moto se estiver vazio
+            const valorVendaField = $('#id_valor_venda');
+            if (valorVendaField.length && !valorVendaField.val() && data.valor) {
+                valorVendaField.val(data.valor);
+            }
+            
+            // Se a moto tem proprietário, preenche o campo fornecedor
+            if (data.proprietario) {
+                const confirmarPreenchimento = confirm(`A moto pertence a ${data.proprietario.nome}. Deseja preencher os campos de proprietário e fornecedor com esses dados?`);
+                
+                if (confirmarPreenchimento) {
+                    // Preenche campo proprietário
+                    preencherCampoCliente('proprietario', data.proprietario);
+                    
+                    // Preenche campo fornecedor
+                    preencherCampoCliente('fornecedor', data.proprietario);
+                }
+            }
+        },
+        error: function(xhr) {
+            console.error('Erro ao carregar detalhes da moto:', xhr.responseText);
+        }
+    });
+}
+
+// Verificações ao submeter o formulário
+$('#vendaForm').on('submit', function(e) {
+    console.log("Formulário sendo submetido");
+    
+    // Se for o botão alternativo, não fazemos nenhuma validação
+    // e permitimos o envio normal do formulário
+    if ($('button[name="salvar_venda_simples"]').is(':focus')) {
+        console.log("Botão alternativo clicado, enviando sem validações...");
+        return true;
+    }
+    
+    // Apenas para o botão normal, fazemos as validações
+    if ($('button[name="salvar_venda"]').is(':focus') || 
+        $('button[type="submit"]').is(':focus') || 
+        $('a.btn-warning').is(':focus')) {
+            
+        const motoStatusAlerta = $('#motoStatusAlerta');
+        const clienteId = $('#id_cliente').val();
+        const proprietarioId = $('#id_proprietario').val();
+        
+        console.log("Validando dados do formulário:");
+        console.log("- motoStatusAlerta visível:", motoStatusAlerta.is(':visible'));
+        console.log("- clienteId:", clienteId);
+        console.log("- proprietarioId:", proprietarioId);
+        
+        if (motoStatusAlerta.is(':visible')) {
+            e.preventDefault();
+            alert('Não é possível realizar a venda. A moto selecionada não está disponível para venda.');
+            return false;
+        }
+
+        if (clienteId && proprietarioId && clienteId === proprietarioId) {
+            e.preventDefault();
+            alert('O proprietário não pode ser o mesmo que o cliente (comprador). Por favor, selecione um proprietário diferente.');
+            return false;
+        }
+        
+        // Verificar se o proprietário está preenchido
+        if (!proprietarioId) {
+            // Vamos verificar se temos o campo de proprietário com texto
+            const proprietarioTexto = $('.autocomplete-field[data-type="cliente"][name="proprietario"]').val();
+            if (!proprietarioTexto || proprietarioTexto.trim() === '') {
+                e.preventDefault();
+                alert('É necessário selecionar um proprietário para a venda.');
+                // Destacar o campo
+                $('.autocomplete-field[data-type="cliente"][name="proprietario"]').css('border-color', 'red');
+                return false;
+            }
+        }
+        
+        // Se passou todas as validações, adicionar indicador de carregamento
+        console.log("Botão salvar foi clicado, enviando formulário...");
+        $(this).find('button[name="salvar_venda"]').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...');
+        
+        // Salvar a posição atual de rolagem para restauração após o redirecionamento
+        const currentScroll = $(window).scrollTop();
+        sessionStorage.setItem('scrollPosition', currentScroll);
+        
+        return true;
+    }
+});
+
+// Evitar que a página role ao selecionar um proprietário ou fornecedor
+$('.form-selecionar-pessoa').on('submit', function(e) {
+    e.preventDefault();
+    
+    const form = $(this);
+    const tipo = form.data('tipo');
+    const pessoaId = form.find(`input[name="${tipo}_id"]`).val();
+    
+    // Mostrar spinner ou indicador de carregamento
+    const card = form.closest('.card');
+    const originalContent = card.html();
+    card.html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
+    
+    // Preparar dados para envio
+    const formData = {
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+    };
+    formData[`${tipo}_id`] = pessoaId;
+    formData[`selecionar_${tipo}`] = 'true';
+    
+    // Fazer requisição AJAX
+    $.ajax({
+        url: "{% url 'core:venda_create' %}",
+        method: 'POST',
+        data: formData,
+        success: function(response) {
+            // Recarregar apenas a parte necessária da página
+            window.location.href = "{% url 'core:venda_create' %}";
+        },
+        error: function(xhr) {
+            // Em caso de erro, restaurar o conteúdo original
+            card.html(originalContent);
+            alert(`Erro ao selecionar ${tipo}. Por favor, tente novamente.`);
+        }
+    });
+});
+
+// Função para preencher um campo de cliente com dados
+function preencherCampoCliente(campo, cliente) {
+    // Tenta obter o campo de input diretamente
+    const inputField = document.querySelector(`.autocomplete-field[data-type="cliente"][name="${campo}"]`);
+    
+    if (inputField) {
+        // Preenche o campo de texto com o nome do cliente
+        inputField.value = cliente.nome;
+        
+        // Preenche o campo oculto com o ID do cliente
+        const idField = document.querySelector(`input[name="${campo}_id"]`);
+        if (idField) {
+            idField.value = cliente.id;
+        }
+    } else {
+        // Tenta o método tradicional
+        $(`#id_${campo}`).val(cliente.id);
+    }
+}
+
+// Configura os campos de autocompletar para clientes e motos
+function setupAutocompleteCampos() {
+    // Configura eventos para input de cliente
+    document.querySelectorAll('.autocomplete-field[data-type="cliente"]').forEach(function(field) {
+        field.addEventListener('autocomplete:selected', function(e) {
+            const clienteSelecionado = e.detail.item;
+            const nomeCampo = e.detail.field;
+            
+            // Se for o cliente principal, preenche dados adicionais
+            if (nomeCampo === 'cliente') {
+                // Preenche o contato automaticamente se tiver telefone
+                if (clienteSelecionado.telefone) {
+                    $('#id_contato').val(clienteSelecionado.telefone);
+                }
+            }
+        });
+    });
+    
+    // Configura eventos para input de moto
+    document.querySelectorAll('.autocomplete-field[data-type="moto"]').forEach(function(field) {
+        field.addEventListener('autocomplete:selected', function(e) {
+            const motoSelecionada = e.detail.item;
+            
+            // Preenche o valor da venda automaticamente se estiver vazio
+            if (motoSelecionada.valor && !$('#id_valor_venda').val()) {
+                $('#id_valor_venda').val(motoSelecionada.valor);
+            }
+        });
+    });
+}
+
+// Função de busca de cliente com delay para não sobrecarregar
+let timeoutBuscaCliente;
+function realizarBuscaCliente() {
+    const form = $('#formBuscarCliente');
+    const termoBusca = form.find('input[name="termo_busca"]').val();
+    
+    if (!termoBusca.trim()) {
+        return;
+    }
+    
+    // Salvar posição atual de rolagem
+    const currentScroll = $(window).scrollTop();
+    sessionStorage.setItem('scrollPosition', currentScroll);
+    
+    // Exibir indicador de carregamento em linha (sem botão)
+    const inputField = form.find('input[name="termo_busca"]');
+    inputField.addClass('loading').css('background-image', 'url("/static/core/img/loading.gif")');
+    
+    // Fazer a busca via AJAX
+    $.ajax({
+        url: "{% url 'core:venda_create' %}",
+        method: 'POST',
+        data: {
+            'termo_busca': termoBusca,
+            'buscar_cliente': 'true',
+            'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        },
+        success: function(response) {
+            // Usar location.replace para evitar adicionar à pilha de histórico
+            window.location.replace("{% url 'core:venda_create' %}");
+        },
+        error: function(xhr) {
+            inputField.removeClass('loading').css('background-image', '');
+            alert('Erro ao buscar clientes. Por favor, tente novamente.');
+        }
+    });
+}
+
+// Adicionar evento de digitação para buscar automaticamente
+$('#formBuscarCliente input[name="termo_busca"]').on('input', function() {
+    clearTimeout(timeoutBuscaCliente);
+    const termo = $(this).val().trim();
+    
+    if (termo.length >= 3) { // Buscar após digitar pelo menos 3 caracteres
+        timeoutBuscaCliente = setTimeout(realizarBuscaCliente, 500); // Delay de 500ms para evitar muitas requisições
+    }
+});
+
+// Evitar que o formulário de busca de cliente faça a rolagem para o topo
+$('#formBuscarCliente').on('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    realizarBuscaCliente();
+    return false;
+});
+
+// Verificar proprietário no carregamento
+function verificarProprietario() {
+    const proprietarioId = $('#id_proprietario').val();
+    const proprietarioTexto = $('.autocomplete-field[data-type="cliente"][name="proprietario"]').val();
+    
+    console.log("Verificando proprietário:", proprietarioId, proprietarioTexto);
+    
+    if (proprietarioId || (proprietarioTexto && proprietarioTexto.trim() !== '')) {
+        // Proprietário preenchido, remover destaque de erro
+        $('.autocomplete-field[data-type="cliente"][name="proprietario"]').css('border-color', '');
+        console.log("Proprietário está preenchido");
+    } else {
+        // Proprietário não preenchido, adicionar destaque de erro
+        $('.autocomplete-field[data-type="cliente"][name="proprietario"]').css('border-color', 'red');
+        console.log("Proprietário não está preenchido");
+    }
+}
+
+// Fazer o mesmo para busca de proprietário
+let timeoutBuscaProprietario;
+$('#formBuscarProprietario input[name="termo_proprietario"]').on('input', function() {
+    clearTimeout(timeoutBuscaProprietario);
+    const termo = $(this).val().trim();
+    
+    if (termo.length >= 3) {
+        timeoutBuscaProprietario = setTimeout(function() {
+            // Salvar posição atual de rolagem
+            const currentScroll = $(window).scrollTop();
+            sessionStorage.setItem('scrollPosition', currentScroll);
+            
+            // Fazer a busca via AJAX para evitar recarregar a página inteira
+            realizarBuscaProprietario(termo);
+        }, 500);
+    }
+});
+
+// Implementar busca AJAX para proprietário
+function realizarBuscaProprietario(termo) {
+    // Mostrar indicador de carregamento
+    const inputField = $('#formBuscarProprietario input[name="termo_proprietario"]');
+    inputField.addClass('loading').css('background-image', 'url("/static/core/img/loading.gif")');
+    
+    $.ajax({
+        url: "{% url 'core:venda_create' %}",
+        method: 'GET',
+        data: {
+            'termo_proprietario': termo
+        },
+        success: function(response) {
+            // Recarregar a página sem afetar o histórico
+            window.location.replace("{% url 'core:venda_create' %}?termo_proprietario=" + encodeURIComponent(termo));
+        },
+        error: function(xhr) {
+            inputField.removeClass('loading').css('background-image', '');
+            alert('Erro ao buscar proprietários. Por favor, tente novamente.');
+        }
+    });
+}
+
+// Evitar que o formulário de busca de proprietário faça a rolagem para o topo
+$('#formBuscarProprietario').on('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const termo = $(this).find('input[name="termo_proprietario"]').val().trim();
+    if (termo.length >= 3) {
+        realizarBuscaProprietario(termo);
+    }
+    return false;
+});
+
+// Busca de fornecedor com entrada automática
+let timeoutBuscaFornecedor;
+$('#formBuscarFornecedor input[name="termo_fornecedor"]').on('input', function() {
+    clearTimeout(timeoutBuscaFornecedor);
+    const termo = $(this).val().trim();
+    
+    if (termo.length >= 3) {
+        timeoutBuscaFornecedor = setTimeout(function() {
+            // Salvar posição atual de rolagem
+            const currentScroll = $(window).scrollTop();
+            sessionStorage.setItem('scrollPosition', currentScroll);
+            
+            // Fazer a busca via AJAX para evitar recarregar a página inteira
+            realizarBuscaFornecedor(termo);
+        }, 500);
+    }
+});
+
+// Implementar busca AJAX para fornecedor
+function realizarBuscaFornecedor(termo) {
+    // Mostrar indicador de carregamento
+    const inputField = $('#formBuscarFornecedor input[name="termo_fornecedor"]');
+    inputField.addClass('loading').css('background-image', 'url("/static/core/img/loading.gif")');
+    
+    $.ajax({
+        url: "{% url 'core:venda_create' %}",
+        method: 'GET',
+        data: {
+            'termo_fornecedor': termo
+        },
+        success: function(response) {
+            // Recarregar a página sem afetar o histórico
+            window.location.replace("{% url 'core:venda_create' %}?termo_fornecedor=" + encodeURIComponent(termo));
+        },
+        error: function(xhr) {
+            inputField.removeClass('loading').css('background-image', '');
+            alert('Erro ao buscar fornecedores. Por favor, tente novamente.');
+        }
+    });
+}
+
+// Evitar que o formulário de busca de fornecedor faça a rolagem para o topo
+$('#formBuscarFornecedor').on('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const termo = $(this).find('input[name="termo_fornecedor"]').val().trim();
+    if (termo.length >= 3) {
+        realizarBuscaFornecedor(termo);
+    }
+    return false;
+});
+
+// Seleção de pessoa (proprietário/fornecedor) sem rolagem para o topo
+$('.form-selecionar-pessoa').on('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const form = $(this);
+    const tipo = form.data('tipo');
+    const pessoaId = form.find(`input[name="${tipo}_id"]`).val();
+    
+    // Salvar posição atual de rolagem
+    const currentScroll = $(window).scrollTop();
+    sessionStorage.setItem('scrollPosition', currentScroll);
+    
+    // Mostrar spinner ou indicador de carregamento
+    const card = form.closest('.card');
+    const originalContent = card.html();
+    card.html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
+    
+    // Preparar dados para envio
+    const formData = {
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+    };
+    formData[`${tipo}_id`] = pessoaId;
+    formData[`selecionar_${tipo}`] = 'true';
+    
+    // Fazer requisição AJAX
+    $.ajax({
+        url: "{% url 'core:venda_create' %}",
+        method: 'POST',
+        data: formData,
+        success: function(response) {
+            // Usar location.replace para evitar adicionar à pilha de histórico
+            window.location.replace("{% url 'core:venda_create' %}");
+        },
+        error: function(xhr) {
+            // Em caso de erro, restaurar o conteúdo original
+            card.html(originalContent);
+            alert(`Erro ao selecionar ${tipo}. Por favor, tente novamente.`);
+        }
+    });
+    
+    return false;
+});
+</script>
+{% endblock %} 

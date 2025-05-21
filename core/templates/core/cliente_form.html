@@ -1,0 +1,501 @@
+{% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Cliente{% else %}Novo Cliente{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/autocomplete.css' %}">
+<style>
+    .motos-disponiveis {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+    .moto-item {
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .moto-item:hover {
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .moto-item.selected {
+        background-color: #e2f4e2;
+        border-color: #28a745;
+    }
+    .moto-details {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    .cadastro-rapido-btn {
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-user me-2"></i>
+            {% if form.instance.pk %}Editar Cliente{% else %}Novo Cliente{% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="post" id="clienteForm" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h4 class="border-bottom pb-2 mb-3">Dados Pessoais</h4>
+                </div>
+                <div class="col-md-6">
+                    {{ form.nome|as_crispy_field }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.cpf|as_crispy_field }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.rg|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.telefone|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.email|as_crispy_field }}
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h4 class="border-bottom pb-2 mb-3">Endereço e Informações Adicionais</h4>
+                </div>
+                <div class="col-md-8">
+                    {{ form.endereco|as_crispy_field }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.data_cadastro|as_crispy_field }}
+                </div>
+                <div class="col-md-12">
+                    {{ form.observacoes|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.tipo|as_crispy_field }}
+                </div>
+            </div>
+            
+            <div class="row mb-4" id="motoSecaoContainer">
+                <div class="col-md-12">
+                    <h4 class="border-bottom pb-2 mb-3">Moto Associada</h4>
+                </div>
+                
+                <div class="col-md-12">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="tipoMotoSelecao" id="tipoMotoExistente" value="existente" checked>
+                        <label class="form-check-label" for="tipoMotoExistente">
+                            Selecionar moto do estoque
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="tipoMotoSelecao" id="tipoMotoNova" value="nova">
+                        <label class="form-check-label" for="tipoMotoNova">
+                            Cadastrar nova moto
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Seção para selecionar moto existente -->
+                <div class="col-md-12 mb-3" id="motoBuscaSection">
+                    <div class="input-group">
+                        <input type="text" id="buscarMoto" class="form-control" placeholder="Buscar moto (marca, modelo, placa, chassi)">
+                        <button class="btn btn-primary" type="button" id="btnBuscarMoto">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                    
+                    <div class="motos-disponiveis mt-3">
+                        <div id="motosLista">
+                            <div class="text-center py-4">
+                                <p>Digite para buscar motos disponíveis no sistema</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botão para cadastro rápido -->
+                <div class="col-md-12 mb-3 text-center" id="motoCadastroRapidoSection" style="display: none;">
+                    <button type="button" class="btn btn-primary" id="btnModalNovaMoto">
+                        <i class="fas fa-plus"></i> Cadastrar Nova Moto
+                    </button>
+                </div>
+                
+                <div class="col-md-12">
+                    <!-- Campo oculto que armazena o ID da moto selecionada -->
+                    <input type="hidden" name="moto_id" id="motoSelecionadaId">
+                    {{ form.motos|as_crispy_field }}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <a href="{% url 'core:cliente_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="btnSalvarCliente">
+                            <i class="fas fa-save me-1"></i>Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para cadastro rápido de moto -->
+<div class="modal fade" id="modalNovaMoto" tabindex="-1" aria-labelledby="modalNovaMotoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalNovaMotoLabel">Cadastro Rápido de Moto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNovaMoto">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoMarca" class="form-label">Marca*</label>
+                            <input type="text" class="form-control" id="novaMotoMarca" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoModelo" class="form-label">Modelo*</label>
+                            <input type="text" class="form-control" id="novaMotoModelo" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="novaMotoAno" class="form-label">Ano*</label>
+                            <input type="text" class="form-control" id="novaMotoAno" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="novaMotoCor" class="form-label">Cor*</label>
+                            <input type="text" class="form-control" id="novaMotoCor" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="novaMotoPlaca" class="form-label">Placa</label>
+                            <input type="text" class="form-control" id="novaMotoPlaca">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoChassi" class="form-label">Chassi*</label>
+                            <input type="text" class="form-control" id="novaMotoChassi" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="novaMotoValor" class="form-label">Valor*</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" class="form-control" id="novaMotoValor" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="novaMotoObservacoes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="novaMotoObservacoes" rows="3"></textarea>
+                    </div>
+                    <input type="hidden" id="novaMotoProprietarioId">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarNovaMoto">Salvar Moto</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/autocomplete.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // Função para alternar a visibilidade da seção de motos com base no tipo
+    function toggleMotoSection(tipoValor) {
+        const motoSecaoContainer = $('#motoSecaoContainer');
+        
+        if (tipoValor === 'PROPRIETARIO' || tipoValor === 'AMBOS') {
+            motoSecaoContainer.show();
+        } else {
+            motoSecaoContainer.hide();
+            $('#motoSelecionadaId').val('');
+        }
+    }
+    
+    // Inicializa a visibilidade baseada no tipo selecionado
+    toggleMotoSection($('#id_tipo').val());
+    
+    // Monitora a mudança no tipo
+    $('#id_tipo').on('change', function() {
+        toggleMotoSection($(this).val());
+    });
+    
+    // Verifica se há erro de "cliente já existe" pelo CPF
+    const cpfField = $('#id_cpf');
+    if (cpfField.length) {
+        cpfField.on('blur', function() {
+            const cpf = $(this).val().trim();
+            if (cpf) {
+                $.ajax({
+                    url: '{% url "core:api_buscar_clientes" %}',
+                    data: { termo: cpf },
+                    success: function(data) {
+                        if (data.results.length > 0) {
+                            const cliente = data.results[0];
+                            alert(`Atenção! Já existe um cliente com este CPF: ${cliente.nome}`);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    // Alternar entre selecionar moto existente ou cadastrar nova
+    $('input[name="tipoMotoSelecao"]').on('change', function() {
+        const tipo = $(this).val();
+        
+        if (tipo === 'existente') {
+            $('#motoBuscaSection').show();
+            $('#motoCadastroRapidoSection').hide();
+        } else {
+            $('#motoBuscaSection').hide();
+            $('#motoCadastroRapidoSection').show();
+        }
+    });
+    
+    // Busca de motos
+    $('#btnBuscarMoto').on('click', function(e) {
+        e.preventDefault();
+        buscarMotos();
+    });
+    
+    // Busca também ao pressionar Enter no campo
+    $('#buscarMoto').on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            buscarMotos();
+        }
+    });
+    
+    // Função para buscar motos
+    function buscarMotos() {
+        const termo = $('#buscarMoto').val().trim();
+        
+        if (termo.length < 2 && termo.length > 0) {
+            alert('Digite pelo menos 2 caracteres para buscar');
+            return;
+        }
+        
+        const motosLista = $('#motosLista');
+        motosLista.html('<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Buscando motos...</p></div>');
+        
+        $.ajax({
+            url: '{% url "core:api_buscar_motos" %}',
+            data: { 
+                termo: termo,
+                disponivel: true
+            },
+            success: function(data) {
+                motosLista.empty();
+                
+                if (data.results.length === 0) {
+                    motosLista.html('<div class="alert alert-info">Nenhuma moto encontrada com os critérios de busca.</div>');
+                    return;
+                }
+                
+                // Criar itens para cada moto
+                data.results.forEach(function(moto) {
+                    const motoItem = $(`
+                        <div class="moto-item" data-moto-id="${moto.id}" data-moto-text="${moto.text}">
+                            <div class="fw-bold">${moto.marca} ${moto.modelo} (${moto.ano})</div>
+                            <div class="moto-details">
+                                <span class="badge bg-secondary">${moto.cor}</span>
+                                ${moto.placa ? `<span class="badge bg-info">Placa: ${moto.placa}</span>` : ''}
+                                <div class="mt-1">Chassi: ${moto.chassi}</div>
+                                <div>Valor: R$ ${parseFloat(moto.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                            </div>
+                        </div>
+                    `);
+                    
+                    motosLista.append(motoItem);
+                });
+                
+                // Selecionar moto quando clicada
+                $('.moto-item').on('click', function() {
+                    $('.moto-item').removeClass('selected');
+                    $(this).addClass('selected');
+                    
+                    const motoId = $(this).data('moto-id');
+                    const motoText = $(this).data('moto-text');
+                    
+                    // Preenche o campo oculto
+                    $('#motoSelecionadaId').val(motoId);
+                    
+                    // Também preenche o campo do formulário de motos (dropdown)
+                    const motoField = $('select[name="motos"]');
+                    if (motoField.length) {
+                        motoField.val(motoId);
+                    }
+                });
+            },
+            error: function() {
+                motosLista.html('<div class="alert alert-danger">Erro ao buscar motos. Tente novamente.</div>');
+            }
+        });
+    }
+    
+    // Abrir modal de cadastro rápido
+    $('#btnModalNovaMoto').on('click', function() {
+        // Limpa o formulário
+        $('#formNovaMoto')[0].reset();
+        
+        // Define o proprietário como o cliente atual sendo cadastrado (se já tiver ID)
+        const clienteId = $('input[name="id"]').val();
+        if (clienteId) {
+            $('#novaMotoProprietarioId').val(clienteId);
+        }
+        
+        // Abre o modal
+        var myModal = new bootstrap.Modal(document.getElementById('modalNovaMoto'));
+        myModal.show();
+    });
+    
+    // Salvar nova moto
+    $('#btnSalvarNovaMoto').on('click', function() {
+        // Validação básica
+        const marca = $('#novaMotoMarca').val().trim();
+        const modelo = $('#novaMotoModelo').val().trim();
+        const ano = $('#novaMotoAno').val().trim();
+        const cor = $('#novaMotoCor').val().trim();
+        const chassi = $('#novaMotoChassi').val().trim();
+        const valor = $('#novaMotoValor').val().trim();
+        
+        if (!marca || !modelo || !ano || !cor || !chassi || !valor) {
+            alert('Preencha todos os campos obrigatórios (marcados com *)');
+            return;
+        }
+        
+        // Salvar por AJAX
+        $.ajax({
+            url: '{% url "core:api_criar_moto_rapida" %}',
+            method: 'POST',
+            data: {
+                marca: marca,
+                modelo: modelo,
+                ano: ano,
+                cor: cor,
+                placa: $('#novaMotoPlaca').val().trim(),
+                chassi: chassi,
+                valor: valor,
+                observacoes: $('#novaMotoObservacoes').val().trim(),
+                proprietario_id: $('#novaMotoProprietarioId').val(),
+                csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
+            },
+            success: function(data) {
+                if (data.success) {
+                    // Fecha o modal
+                    var myModalEl = document.getElementById('modalNovaMoto');
+                    var modal = bootstrap.Modal.getInstance(myModalEl);
+                    modal.hide();
+                    
+                    // Seleciona a moto recém-cadastrada
+                    const motoId = data.moto.id;
+                    $('#motoSelecionadaId').val(motoId);
+                    
+                    // Preenche o select também
+                    const motoField = $('select[name="motos"]');
+                    if (motoField.length) {
+                        // Adiciona a opção se não existir
+                        if (motoField.find(`option[value="${motoId}"]`).length === 0) {
+                            motoField.append(new Option(data.moto.text, motoId, true, true));
+                        }
+                        motoField.val(motoId);
+                    }
+                    
+                    // Exibe mensagem
+                    alert('Moto cadastrada com sucesso!');
+                    
+                    // Altera para o modo de seleção e exibe a moto cadastrada
+                    $('input[name="tipoMotoSelecao"][value="existente"]').prop('checked', true).trigger('change');
+                    buscarMotos();
+                } else {
+                    alert('Erro ao cadastrar moto: ' + data.error);
+                }
+            },
+            error: function(xhr) {
+                alert('Erro ao cadastrar moto. Verifique os dados e tente novamente.');
+                console.error(xhr.responseText);
+            }
+        });
+    });
+    
+    // Se já existir uma moto associada, carrega-a inicialmente
+    {% if form.instance.pk %}
+        $.ajax({
+            url: '{% url "core:motos_cliente_ajax" form.instance.pk %}',
+            success: function(data) {
+                if (data.motos && data.motos.length > 0) {
+                    const motosLista = $('#motosLista');
+                    motosLista.empty();
+                    
+                    data.motos.forEach(function(moto) {
+                        const motoItem = $(`
+                            <div class="moto-item ${moto.selecionada ? 'selected' : ''}" data-moto-id="${moto.id}" data-moto-text="${moto.text}">
+                                <div class="fw-bold">${moto.marca} ${moto.modelo} (${moto.ano})</div>
+                                <div class="moto-details">
+                                    <span class="badge bg-secondary">${moto.cor}</span>
+                                    ${moto.placa ? `<span class="badge bg-info">Placa: ${moto.placa}</span>` : ''}
+                                    <div class="mt-1">Chassi: ${moto.chassi}</div>
+                                    <div>Valor: R$ ${parseFloat(moto.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                        `);
+                        
+                        motosLista.append(motoItem);
+                        
+                        if (moto.selecionada) {
+                            $('#motoSelecionadaId').val(moto.id);
+                        }
+                    });
+                    
+                    // Selecionar moto quando clicada
+                    $('.moto-item').on('click', function() {
+                        $('.moto-item').removeClass('selected');
+                        $(this).addClass('selected');
+                        
+                        const motoId = $(this).data('moto-id');
+                        $('#motoSelecionadaId').val(motoId);
+                        
+                        // Atualiza também o select
+                        const motoField = $('select[name="motos"]');
+                        if (motoField.length) {
+                            motoField.val(motoId);
+                        }
+                    });
+                }
+            }
+        });
+    {% endif %}
+});
+</script>
+{% endblock %} 

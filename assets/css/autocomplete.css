@@ -1,0 +1,112 @@
+/**
+ * autocomplete.css
+ * Estilos específicos para o componente de autocomplete
+ */
+
+.autocomplete-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.autocomplete-input-group {
+    position: relative;
+}
+
+.autocomplete-search-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #adb5bd;
+    z-index: 10;
+}
+
+.autocomplete-results {
+    position: absolute;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1050;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    display: none;
+    margin-top: 3px;
+}
+
+.autocomplete-results.show {
+    display: block;
+}
+
+.autocomplete-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f2f2f2;
+    color: #34395e;
+    transition: background-color 0.2s;
+}
+
+.autocomplete-item:hover {
+    background-color: #f8f9fa;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item .item-info {
+    display: block;
+    font-size: 12px;
+    color: #868e96;
+    margin-top: 2px;
+}
+
+.autocomplete-highlight {
+    font-weight: bold;
+    color: #006BE6;
+}
+
+.autocomplete-message {
+    padding: 10px 15px;
+    color: #868e96;
+    font-style: italic;
+    text-align: center;
+}
+
+.autocomplete-loading {
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    color: #868e96;
+}
+
+.autocomplete-loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estilos para dispositivos móveis */
+@media (max-width: 576px) {
+    .autocomplete-results {
+        position: fixed;
+        top: auto;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-height: 50vh;
+        margin-top: 0;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    
+    .autocomplete-item {
+        padding: 15px;
+    }
+} 

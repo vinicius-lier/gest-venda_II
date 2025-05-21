@@ -1,0 +1,39 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Confirmar Exclusão - Cliente{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Confirmar Exclusão</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-danger mb-4">
+            <p class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Atenção!</strong> Você está prestes a excluir permanentemente o seguinte cliente:
+            </p>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <p><strong>Nome:</strong> {{ object.nome }}</p>
+                <p><strong>CPF:</strong> {{ object.cpf|default:"Não informado" }}</p>
+                <p><strong>Telefone:</strong> {{ object.telefone|default:"Não informado" }}</p>
+            </div>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <a href="{% url 'cliente-list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash me-1"></i>Confirmar Exclusão
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

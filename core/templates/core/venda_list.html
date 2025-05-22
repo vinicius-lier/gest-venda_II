@@ -1,6 +1,118 @@
 {% extends 'core/base.html' %}
+{% load static %}
 
-{% block title %}Vendas - Gestão de Vendas{% endblock %}
+{% block title %}Lista de Vendas - Gestão de Vendas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/dataTables.bootstrap5.min.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/responsive.bootstrap5.min.css' %}">
+<style>
+    .actions-column {
+        width: 150px;
+    }
+    .btn-group-sm>.btn, .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border-radius: 0.25rem;
+    }
+    .filter-card {
+        margin-bottom: 20px;
+    }
+    .status-vendido {
+        background-color: #28a745;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    .status-negociacao {
+        background-color: #ffc107;
+        color: #212529;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    .status-recusa {
+        background-color: #dc3545;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    .status-encerrado {
+        background-color: #6c757d;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    /* Correção para os dropdowns de contratos */
+    .dropdown-menu {
+        position: absolute !important;
+        z-index: 9999 !important;
+        margin: 0 !important;
+    }
+    
+    /* Garantir que os containers não restrinjam os dropdowns */
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .card-body {
+        overflow: visible !important;
+    }
+    
+    .card {
+        overflow: visible !important;
+    }
+    
+    /* Forçar posicionamento do dropdown */
+    .dropdown {
+        position: relative !important;
+    }
+    
+    /* Estilo específico para o menu de contratos */
+    .contratos-dropdown .dropdown-menu {
+        position: fixed !important;
+        margin-top: 5px !important;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175) !important;
+        min-width: 240px !important;
+        border-radius: 0.25rem !important;
+        border: 1px solid rgba(0,0,0,.15) !important;
+        background-color: #fff !important;
+        padding: 0.5rem 0 !important;
+    }
+    
+    /* Estilos para os itens do menu de contratos */
+    .contratos-dropdown .dropdown-item {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.9rem !important;
+        color: #212529 !important;
+    }
+    
+    .contratos-dropdown .dropdown-item:hover {
+        background-color: #f8f9fa !important;
+    }
+    
+    /* Ocultar menus quando não estiverem em uso */
+    .dropdown-menu:not(.show) {
+        display: none !important;
+    }
+    
+    /* Correção para visualização em dispositivos móveis */
+    @media (max-width: 767.98px) {
+        .dropdown-menu {
+            max-height: 80vh !important;
+            overflow-y: auto !important;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="card">
@@ -9,184 +121,218 @@
             <i class="fas fa-list me-2"></i>Lista de Vendas
         </h5>
         <div>
-            <a href="{% url 'core:venda_create' %}" class="btn btn-sm btn-primary">
+            <a href="{% url 'core:venda_create' %}" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus me-1"></i>Nova Venda
             </a>
         </div>
     </div>
     <div class="card-body">
-        <!-- Filtros -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="btn-group" role="group">
-                    <a href="?ordem=data_desc{% if vendedor_selecionado %}&vendedor={{ vendedor_selecionado }}{% endif %}" 
-                       class="btn btn-outline-secondary {% if ordem_atual == 'data_desc' %}active{% endif %}">
-                        <i class="fas fa-sort-amount-down me-1"></i>Mais Recentes
-                    </a>
-                    <a href="?ordem=data_asc{% if vendedor_selecionado %}&vendedor={{ vendedor_selecionado }}{% endif %}" 
-                       class="btn btn-outline-secondary {% if ordem_atual == 'data_asc' %}active{% endif %}">
-                        <i class="fas fa-sort-amount-up me-1"></i>Mais Antigas
-                    </a>
-                </div>
+        <div class="card filter-card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-filter me-1"></i>Filtros
+                </h6>
             </div>
-            {% if show_vendedor %}
-            <div class="col-md-6">
-                <form method="get" class="d-flex">
-                    <select name="vendedor" class="form-select me-2" onchange="this.form.submit()">
-                        <option value="">Todos os Vendedores</option>
-                        {% for vendedor in vendedores %}
-                            <option value="{{ vendedor.id }}" {% if vendedor_selecionado == vendedor.id|stringformat:"i" %}selected{% endif %}>
-                                {{ vendedor.get_full_name|default:vendedor.username }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    {% if ordem_atual %}
-                        <input type="hidden" name="ordem" value="{{ ordem_atual }}">
-                    {% endif %}
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="cliente" class="form-label">Cliente</label>
+                        <input type="text" class="form-control form-control-sm" id="cliente" name="cliente" value="{{ request.GET.cliente|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select form-select-sm" id="status" name="status">
+                            <option value="">Todos</option>
+                            <option value="VENDIDO" {% if request.GET.status == 'VENDIDO' %}selected{% endif %}>Vendido</option>
+                            <option value="EM NEGOCIAÇÃO" {% if request.GET.status == 'EM NEGOCIAÇÃO' %}selected{% endif %}>Em Negociação</option>
+                            <option value="RECUSA DE CRÉDITO" {% if request.GET.status == 'RECUSA DE CRÉDITO' %}selected{% endif %}>Recusa de Crédito</option>
+                            <option value="NEGOCIAÇÃO ENCERRADA" {% if request.GET.status == 'NEGOCIAÇÃO ENCERRADA' %}selected{% endif %}>Negociação Encerrada</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="vendedor" class="form-label">Vendedor</label>
+                        <select class="form-select form-select-sm" id="vendedor" name="vendedor">
+                            <option value="">Todos os Vendedores</option>
+                            {% for vendedor in vendedores %}
+                                <option value="{{ vendedor.id }}" {% if request.GET.vendedor|add:"0" == vendedor.id %}selected{% endif %}>{{ vendedor.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary btn-sm me-2">
+                            <i class="fas fa-search me-1"></i>Filtrar
+                        </button>
+                        <a href="{% url 'core:venda_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-times me-1"></i>Limpar
+                        </a>
+                    </div>
                 </form>
             </div>
-            {% endif %}
         </div>
-
-        {% if vendedor_selecionado %}
-            <div class="alert alert-info">
-                Exibindo atendimentos de: <strong>{{ vendedor_nome }}</strong>
-                <a href="{% url 'core:venda_list' %}{% if ordem_atual %}?ordem={{ ordem_atual }}{% endif %}" class="btn btn-sm btn-secondary ms-2">Limpar filtro</a>
-            </div>
-        {% endif %}
-
-        {% if vendas %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-calendar me-1"></i>Data</th>
-                            {% if show_vendedor %}
-                                <th><i class="fas fa-user me-1"></i>Vendedor</th>
+        
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="vendasTable">
+                <thead>
+                    <tr>
+                        <th data-priority="1">Data</th>
+                        <th>Vendedor</th>
+                        <th>Cliente</th>
+                        <th>Modelo</th>
+                        <th>Status</th>
+                        <th data-priority="2" class="actions-column">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venda in vendas %}
+                    <tr>
+                        <td>{{ venda.data_atendimento|date:"d/m/Y" }}</td>
+                        <td>{{ venda.vendedor.username }}</td>
+                        <td>{{ venda.nome_cliente }}</td>
+                        <td>
+                            {% if venda.moto %}
+                                {{ venda.moto.marca }} {{ venda.moto.modelo }}
+                            {% elif venda.modelo_interesse %}
+                                {{ venda.modelo_interesse }}
+                            {% else %}
+                                -
                             {% endif %}
-                            <th><i class="fas fa-user me-1"></i>Cliente</th>
-                            <th><i class="fas fa-car me-1"></i>Modelo</th>
-                            <th><i class="fas fa-tag me-1"></i>Status</th>
-                            <th><i class="fas fa-cog me-1"></i>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for venda in vendas %}
-                            <tr {% if venda.is_consignacao %}class="table-success"{% endif %}>
-                                <td>{{ venda.data_atendimento|date:"d/m/Y" }}</td>
-                                {% if show_vendedor %}
-                                    <td>{{ venda.vendedor.get_full_name|default:venda.vendedor.username }}</td>
+                        </td>
+                        <td>
+                            {% if venda.status == 'VENDIDO' %}
+                                <span class="status-vendido">VENDIDO</span>
+                            {% elif venda.status == 'EM NEGOCIAÇÃO' %}
+                                <span class="status-negociacao">EM NEGOCIAÇÃO</span>
+                            {% elif venda.status == 'RECUSA DE CRÉDITO' %}
+                                <span class="status-recusa">RECUSA DE CRÉDITO</span>
+                            {% elif venda.status == 'NEGOCIAÇÃO ENCERRADA' %}
+                                <span class="status-encerrado">NEGOCIAÇÃO ENCERRADA</span>
+                            {% else %}
+                                {{ venda.status }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex">
+                                <div class="btn-group me-1" role="group">
+                                    <a href="{% url 'core:venda_update' venda.id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'core:venda_delete' venda.id %}" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                                {% if venda.status == 'VENDIDO' %}
+                                <div class="dropdown d-inline-block contratos-dropdown">
+                                    <button class="btn btn-sm btn-success dropdown-toggle" type="button" id="dropdownMenuContratos-{{ venda.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-file-contract me-1"></i>Contratos
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuContratos-{{ venda.id }}">
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'compra_venda' %}" target="_blank">Contrato de Compra e Venda</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'veiculo_usado' %}" target="_blank">Contrato Veículo Usado</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'sem_garantia' %}" target="_blank">Contrato Sem Garantia</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'consignacao' %}" target="_blank">Contrato de Consignação</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'sem_emplacamento' %}" target="_blank">Liberação Sem Emplacamento</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'sem_intencao' %}" target="_blank">Liberação Sem Intenção</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'recibo_entrada' %}" target="_blank">Recibo de Entrada</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'termo_responsabilidade' %}" target="_blank">Termo de Responsabilidade</a></li>
+                                    </ul>
+                                </div>
                                 {% endif %}
-                                <td>{{ venda.nome_cliente|default:"-" }}</td>
-                                <td>
-                                    {% if venda.is_consignacao %}
-                                        <i class="fas fa-motorcycle me-1"></i>{{ venda.modelo_interesse|default:"-" }}
-                                    {% else %}
-                                        {{ venda.modelo_interesse|default:"-" }}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if venda.status == 'VENDIDO' %}
-                                        <span class="badge bg-success">VENDIDO</span>
-                                    {% elif venda.status == 'EM NEGOCIAÇÃO' %}
-                                        <span class="badge bg-warning">EM NEGOCIAÇÃO</span>
-                                    {% elif venda.status == 'RECUSA DE CRÉDITO' %}
-                                        <span class="badge bg-danger">RECUSA DE CRÉDITO</span>
-                                    {% elif venda.status == 'NEGOCIAÇÃO ENCERRADA' %}
-                                        <span class="badge bg-secondary">NEGOCIAÇÃO ENCERRADA</span>
-                                    {% else %}
-                                        <span class="badge bg-info">{{ venda.status }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        {% if venda.is_consignacao %}
-                                            {% with consignacao_id=venda.id|stringformat:"s"|slice:"1:" %}
-                                            <a href="{% url 'core:consignacao_detail' consignacao_id %}" class="btn btn-sm btn-info">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            {% endwith %}
-                                        {% else %}
-                                            <a href="{% url 'core:venda_update' venda.id %}" class="btn btn-sm btn-info">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a href="{% url 'core:venda_delete' venda.id %}" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
-                                            
-                                            {% if venda.status == 'VENDIDO' %}
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <i class="fas fa-file-contract"></i> Contratos
-                                                </button>
-                                                <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'compra_venda' %}">Contrato de Venda</a></li>
-                                                    <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'veiculo_usado' %}">Contrato Veículo Usado</a></li>
-                                                    <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'sem_garantia' %}">Contrato Sem Garantia</a></li>
-                                                    <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'consignacao' %}">Contrato de Consignação</a></li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'sem_emplacamento' %}">Liberação Sem Emplacamento</a></li>
-                                                    <li><a class="dropdown-item" href="{% url 'core:gerar_contrato' venda.id 'sem_intencao' %}">Liberação Sem Intenção</a></li>
-                                                </ul>
-                                            </div>
-                                            {% endif %}
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            {% if is_paginated %}
-                <nav aria-label="Navegação de páginas" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        {% if page_obj.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page=1{% if ordem_atual %}&ordem={{ ordem_atual }}{% endif %}{% if vendedor_selecionado %}&vendedor={{ vendedor_selecionado }}{% endif %}">
-                                    <i class="fas fa-angle-double-left"></i>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if ordem_atual %}&ordem={{ ordem_atual }}{% endif %}{% if vendedor_selecionado %}&vendedor={{ vendedor_selecionado }}{% endif %}">
-                                    <i class="fas fa-angle-left"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        {% for num in page_obj.paginator.page_range %}
-                            {% if page_obj.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
-                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}{% if ordem_atual %}&ordem={{ ordem_atual }}{% endif %}{% if vendedor_selecionado %}&vendedor={{ vendedor_selecionado }}{% endif %}">{{ num }}</a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-
-                        {% if page_obj.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if ordem_atual %}&ordem={{ ordem_atual }}{% endif %}{% if vendedor_selecionado %}&vendedor={{ vendedor_selecionado }}{% endif %}">
-                                    <i class="fas fa-angle-right"></i>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if ordem_atual %}&ordem={{ ordem_atual }}{% endif %}{% if vendedor_selecionado %}&vendedor={{ vendedor_selecionado }}{% endif %}">
-                                    <i class="fas fa-angle-double-right"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            {% endif %}
-        {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>Nenhuma venda registrada.
-            </div>
-        {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">Nenhuma venda encontrada.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginação -->
+        {% include 'core/pagination.html' with page_obj=vendas %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'core/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'core/js/dataTables.bootstrap5.min.js' %}"></script>
+<script src="{% static 'core/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'core/js/responsive.bootstrap5.min.js' %}"></script>
+<script>
+$(document).ready(function() {
+    $('#vendasTable').DataTable({
+        responsive: true,
+        "dom": '<"top"f>rt<"bottom"ip><"clear">',
+        "language": {
+            "url": "{% static 'core/js/dataTables.pt-BR.json' %}"
+        },
+        "pageLength": 25,
+        "order": [[ 0, "desc" ]]
+    });
+    
+    // Inicializar dropdowns do Bootstrap
+    var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'))
+    var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+        return new bootstrap.Dropdown(dropdownToggleEl, {
+            autoClose: true
+        })
+    });
+    
+    // Substituir o comportamento padrão dos dropdowns de contratos
+    $('.contratos-dropdown .dropdown-toggle').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var $button = $(this);
+        var dropdownId = $button.attr('id');
+        var dropdown = bootstrap.Dropdown.getInstance($button[0]);
+        
+        // Toggle do dropdown
+        if (!$button.next('.dropdown-menu').hasClass('show')) {
+            dropdown.show();
+        } else {
+            dropdown.hide();
+            return;
+        }
+        
+        // Posicionamento preciso do menu
+        var $menu = $button.next('.dropdown-menu');
+        
+        // Garantir que o menu está visível
+        $menu.addClass('show');
+        
+        // Calcular posição exata
+        var buttonPos = $button.offset();
+        var buttonWidth = $button.outerWidth();
+        var buttonHeight = $button.outerHeight();
+        var menuWidth = $menu.outerWidth();
+        
+        // Posicionar o menu centralizado abaixo do botão
+        var leftPos = buttonPos.left;
+        
+        // Verificar se o menu vai sair da tela à direita
+        if (leftPos + menuWidth > $(window).width()) {
+            leftPos = buttonPos.left + buttonWidth - menuWidth;
+        }
+        
+        // Aplicar posicionamento
+        $menu.css({
+            'position': 'fixed',
+            'top': (buttonPos.top + buttonHeight + 5) + 'px',
+            'left': leftPos + 'px',
+            'z-index': 9999
+        });
+    });
+    
+    // Fechar dropdowns ao clicar fora
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.contratos-dropdown').length) {
+            $('.contratos-dropdown .dropdown-menu').removeClass('show');
+        }
+    });
+});
+</script>
 {% endblock %} 

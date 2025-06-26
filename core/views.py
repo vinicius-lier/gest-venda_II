@@ -1289,8 +1289,8 @@ def ocorrencia_create(request):
         form = OcorrenciaForm(request.POST, request.FILES)
         if form.is_valid():
             ocorrencia = form.save(commit=False)
-            # Definir o solicitante como o usuário logado
-            ocorrencia.solicitante = request.user
+            # Definir o solicitante como o usuário logado do sistema
+            ocorrencia.solicitante = request.user.usuario_sistema
             ocorrencia.save()
             messages.success(request, 'Ocorrência registrada com sucesso!')
             return redirect('core:ocorrencia_list')

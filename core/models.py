@@ -187,12 +187,7 @@ class Cliente(models.Model):
         return f"{self.nome} ({self.get_tipo_display()})"
     
     def clean(self):
-        """Validação personalizada"""
-        if self.cpf_cnpj:
-            # Remove caracteres especiais
-            cpf_cnpj_limpo = ''.join(filter(str.isdigit, self.cpf_cnpj))
-            if len(cpf_cnpj_limpo) not in [11, 14]:
-                raise ValidationError('CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos')
+        pass
 
     def get_tipo_color(self):
         """Retorna a cor CSS para o tipo do cliente"""

@@ -148,7 +148,7 @@
                     </ul>
                     
                     <!-- Seção Administrativa -->
-                    {% if usuario_sistema.perfil.nome == 'admin' or usuario_sistema.perfil.nome == 'gerente' %}
+                    {% if request.user.is_superuser or (usuario_sistema and (usuario_sistema.perfil.nome == 'admin' or usuario_sistema.perfil.nome == 'gerente')) %}
                     <div class="admin-section">
                         <h6 class="text-white-50 text-uppercase small mb-3">
                             <i class="fas fa-cogs me-2"></i> Administrativo

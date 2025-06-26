@@ -1092,12 +1092,15 @@ def ocorrencia_create(request):
             messages.success(request, 'Ocorrência registrada com sucesso!')
             return redirect('core:ocorrencia_list')
     else:
-        form = OcorrenciaForm(initial={'loja': request.user.usuario_sistema.loja})
+        loja_inicial = None
+        if hasattr(request.user, 'usuario_sistema') and request.user.usuario_sistema:
+            loja_inicial = request.user.usuario_sistema.loja
+        form = OcorrenciaForm(initial={'loja': loja_inicial} if loja_inicial else {})
     
     return render(request, 'core/ocorrencia_form.html', {
         'form': form,
         'ocorrencia': None,
-        'usuario_sistema': request.user
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None)
     })
 
 @login_required

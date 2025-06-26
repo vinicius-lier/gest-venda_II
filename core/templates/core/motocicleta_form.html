@@ -1,0 +1,256 @@
+{% extends 'core/base.html' %}
+{% load core_extras %}
+
+{% block title %}
+{% if motocicleta %}Editar Motocicleta{% else %}Nova Motocicleta{% endif %} - Gestão Operacional de Vendas
+{% endblock %}
+
+{% block page_title %}
+{% if motocicleta %}Editar Motocicleta{% else %}Nova Motocicleta{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if perms.core.add_motocicleta or perms.core.change_motocicleta %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-motorcycle me-2"></i>
+                    {% if motocicleta %}Editar Motocicleta{% else %}Nova Motocicleta{% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {{ form.non_field_errors }}
+
+                    <!-- Identificação e Características -->
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_marca" class="form-label"><i class="fas fa-industry me-1"></i>Marca *</label>
+                            {{ form.marca }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_modelo" class="form-label"><i class="fas fa-cogs me-1"></i>Modelo *</label>
+                            {{ form.modelo }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_ano" class="form-label"><i class="fas fa-calendar me-1"></i>Ano *</label>
+                            {{ form.ano }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_cor" class="form-label"><i class="fas fa-palette me-1"></i>Cor *</label>
+                            {{ form.cor }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_cilindrada" class="form-label"><i class="fas fa-tachometer-alt me-1"></i>Cilindrada</label>
+                            {{ form.cilindrada }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_status" class="form-label"><i class="fas fa-flag me-1"></i>Status *</label>
+                            {{ form.status }}
+                        </div>
+                    </div>
+
+                    <!-- Documentação -->
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_chassi" class="form-label"><i class="fas fa-barcode me-1"></i>Chassi *</label>
+                            {{ form.chassi }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_placa" class="form-label"><i class="fas fa-car-side me-1"></i>Placa</label>
+                            {{ form.placa }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_renavam" class="form-label"><i class="fas fa-id-card me-1"></i>Renavam</label>
+                            {{ form.renavam }}
+                        </div>
+                    </div>
+
+                    <!-- Classificação e Valores -->
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_tipo_entrada" class="form-label"><i class="fas fa-sign-in-alt me-1"></i>Tipo Entrada *</label>
+                            {{ form.tipo_entrada }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_origem" class="form-label"><i class="fas fa-map-marker-alt me-1"></i>Origem *</label>
+                            {{ form.origem }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_loja_origem" class="form-label"><i class="fas fa-store me-1"></i>Loja Origem</label>
+                            {{ form.loja_origem }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_valor_entrada" class="form-label"><i class="fas fa-dollar-sign me-1"></i>Valor Entrada *</label>
+                            {{ form.valor_entrada }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_valor_atual" class="form-label"><i class="fas fa-tag me-1"></i>Valor Atual *</label>
+                            {{ form.valor_atual }}
+                        </div>
+                    </div>
+
+                    <!-- Datas -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_data_entrada" class="form-label"><i class="fas fa-calendar-plus me-1"></i>Data Entrada *</label>
+                            {{ form.data_entrada }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_data_venda" class="form-label"><i class="fas fa-calendar-check me-1"></i>Data Venda</label>
+                            {{ form.data_venda }}
+                        </div>
+                    </div>
+
+                    <!-- Relacionamentos -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_proprietario" class="form-label"><i class="fas fa-user me-1"></i>Proprietário *</label>
+                            <div class="input-group">
+                                {{ form.proprietario }}
+                                {% if perms.core.add_cliente %}
+                                <button type="button" class="btn btn-outline-primary" id="btn_novo_proprietario" title="Cadastrar novo proprietário">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <a href="{% url 'core:cliente_create' %}" class="btn btn-outline-secondary" target="_blank" title="Cadastro completo">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_fornecedor" class="form-label"><i class="fas fa-user-tie me-1"></i>Fornecedor</label>
+                            <div class="input-group">
+                                {{ form.fornecedor }}
+                                {% if perms.core.add_cliente %}
+                                <button type="button" class="btn btn-outline-primary" id="btn_novo_fornecedor" title="Cadastrar novo fornecedor">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <a href="{% url 'core:cliente_create' %}" class="btn btn-outline-secondary" target="_blank" title="Cadastro completo">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_seguro" class="form-label"><i class="fas fa-file-contract me-1"></i>Seguro Vinculado</label>
+                            {{ form.seguro }}
+                        </div>
+                    </div>
+
+                    <!-- Fotos -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_foto_principal" class="form-label"><i class="fas fa-camera me-1"></i>Foto Principal</label>
+                            {{ form.foto_principal }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-images me-1"></i>Fotos Adicionais</label>
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <label for="id_foto_frontal" class="form-label small">Frontal</label>
+                                    {{ form.foto_frontal }}
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label for="id_foto_traseira" class="form-label small">Traseira</label>
+                                    {{ form.foto_traseira }}
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label for="id_foto_lado_esquerdo" class="form-label small">Lado Esquerdo</label>
+                                    {{ form.foto_lado_esquerdo }}
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label for="id_foto_lado_direito" class="form-label small">Lado Direito</label>
+                                    {{ form.foto_lado_direito }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="mb-4">
+                        <label for="id_observacoes" class="form-label"><i class="fas fa-sticky-note me-1"></i>Observações</label>
+                        {{ form.observacoes }}
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between">
+                        {% if perms.core.add_motocicleta or perms.core.change_motocicleta %}
+                        <a href="{% url 'core:motocicleta_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if motocicleta %}Atualizar{% else %}Salvar{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de cadastro rápido de cliente -->
+{% if perms.core.add_cliente %}
+<div class="modal fade" id="modal_novo_cliente" tabindex="-1" aria-labelledby="modalNovoClienteLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalNovoClienteLabel">Cadastro Rápido de Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form_novo_cliente">
+                    <div class="mb-3">
+                        <label for="novo_cliente_nome" class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="novo_cliente_nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="novo_cliente_cpf_cnpj" class="form-label">CPF/CNPJ *</label>
+                        <input type="text" class="form-control" id="novo_cliente_cpf_cnpj" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="novo_cliente_telefone" class="form-label">Telefone</label>
+                        <input type="text" class="form-control" id="novo_cliente_telefone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="novo_cliente_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="novo_cliente_email">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn_salvar_novo_cliente">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Acesso Negado
+    </h4>
+    <p>Você não tem permissão para {% if motocicleta %}editar{% else %}criar{% endif %} motocicletas.</p>
+    <hr>
+    <p class="mb-0">
+        {% if perms.core.add_motocicleta or perms.core.change_motocicleta %}
+        <a href="{% url 'core:motocicleta_list' %}" class="btn btn-outline-danger">
+            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+        </a>
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+{% endblock %} 

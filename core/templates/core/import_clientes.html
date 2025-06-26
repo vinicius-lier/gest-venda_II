@@ -1,0 +1,74 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Importar Clientes{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-users"></i> Importar Clientes
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:import_data' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="file">Selecione o arquivo CSV/Excel:</label>
+                                    <input type="file" class="form-control-file" id="file" name="file" accept=".csv,.xlsx,.xls" required>
+                                    <small class="form-text text-muted">
+                                        Formatos aceitos: CSV, Excel (.xlsx, .xls)
+                                    </small>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-3">
+                                    <i class="fas fa-upload"></i> Importar Clientes
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-info-circle"></i> Informações
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <h6>Colunas necessárias:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>nome</strong> - Nome completo</li>
+                                        <li><strong>cpf</strong> - CPF</li>
+                                        <li><strong>rg</strong> - RG</li>
+                                        <li><strong>data_nascimento</strong> - Data (YYYY-MM-DD)</li>
+                                        <li><strong>telefone</strong> - Telefone</li>
+                                        <li><strong>email</strong> - Email</li>
+                                        <li><strong>endereco</strong> - Endereço</li>
+                                        <li><strong>cidade</strong> - Cidade</li>
+                                        <li><strong>estado</strong> - Estado</li>
+                                        <li><strong>cep</strong> - CEP</li>
+                                        <li><strong>ativo</strong> - Status (True/False)</li>
+                                    </ul>
+                                    <hr>
+                                    <h6>Exemplo de CSV:</h6>
+                                    <pre class="small">nome,cpf,rg,data_nascimento,telefone,email,endereco,cidade,estado,cep,ativo
+João Silva,123.456.789-00,12.345.678-9,1990-01-15,11999999999,joao@email.com,Rua A 123,São Paulo,SP,01234-567,True
+Maria Santos,987.654.321-00,98.765.432-1,1985-05-20,21988888888,maria@email.com,Av B 456,Rio de Janeiro,RJ,20000-000,True</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

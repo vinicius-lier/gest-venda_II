@@ -1,78 +1,181 @@
 {% extends 'core/base.html' %}
+{% load core_extras %}
 
-{% block title %}Gerenciamento de Usuários{% endblock %}
+{% block title %}Usuários do Sistema{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h4><i class="fas fa-users me-2"></i>Gerenciamento de Usuários</h4>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-users"></i> Usuários do Sistema
+        </h1>
+        {% if perms.core.add_usuario %}
         <a href="{% url 'core:usuario_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i>Novo Usuário
+            <i class="fas fa-plus"></i> Novo Usuário
         </a>
+        {% endif %}
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Usuário</th>
-                        <th>Nome</th>
-                        <th>Email</th>
-                        <th>Tipo</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for usuario in usuarios %}
-                    <tr>
-                        <td>{{ usuario.username }}</td>
-                        <td>{{ usuario.get_full_name }}</td>
-                        <td>{{ usuario.email }}</td>
-                        <td>
-                            {% if usuario.perfil %}
-                                <span class="badge bg-{% if usuario.perfil.tipo == 'master' %}danger{% elif usuario.perfil.tipo == 'gerente' %}warning{% else %}primary{% endif %}">
-                                    {{ usuario.perfil.tipo|title }}
-                                </span>
-                            {% else %}
-                                <span class="badge bg-secondary">Sem perfil</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if usuario.is_active %}
-                                <span class="badge bg-success">Ativo</span>
-                            {% else %}
-                                <span class="badge bg-danger">Inativo</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <a class="dropdown-item" href="{% url 'core:usuario_update' usuario.id %}">
-                                            <i class="fas fa-edit me-1"></i>Editar
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="{% url 'core:alterar_senha' usuario.id %}">
-                                            <i class="fas fa-key me-1"></i>Alterar Senha
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center">Nenhum usuário encontrado.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ request.GET.search }}" placeholder="Nome, usuário ou email">
+                </div>
+                <div class="col-md-2">
+                    <label for="perfil" class="form-label">Perfil</label>
+                    <select class="form-select" id="perfil" name="perfil">
+                        <option value="">Todos</option>
+                        <option value="admin" {% if request.GET.perfil == 'admin' %}selected{% endif %}>Administrador</option>
+                        <option value="gerente" {% if request.GET.perfil == 'gerente' %}selected{% endif %}>Gerente</option>
+                        <option value="vendedor" {% if request.GET.perfil == 'vendedor' %}selected{% endif %}>Vendedor</option>
+                        <option value="consultor" {% if request.GET.perfil == 'consultor' %}selected{% endif %}>Consultor</option>
+                        <option value="financeiro" {% if request.GET.perfil == 'financeiro' %}selected{% endif %}>Financeiro</option>
+                        <option value="ti" {% if request.GET.perfil == 'ti' %}selected{% endif %}>TI</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="ativo" {% if status == 'ativo' %}selected{% endif %}>Ativos</option>
+                        <option value="inativo" {% if status == 'inativo' %}selected{% endif %}>Inativos</option>
+                        <option value="bloqueado" {% if status == 'bloqueado' %}selected{% endif %}>Bloqueados</option>
+                        <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="loja" class="form-label">Loja</label>
+                    <select class="form-select" id="loja" name="loja">
+                        <option value="">Todas</option>
+                        {% for loja in lojas %}
+                        <option value="{{ loja.id }}" {% if request.GET.loja == loja.id|stringformat:"s" %}selected{% endif %}>
+                            {{ loja.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{% url 'core:usuario_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Usuários -->
+    <div class="card shadow">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Usuários ({{ usuarios.count }})</h6>
+        </div>
+        <div class="card-body">
+            {% if usuarios %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Usuário</th>
+                            <th>Email</th>
+                            <th>Perfil</th>
+                            <th>Loja</th>
+                            <th>Status</th>
+                            <th>Último Acesso</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        <tr>
+                            <td>
+                                <strong>{{ usuario.user.get_full_name }}</strong>
+                            </td>
+                            <td>{{ usuario.user.username }}</td>
+                            <td>{{ usuario.user.email }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ usuario.perfil.get_nome_display }}</span>
+                            </td>
+                            <td>{{ usuario.loja.nome }}</td>
+                            <td>
+                                {% if usuario.status == 'ativo' %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% elif usuario.status == 'inativo' %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Bloqueado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if usuario.ultimo_acesso %}
+                                    {{ usuario.ultimo_acesso|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Nunca</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    {% if perms.core.view_usuario %}
+                                    <a href="{% url 'core:usuario_detail' usuario.pk %}" 
+                                       class="btn btn-sm btn-info" title="Visualizar">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.core.change_usuario %}
+                                    <a href="{% url 'core:usuario_update' usuario.pk %}" 
+                                       class="btn btn-sm btn-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.core.delete_usuario and usuario.status == 'ativo' %}
+                                    <a href="{% url 'core:usuario_delete' usuario.pk %}" 
+                                       class="btn btn-sm btn-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Nenhum usuário encontrado</h5>
+                <p class="text-muted">Não há usuários cadastrados no sistema.</p>
+                {% if perms.core.add_usuario %}
+                <a href="{% url 'core:usuario_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Cadastrar Primeiro Usuário
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Scripts -->
+<script>
+$(document).ready(function() {
+    // DataTable
+    $('#dataTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+        },
+        order: [[0, 'asc']],
+        pageLength: 25,
+        responsive: true
+    });
+});
+</script>
 {% endblock %} 

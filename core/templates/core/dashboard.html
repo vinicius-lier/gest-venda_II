@@ -1,160 +1,229 @@
 {% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
 
-{% block title %}Dashboard - Gestão de Vendas{% endblock %}
+{% block title %}Dashboard - Gestão Operacional de Vendas{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-md-6">
-        <div class="dashboard-card">
-            <div class="icon">
-                <i class="fas fa-users"></i>
+    <!-- Cards de Estatísticas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total de Clientes
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_clientes|default:"0" }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                    </div>
+                </div>
             </div>
-            <div class="value">{{ numero_atendimentos }}</div>
-            <div class="label">Número de Atendimentos</div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="dashboard-card">
-            <div class="icon">
-                <i class="fas fa-check-circle"></i>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-dark shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                            Total de Motos Cadastradas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_motos|default:"0" }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-motorcycle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
             </div>
-            <div class="value">{{ numero_fechamentos }}</div>
-            <div class="label">Número de Fechamentos (Vendas)</div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Motos em Estoque
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ motos_estoque|default:"0" }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-warehouse fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Vendas do Mês
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ vendas_mes|default:"0" }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Consignações
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ consignacoes|default:"0" }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-handshake fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="alert alert-info mt-3">
-    <i class="fas fa-info-circle me-2"></i>As estatísticas acima incluem tanto vendas diretas quanto consignações vendidas.
-</div>
-
-{% if is_gerente %}
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
+<!-- Gráficos de Ranking -->
+<div class="row">
+    <!-- Ranking de Vendedores -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
                     <i class="fas fa-trophy me-2"></i>Ranking de Vendedores
-                </h5>
+                </h6>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Vendedor</th>
-                                <th>Atendimentos</th>
-                                <th>Total de Vendas</th>
-                                <th>Taxa de Conversão</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for v in ranking %}
-                            <tr>
-                                <td>
-                                    <a href="{% url 'core:venda_list' %}?vendedor={{ v.vendedor_id }}">
-                                        {{ v.vendedor__username }}
-                                    </a>
-                                </td>
-                                <td>{{ v.total_atendimentos }}</td>
-                                <td>{{ v.fechamentos }}</td>
-                                <td>
-                                    {% if v.total_atendimentos > 0 %}
-                                        {% widthratio v.fechamentos v.total_atendimentos 100 %}%
-                                    {% else %}
-                                        0%
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                {% if ranking_vendedores %}
+                <canvas id="rankingVendedoresChart" width="400" height="200"></canvas>
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                    <p>Nenhum dado de vendas disponível</p>
                 </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking de Motos Mais Vendidas -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-motorcycle me-2"></i>Motos Mais Vendidas
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if ranking_motos %}
+                <canvas id="rankingMotosChart" width="400" height="200"></canvas>
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-chart-pie fa-3x mb-3"></i>
+                    <p>Nenhum dado de vendas disponível</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
+<!-- Mensagem de Bem-vindo -->
+<div class="row">
     <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-cog me-2"></i>Ferramentas Gerenciais
-                </h5>
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>Bem-vindo ao Sistema
+                </h6>
             </div>
             <div class="card-body">
-                <div class="d-flex gap-2">
-                    <a href="{% url 'core:importar_vendas' %}" class="btn btn-success">
-                        <i class="fas fa-file-import me-1"></i>Importar Vendas
-                    </a>
-                    <a href="{% url 'core:modelo_importacao' %}" class="btn btn-outline-primary ms-2" download>
-                        <i class="fas fa-download me-1"></i>Baixar Modelo de Importação
-                    </a>
-                    <a href="{% url 'core:resumo_gerencial' %}" class="btn btn-info">
-                        <i class="fas fa-chart-bar me-1"></i>Resumo Gerencial
-                    </a>
-                </div>
+                <p class="mb-0">
+                    Sistema de Gestão Operacional de Vendas em desenvolvimento. 
+                    As funcionalidades estão sendo implementadas gradualmente.
+                </p>
             </div>
         </div>
     </div>
 </div>
-{% endif %}
+{% endblock %}
 
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-list me-2"></i>Meus Atendimentos
-                </h5>
-                <a href="{% url 'core:venda_create' %}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus me-1"></i>Novo Atendimento
-                </a>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Cliente</th>
-                                <th>Contato</th>
-                                <th>Modelo de Interesse</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for venda in vendas %}
-                            <tr>
-                                <td>{{ venda.data_atendimento|date:"d/m/Y" }}</td>
-                                <td>{{ venda.nome_cliente }}</td>
-                                <td>{{ venda.contato }}</td>
-                                <td>{{ venda.modelo_interesse }}</td>
-                                <td>
-                                    <span class="badge {% if venda.status == 'VENDIDO' %}bg-success{% elif venda.status == 'PENDENTE' %}bg-warning{% else %}bg-danger{% endif %}">
-                                        {{ venda.status }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{% url 'core:venda_update' venda.pk %}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center">
-                                    <i class="fas fa-info-circle me-1"></i>Nenhum atendimento registrado.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% block extra_css %}
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-dark {
+    border-left: 0.25rem solid #343a40 !important;
+}
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+.font-weight-bold {
+    font-weight: 700 !important;
+}
+.text-xs {
+    font-size: 0.7rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Dados para os gráficos
+window.rankingVendedoresLabels = [
+    {% for vendedor in ranking_vendedores %}
+        '{{ vendedor.user.first_name|default:vendedor.user.username }}',
+    {% endfor %}
+];
+
+window.rankingVendedoresData = [
+    {% for vendedor in ranking_vendedores %}
+        {{ vendedor.total_vendas }},
+    {% endfor %}
+];
+
+window.rankingMotosLabels = [
+    {% for moto in ranking_motos %}
+        '{{ moto.marca }} {{ moto.modelo }}',
+    {% endfor %}
+];
+
+window.rankingMotosData = [
+    {% for moto in ranking_motos %}
+        {{ moto.total_vendas }},
+    {% endfor %}
+];
+</script>
+<script src="{% static 'core/js/dashboard-charts.js' %}"></script>
 {% endblock %} 

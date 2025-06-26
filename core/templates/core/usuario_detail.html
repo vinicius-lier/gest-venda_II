@@ -1,0 +1,261 @@
+{% extends 'core/base.html' %}
+{% load core_extras %}
+
+{% block title %}Detalhes do Usuário - {{ usuario.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-user"></i> Detalhes do Usuário
+        </h1>
+        <div class="btn-group" role="group">
+            <a href="{% url 'core:usuario_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            {% if perms.core.change_usuario %}
+            <a href="{% url 'core:usuario_update' usuario.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informações Principais -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user-circle"></i> Informações Pessoais
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Nome Completo:</label>
+                            <p class="form-control-plaintext">{{ usuario.user.get_full_name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Nome de Usuário:</label>
+                            <p class="form-control-plaintext">{{ usuario.user.username }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Email:</label>
+                            <p class="form-control-plaintext">
+                                {% if usuario.user.email %}
+                                    <a href="mailto:{{ usuario.user.email }}">{{ usuario.user.email }}</a>
+                                {% else %}
+                                    <span class="text-muted">Não informado</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Status do Usuário:</label>
+                            <p class="form-control-plaintext">
+                                {% if usuario.user.is_active %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativo</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configurações do Sistema -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-cogs"></i> Configurações do Sistema
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Perfil:</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge bg-info">{{ usuario.perfil.get_nome_display }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Loja:</label>
+                            <p class="form-control-plaintext">{{ usuario.loja.nome }}</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Status no Sistema:</label>
+                            <p class="form-control-plaintext">
+                                {% if usuario.status == 'ativo' %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% elif usuario.status == 'inativo' %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Bloqueado</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Data de Cadastro:</label>
+                            <p class="form-control-plaintext">{{ usuario.data_cadastro|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Último Acesso:</label>
+                            <p class="form-control-plaintext">
+                                {% if usuario.ultimo_acesso %}
+                                    {{ usuario.ultimo_acesso|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Nunca acessou</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissões -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-key"></i> Permissões do Perfil
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for permissao in usuario.perfil.permissoes.all %}
+                        <div class="col-md-6 mb-2">
+                            <span class="badge bg-primary me-1">
+                                {{ permissao.get_modulo_display }} - {{ permissao.get_acao_display }}
+                            </span>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <p class="text-muted">Nenhuma permissão específica configurada para este perfil.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informações da Loja -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-store"></i> Informações da Loja
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome da Loja:</label>
+                        <p class="form-control-plaintext">{{ usuario.loja.nome }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">CNPJ:</label>
+                        <p class="form-control-plaintext">{{ usuario.loja.cnpj }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cidade:</label>
+                        <p class="form-control-plaintext">{{ usuario.loja.cidade }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Telefone:</label>
+                        <p class="form-control-plaintext">
+                            {% if usuario.loja.telefone %}
+                                <a href="tel:{{ usuario.loja.telefone }}">{{ usuario.loja.telefone }}</a>
+                            {% else %}
+                                <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email:</label>
+                        <p class="form-control-plaintext">
+                            {% if usuario.loja.email %}
+                                <a href="mailto:{{ usuario.loja.email }}">{{ usuario.loja.email }}</a>
+                            {% else %}
+                                <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status da Loja:</label>
+                        <p class="form-control-plaintext">
+                            {% if usuario.loja.ativo %}
+                                <span class="badge bg-success">Ativa</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inativa</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-bar"></i> Estatísticas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-primary">{{ usuario.vendas_realizadas.count }}</h4>
+                                <small class="text-muted">Vendas Realizadas</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4 class="text-success">{{ usuario.consignacoes_responsavel.count }}</h4>
+                            <small class="text-muted">Consignações</small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-info">{{ usuario.seguros_vendidos.count }}</h4>
+                                <small class="text-muted">Seguros Vendidos</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4 class="text-warning">{{ usuario.cotacoes_realizadas.count }}</h4>
+                            <small class="text-muted">Cotações</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ações Rápidas -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-bolt"></i> Ações Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if perms.core.change_usuario %}
+                        <a href="{% url 'core:usuario_update' usuario.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Editar Usuário
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'core:loja_detail' usuario.loja.pk %}" class="btn btn-info btn-sm">
+                            <i class="fas fa-store"></i> Ver Loja
+                        </a>
+                        
+                        <a href="{% url 'core:venda_list' %}?vendedor={{ usuario.user.username }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-shopping-cart"></i> Vendas do Usuário
+                        </a>
+                        
+                        <a href="{% url 'core:consignacao_list' %}?vendedor={{ usuario.user.username }}" class="btn btn-success btn-sm">
+                            <i class="fas fa-handshake"></i> Consignações
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

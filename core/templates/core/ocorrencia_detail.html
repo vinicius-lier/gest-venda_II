@@ -1,0 +1,289 @@
+{% extends 'core/base.html' %}
+{% load core_extras %}
+
+{% block title %}Ocorrência #{{ ocorrencia.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-exclamation-triangle"></i> Ocorrência #{{ ocorrencia.id }}
+        </h1>
+        <div>
+            <a href="{% url 'core:ocorrencia_update' ocorrencia.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <a href="{% url 'core:ocorrencia_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Detalhes da Ocorrência -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">{{ ocorrencia.titulo }}</h6>
+                    {% if ocorrencia.atrasada %}
+                        <span class="badge bg-danger">ATRASADA</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Tipo:</strong> 
+                                <span class="badge bg-secondary">{{ ocorrencia.get_tipo_display }}</span>
+                            </p>
+                            <p><strong>Prioridade:</strong> 
+                                {% if ocorrencia.prioridade == 'baixa' %}
+                                    <span class="badge bg-success">Baixa</span>
+                                {% elif ocorrencia.prioridade == 'media' %}
+                                    <span class="badge bg-warning">Média</span>
+                                {% elif ocorrencia.prioridade == 'alta' %}
+                                    <span class="badge bg-danger">Alta</span>
+                                {% else %}
+                                    <span class="badge bg-dark">Crítica</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Status:</strong> 
+                                {% if ocorrencia.status == 'aberta' %}
+                                    <span class="badge bg-primary">Aberta</span>
+                                {% elif ocorrencia.status == 'em_analise' %}
+                                    <span class="badge bg-info">Em Análise</span>
+                                {% elif ocorrencia.status == 'em_andamento' %}
+                                    <span class="badge bg-warning">Em Andamento</span>
+                                {% elif ocorrencia.status == 'resolvida' %}
+                                    <span class="badge bg-success">Resolvida</span>
+                                {% elif ocorrencia.status == 'fechada' %}
+                                    <span class="badge bg-secondary">Fechada</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Cancelada</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Loja:</strong> {{ ocorrencia.loja.nome }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Solicitante:</strong> {{ ocorrencia.solicitante.user.get_full_name }}</p>
+                            <p><strong>Responsável:</strong> 
+                                {% if ocorrencia.responsavel %}
+                                    {{ ocorrencia.responsavel.user.get_full_name }}
+                                {% else %}
+                                    <span class="text-muted">Não atribuído</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Data de Abertura:</strong> {{ ocorrencia.data_abertura|date:"d/m/Y H:i" }}</p>
+                            {% if ocorrencia.data_limite %}
+                                <p><strong>Data Limite:</strong> {{ ocorrencia.data_limite|date:"d/m/Y H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <h6><strong>Descrição:</strong></h6>
+                        <p class="text-muted">{{ ocorrencia.descricao|linebreaks }}</p>
+                    </div>
+
+                    {% if ocorrencia.observacoes %}
+                    <div class="mb-3">
+                        <h6><strong>Observações:</strong></h6>
+                        <p class="text-muted">{{ ocorrencia.observacoes|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if ocorrencia.solucao %}
+                    <div class="mb-3">
+                        <h6><strong>Solução:</strong></h6>
+                        <p class="text-muted">{{ ocorrencia.solucao|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if ocorrencia.arquivos_anexos %}
+                    <div class="mb-3">
+                        <h6><strong>Arquivos Anexos:</strong></h6>
+                        <a href="{{ ocorrencia.arquivos_anexos.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                            <i class="fas fa-download"></i> Download do Arquivo
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Comentários -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Comentários ({{ comentarios.count }})</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Formulário de novo comentário -->
+                    <form method="post" class="mb-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ comentario_form.conteudo.id_for_label }}" class="form-label">
+                                {{ comentario_form.conteudo.label }}
+                            </label>
+                            {{ comentario_form.conteudo }}
+                            {% if comentario_form.conteudo.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ comentario_form.conteudo.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ comentario_form.privado }}
+                                <label class="form-check-label" for="{{ comentario_form.privado.id_for_label }}">
+                                    {{ comentario_form.privado.label }}
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-comment"></i> Adicionar Comentário
+                        </button>
+                    </form>
+
+                    <!-- Lista de comentários -->
+                    {% if comentarios %}
+                        {% for comentario in comentarios %}
+                        <div class="border rounded p-3 mb-3 {% if comentario.privado %}border-warning{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ comentario.autor.user.get_full_name }}</strong>
+                                    {% if comentario.privado %}
+                                        <span class="badge bg-warning ms-1">Privado</span>
+                                    {% endif %}
+                                    <small class="text-muted ms-2">{{ comentario.data_criacao|date:"d/m/Y H:i" }}</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                {{ comentario.conteudo|linebreaks }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informações Gerais -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informações Gerais</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Dias Aberta:</strong><br>
+                        <span class="badge bg-info fs-6">{{ ocorrencia.dias_aberta }} dias</span>
+                    </div>
+                    
+                    {% if ocorrencia.data_resolucao %}
+                    <div class="mb-3">
+                        <strong>Data de Resolução:</strong><br>
+                        {{ ocorrencia.data_resolucao|date:"d/m/Y H:i" }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if ocorrencia.data_fechamento %}
+                    <div class="mb-3">
+                        <strong>Data de Fechamento:</strong><br>
+                        {{ ocorrencia.data_fechamento|date:"d/m/Y H:i" }}
+                    </div>
+                    {% endif %}
+
+                    {% if ocorrencia.atrasada %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Atenção!</strong><br>
+                        Esta ocorrência está atrasada!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Histórico de Status -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Histórico</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Ocorrência Aberta</h6>
+                                <p class="timeline-text">{{ ocorrencia.data_abertura|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        
+                        {% if ocorrencia.data_resolucao %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Ocorrência Resolvida</h6>
+                                <p class="timeline-text">{{ ocorrencia.data_resolucao|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if ocorrencia.data_fechamento %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-secondary"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Ocorrência Fechada</h6>
+                                <p class="timeline-text">{{ ocorrencia.data_fechamento|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    padding-left: 10px;
+}
+
+.timeline-title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.timeline-text {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %} 

@@ -1,1684 +1,1331 @@
+# -*- coding: utf-8 -*-
+"""
+Views do sistema de gestão operacional de vendas
+"""
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, FormView
-from django.urls import reverse_lazy, reverse
-from django.db.models import Count, Q, Sum, F
-from django.contrib.auth.models import User
-from .models import Venda, Perfil, Consignacao, AssinaturaDigital, EstoqueMoto, Cliente
-from .forms import VendaForm, ConsignacaoForm, ConsignacaoVendaForm, PerfilForm, UsuarioCreateForm, UsuarioUpdateForm, AlterarSenhaForm, EstoqueMotoForm, ClienteForm
-import pandas as pd
-from django.http import JsonResponse, FileResponse, HttpResponse, Http404
 from django.contrib import messages
-from django.conf import settings
-import os
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.forms import AuthenticationForm
+from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia
+from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, ClienteForm
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
 from django.utils import timezone
-from datetime import timedelta
-from django.contrib.auth.models import Group
-from django.views.decorators.csrf import csrf_exempt
-import json
-import decimal
-from docx import Document
-from xhtml2pdf import pisa
-from django.template.loader import get_template
+from datetime import datetime
+from .importers import DataImporter
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+import csv
+import io
+from decimal import Decimal
 
-def is_master(user):
-    try:
-        return user.perfil.tipo == 'master'
-    except:
-        return False
+def login_view(request):
+    """View de login do sistema"""
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = authenticate(
+                username=form.cleaned_data.get('username'),
+                password=form.cleaned_data.get('password')
+            )
+            if user:
+                login(request, user)
+                return redirect('core:dashboard')
+            else:
+                messages.error(request, 'Usuário ou senha inválidos.')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'core/login.html', {'form': form})
 
-def is_gerente(user):
-    try:
-        return user.perfil.tipo in ['master', 'gerente']
-    except:
-        return False
+def logout_view(request):
+    """View de logout do sistema"""
+    logout(request)
+    messages.success(request, 'Logout realizado com sucesso.')
+    return redirect('core:login')
 
 @login_required
 def dashboard(request):
-    if is_master(request.user) or is_gerente(request.user):
-        vendedor_id = request.GET.get('vendedor')
-        vendedores = User.objects.filter(groups__name='vendedores')
-        
-        # Vendas diretas
-        vendas = Venda.objects.all()
-        if vendedor_id:
-            vendas = vendas.filter(vendedor_id=vendedor_id)
-            
-        # Consignações vendidas
-        consignacoes_vendidas = Consignacao.objects.filter(status='VENDIDO')
-        if vendedor_id:
-            consignacoes_vendidas = consignacoes_vendidas.filter(vendedor_responsavel_id=vendedor_id)
-            
-        # Totais
-        numero_atendimentos = vendas.count() + consignacoes_vendidas.count()
-        numero_fechamentos = vendas.filter(status='VENDIDO').count() + consignacoes_vendidas.count()
-        
-        # Ranking de vendedores combinando vendas diretas e consignações vendidas
-        # Primeiro obtemos as estatísticas de vendas diretas
-        ranking_vendas = (
-            Venda.objects.values('vendedor__username', 'vendedor_id')
-            .annotate(
-                total_atendimentos=Count('id'),
-                fechamentos=Count('id', filter=Q(status='VENDIDO'))
-            )
-        )
-        
-        # Depois obtemos estatísticas de consignações vendidas
-        ranking_consignacoes = (
-            Consignacao.objects.filter(status='VENDIDO')
-            .values('vendedor_responsavel__username', 'vendedor_responsavel_id')
-            .annotate(
-                total_atendimentos=Count('id'),
-                fechamentos=Count('id')
-            )
-        )
-        
-        # Combinamos os dois rankings em um dicionário
-        ranking_combinado = {}
-        
-        # Adicionar dados de vendas diretas
-        for item in ranking_vendas:
-            vendedor_id = item['vendedor_id']
-            vendedor_nome = item['vendedor__username']
-            
-            if vendedor_id not in ranking_combinado:
-                ranking_combinado[vendedor_id] = {
-                    'vendedor_id': vendedor_id,
-                    'vendedor__username': vendedor_nome,
-                    'total_atendimentos': 0,
-                    'fechamentos': 0
-                }
-                
-            ranking_combinado[vendedor_id]['total_atendimentos'] += item['total_atendimentos']
-            ranking_combinado[vendedor_id]['fechamentos'] += item['fechamentos']
-        
-        # Adicionar dados de consignações vendidas
-        for item in ranking_consignacoes:
-            vendedor_id = item['vendedor_responsavel_id']
-            vendedor_nome = item['vendedor_responsavel__username']
-            
-            if vendedor_id not in ranking_combinado:
-                ranking_combinado[vendedor_id] = {
-                    'vendedor_id': vendedor_id,
-                    'vendedor__username': vendedor_nome,
-                    'total_atendimentos': 0,
-                    'fechamentos': 0
-                }
-                
-            ranking_combinado[vendedor_id]['total_atendimentos'] += item['total_atendimentos']
-            ranking_combinado[vendedor_id]['fechamentos'] += item['fechamentos']
-        
-        # Convertemos o dicionário para lista e ordenamos
-        ranking = sorted(
-            ranking_combinado.values(),
-            key=lambda x: (-x['fechamentos'], -x['total_atendimentos'])
-        )
-        
-        context = {
-            'numero_atendimentos': numero_atendimentos,
-            'numero_fechamentos': numero_fechamentos,
-            'vendas': vendas,
-            'vendedores': vendedores,
-            'vendedor_selecionado': int(vendedor_id) if vendedor_id else None,
-            'ranking': ranking,
-            'is_gerente': True,  # Flag para controlar exibição no template
-        }
-    else:
-        vendas = Venda.objects.filter(vendedor=request.user)
-        consignacoes_vendidas = Consignacao.objects.filter(vendedor_responsavel=request.user, status='VENDIDO')
-        
-        numero_atendimentos = vendas.count() + consignacoes_vendidas.count()
-        numero_fechamentos = vendas.filter(status='VENDIDO').count() + consignacoes_vendidas.count()
-        
-        context = {
-            'numero_atendimentos': numero_atendimentos,
-            'numero_fechamentos': numero_fechamentos,
-            'vendas': vendas,
-            'is_gerente': False,
-        }
+    """Dashboard principal do sistema"""
+    hoje = timezone.now().date()
+    primeiro_dia_mes = hoje.replace(day=1)
+
+    total_clientes = Cliente.objects.count()
+    total_motos = Motocicleta.objects.count()
+    motos_estoque = Motocicleta.objects.filter(status='estoque').count()
+    vendas_mes = Venda.objects.filter(data_venda__gte=primeiro_dia_mes).count()
+    consignacoes = Consignacao.objects.filter(status='disponivel').count()
+
+    # Dados para gráfico de ranking de vendedores
+    ranking_vendedores = Usuario.objects.filter(
+        vendas_realizadas__status='vendido'
+    ).annotate(
+        total_vendas=Count('vendas_realizadas', filter=Q(vendas_realizadas__status='vendido'))
+    ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
+
+    # Dados para gráfico de motos mais vendidas
+    ranking_motos = Motocicleta.objects.filter(
+        vendas__status='vendido'
+    ).annotate(
+        total_vendas=Count('vendas', filter=Q(vendas__status='vendido'))
+    ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
+
+    context = {
+        'total_clientes': total_clientes,
+        'total_motos': total_motos,
+        'motos_estoque': motos_estoque,
+        'vendas_mes': vendas_mes,
+        'consignacoes': consignacoes,
+        'ranking_vendedores': ranking_vendedores,
+        'ranking_motos': ranking_motos,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
     return render(request, 'core/dashboard.html', context)
 
 @login_required
-def dashboard_vendas(request):
-    hoje = timezone.now().date()
+def cliente_list(request):
+    """Lista de clientes com filtros e paginação"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_cliente')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar clientes.'})
+    query = request.GET.get('q', '').strip()
+    tipo = request.GET.get('tipo', '')
+    status = request.GET.get('status', 'ativo')  # Filtro de status
+    tipos = Cliente.TIPO_CHOICES
     
-    # Obter filtros de mês e ano dos parâmetros GET, ou usar todos se não informados
-    mes = request.GET.get('mes')
-    ano = request.GET.get('ano')
-    
-    # Se não tiver filtros, pegue todas as vendas, caso contrário filtre por mês/ano
-    if mes and ano:
-        mes_atual = int(mes)
-        ano_atual = int(ano)
-        vendas = Venda.objects.filter(data_atendimento__year=ano_atual, data_atendimento__month=mes_atual)
+    # Filtrar apenas clientes ativos por padrão
+    if status == 'ativo':
+        clientes = Cliente.objects.filter(ativo=True).order_by('-data_cadastro')
+    elif status == 'inativo':
+        clientes = Cliente.objects.filter(ativo=False).order_by('-data_cadastro')
     else:
-        mes_atual = hoje.month
-        ano_atual = hoje.year
-        vendas = Venda.objects.exclude(data_atendimento__isnull=True)  # Pega todas as vendas com data
+        clientes = Cliente.objects.all().order_by('-data_cadastro')
     
-    atendimentos = vendas.count()
-    vendas_fechadas = vendas.filter(status='VENDIDO')
-    total_vendas = vendas_fechadas.count()
-
-    # Como não há campo de valor, ticket médio será apenas o número de vendas
-    valor_total = total_vendas
-    ticket_medio = total_vendas
-
-    taxa_conversao = (total_vendas / atendimentos * 100) if atendimentos else 0
-
-    # Agrupamentos com tratamento para nulos
-    vendas_por_vendedor = vendas_fechadas.values('vendedor__username').annotate(
-        qtd=Count('id')
-    ).order_by('-qtd')
+    # Filtro de busca
+    if query:
+        clientes = clientes.filter(
+            Q(nome__icontains=query) |
+            Q(cpf_cnpj__icontains=query) |
+            Q(telefone__icontains=query)
+        )
+    # Filtro de tipo
+    if tipo:
+        clientes = clientes.filter(tipo=tipo)
     
-    # Tratar campos nulos para origem
-    vendas_por_origem = vendas_fechadas.values('origem').annotate(
-        qtd=Count('id')
-    )
-    # Substituir valores nulos por "Não informado"
-    vendas_por_origem = [
-        {'origem': v['origem'] if v['origem'] else 'Não informado', 'qtd': v['qtd']} 
-        for v in vendas_por_origem
-    ]
+    # Paginação
+    paginator = Paginator(clientes, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
-    # Tratar campos nulos para forma_pagamento
-    vendas_por_pagamento = vendas_fechadas.values('forma_pagamento').annotate(
-        qtd=Count('id')
-    )
-    # Substituir valores nulos por "Não informado"
-    vendas_por_pagamento = [
-        {'forma_pagamento': v['forma_pagamento'] if v['forma_pagamento'] else 'Não informado', 'qtd': v['qtd']} 
-        for v in vendas_por_pagamento
-    ]
-    
-    vendas_por_status = vendas.values('status').annotate(qtd=Count('id'))
-    # Substituir valores nulos por "Não informado"
-    vendas_por_status = [
-        {'status': v['status'] if v['status'] else 'Não informado', 'qtd': v['qtd']} 
-        for v in vendas_por_status
-    ]
-    
-    vendas_por_dia = vendas_fechadas.values('data_atendimento').annotate(qtd=Count('id')).order_by('data_atendimento')
-
     context = {
-        'total_vendas': total_vendas,
-        'taxa_conversao': round(taxa_conversao, 2),
-        'ticket_medio': round(ticket_medio, 2),
-        'vendas_por_vendedor': list(vendas_por_vendedor),
-        'vendas_por_origem': vendas_por_origem,
-        'vendas_por_pagamento': vendas_por_pagamento,
-        'vendas_por_status': vendas_por_status,
-        'vendas_por_dia': list(vendas_por_dia),
-        'mes_atual': mes_atual,
-        'ano_atual': ano_atual,
-        'tem_vendas': total_vendas > 0,  # Flag para verificar se há vendas
+        'page_obj': page_obj,
+        'query': query,
+        'tipo': tipo,
+        'status': status,
+        'tipos': tipos,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
     }
-    
-    return render(request, 'core/dashboard_vendas.html', context)
+    return render(request, 'core/cliente_list.html', context)
 
-class VendaListView(LoginRequiredMixin, ListView):
-    model = Venda
-    template_name = 'core/venda_list.html'
-    context_object_name = 'vendas'
-    paginate_by = 10
-
-    def get_queryset(self):
-        # Obtém vendas diretas
-        if is_master(self.request.user) or is_gerente(self.request.user):
-            queryset = Venda.objects.all().select_related('vendedor')
-        else:
-            queryset = Venda.objects.filter(vendedor=self.request.user)
-        
-        # Filtro por vendedor
-        vendedor_id = self.request.GET.get('vendedor')
-        if vendedor_id and (is_master(self.request.user) or is_gerente(self.request.user)):
-            queryset = queryset.filter(vendedor_id=vendedor_id)
-        
-        # Ordenação
-        ordem = self.request.GET.get('ordem', '-data_atendimento')  # Padrão: mais recente primeiro
-        if ordem == 'data_asc':
-            queryset = queryset.order_by('data_atendimento')
-        elif ordem == 'data_desc':
-            queryset = queryset.order_by('-data_atendimento')
-        elif ordem == 'vendedor_asc':
-            queryset = queryset.order_by('vendedor__username')
-        elif ordem == 'vendedor_desc':
-            queryset = queryset.order_by('-vendedor__username')
-        
-        # Obter consignações vendidas e convertê-las para objetos tipo Venda
-        if is_master(self.request.user) or is_gerente(self.request.user):
-            consignacoes_vendidas = Consignacao.objects.filter(status='VENDIDO').select_related('vendedor_responsavel')
-            if vendedor_id:
-                consignacoes_vendidas = consignacoes_vendidas.filter(vendedor_responsavel_id=vendedor_id)
-        else:
-            consignacoes_vendidas = Consignacao.objects.filter(
-                status='VENDIDO', 
-                vendedor_responsavel=self.request.user
-            ).select_related('vendedor_responsavel')
-        
-        # Converter consignações em objetos tipo Venda para exibição unificada
-        vendas_lista = list(queryset)
-        for consignacao in consignacoes_vendidas:
-            venda_virtual = Venda(
-                nome_cliente=consignacao.nome_comprador or consignacao.nome_proprietario,
-                contato=consignacao.contato_proprietario,
-                modelo_interesse=f"{consignacao.marca} {consignacao.modelo}",
-                status='VENDIDO',
-                data_atendimento=consignacao.data_venda or consignacao.data_entrada,
-                vendedor=consignacao.vendedor_responsavel,
-                observacoes=f"Venda de consignação: {consignacao.marca} {consignacao.modelo} (#{consignacao.id})"
-            )
-            venda_virtual.id = f"C{consignacao.id}"  # Prefixo C para identificar consignações
-            venda_virtual.is_consignacao = True
-            vendas_lista.append(venda_virtual)
-        
-        # Ordenação manual da lista combinada
-        if ordem == 'data_asc':
-            vendas_lista.sort(key=lambda x: x.data_atendimento or timezone.now().date())
-        elif ordem == 'data_desc' or ordem == '-data_atendimento':
-            vendas_lista.sort(key=lambda x: x.data_atendimento or timezone.now().date(), reverse=True)
-        elif ordem == 'vendedor_asc':
-            vendas_lista.sort(key=lambda x: x.vendedor.username if x.vendedor else '')
-        elif ordem == 'vendedor_desc':
-            vendas_lista.sort(key=lambda x: x.vendedor.username if x.vendedor else '', reverse=True)
-        
-        return vendas_lista
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['show_vendedor'] = is_master(self.request.user) or is_gerente(self.request.user)
-        
-        # Adiciona a ordem atual ao contexto
-        context['ordem_atual'] = self.request.GET.get('ordem', '-data_atendimento')
-        
-        # Adiciona lista de vendedores para o filtro
-        if context['show_vendedor']:
-            context['vendedores'] = User.objects.filter(groups__name='vendedores')
-        
-        # Adiciona o vendedor selecionado ao contexto
-        vendedor_id = self.request.GET.get('vendedor')
-        if vendedor_id:
-            vendedor = User.objects.filter(id=vendedor_id).first()
-            context['vendedor_selecionado'] = vendedor_id
-            context['vendedor_nome'] = vendedor.get_full_name() or vendedor.username if vendedor else ''
-        
-        return context
-
-class VendaCreateView(LoginRequiredMixin, CreateView):
-    model = Venda
-    form_class = VendaForm
-    template_name = 'core/venda_form.html'
-    success_url = reverse_lazy('core:venda_list')
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Inicializa o atributo object para evitar erros de acesso
-        self.object = None
-    
-    def form_valid(self, form):
-        form.instance.vendedor = self.request.user
-        messages.success(self.request, "Venda registrada com sucesso!")
-        return super().form_valid(form)
-        
-    def form_invalid(self, form):
-        # Exibe mensagens de erro específicas
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(self.request, f"Erro no campo {field}: {error}")
-        
-        return super().form_invalid(form)
-        
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        
-        # Adiciona data de hoje para os formulários
-        context['hoje'] = timezone.now().date()
-        
-        # Processa os parâmetros da solicitação
-        termo_busca = self.request.POST.get('termo_busca', '')
-        
-        # Se houver um termo de busca, procura clientes
-        if termo_busca:
-            resultados = Cliente.objects.filter(
-                Q(nome__icontains=termo_busca) | 
-                Q(cpf__icontains=termo_busca) | 
-                Q(telefone__icontains=termo_busca)
-            )[:10]
-            context['resultados_busca'] = resultados
-            context['termo_busca'] = termo_busca
-            
-        # Busca de motos pelo parâmetro GET
-        termo_moto = self.request.GET.get('termo_moto', '')
-        if termo_moto:
-            # Filtra motos disponíveis que correspondem ao termo de busca
-            motos = EstoqueMoto.objects.filter(
-                ~Q(status='VENDIDO') &
-                (Q(modelo__icontains=termo_moto) | 
-                 Q(marca__icontains=termo_moto) | 
-                 Q(placa__icontains=termo_moto) | 
-                 Q(chassi__icontains=termo_moto) |
-                 Q(matricula__icontains=termo_moto))
-            )[:10]
-            context['resultados_motos'] = motos
-            context['termo_moto'] = termo_moto
-            
-        # Busca de proprietários
-        termo_proprietario = self.request.GET.get('termo_proprietario', '')
-        if termo_proprietario:
-            proprietarios = Cliente.objects.filter(
-                Q(nome__icontains=termo_proprietario) | 
-                Q(cpf__icontains=termo_proprietario) | 
-                Q(telefone__icontains=termo_proprietario)
-            )[:10]
-            context['resultados_proprietarios'] = proprietarios
-            context['termo_proprietario'] = termo_proprietario
-            
-        # Busca de fornecedores
-        termo_fornecedor = self.request.GET.get('termo_fornecedor', '')
-        if termo_fornecedor:
-            fornecedores = Cliente.objects.filter(
-                Q(nome__icontains=termo_fornecedor) | 
-                Q(cpf__icontains=termo_fornecedor) | 
-                Q(telefone__icontains=termo_fornecedor)
-            )[:10]
-            context['resultados_fornecedores'] = fornecedores
-            context['termo_fornecedor'] = termo_fornecedor
-        
-        # Se um cliente for selecionado
-        cliente_id = self.request.session.get('cliente_selecionado_id')
-        if cliente_id:
-            try:
-                cliente = Cliente.objects.get(id=cliente_id)
-                context['cliente_selecionado'] = cliente
-                
-                # Verifica se o cliente tem motos
-                motos_cliente = EstoqueMoto.objects.filter(proprietario=cliente)
-                if motos_cliente.exists():
-                    context['cliente_tem_motos'] = True
-                    context['motos_cliente'] = motos_cliente
-            except Cliente.DoesNotExist:
-                # Remove da sessão se o cliente não existir mais
-                if 'cliente_selecionado_id' in self.request.session:
-                    del self.request.session['cliente_selecionado_id']
-        
-        # Se uma moto foi selecionada
-        moto_id = self.request.session.get('moto_selecionada_id')
-        if moto_id:
-            try:
-                moto = EstoqueMoto.objects.get(id=moto_id)
-                context['moto_selecionada'] = moto
-            except EstoqueMoto.DoesNotExist:
-                # Remove da sessão se a moto não existir mais
-                if 'moto_selecionada_id' in self.request.session:
-                    del self.request.session['moto_selecionada_id']
-        
-        return context
-        
-    def get_initial(self):
-        initial = super().get_initial()
-        
-        # Prepopula o formulário com o cliente selecionado, se houver
-        cliente_id = self.request.session.get('cliente_selecionado_id')
-        if cliente_id:
-            try:
-                cliente = Cliente.objects.get(id=cliente_id)
-                initial['cliente'] = cliente
-                initial['nome_cliente'] = cliente.nome
-                
-                # Preenche automaticamente outros campos relacionados ao cliente
-                if cliente.telefone:
-                    initial['contato'] = cliente.telefone
-            except Cliente.DoesNotExist:
-                pass
-        
-        # Prepopula o formulário com a moto selecionada, se houver
-        moto_id = self.request.session.get('moto_selecionada_id')
-        if moto_id:
-            try:
-                moto = EstoqueMoto.objects.get(id=moto_id)
-                initial['moto'] = moto
-                
-                # Preenche automaticamente o valor da moto
-                if moto.valor:
-                    initial['valor_venda'] = moto.valor
-                    
-                # Preenche automaticamente o fornecedor/proprietário da moto
-                if moto.proprietario:
-                    initial['proprietario'] = moto.proprietario
-                    initial['fornecedor'] = moto.proprietario
-            except EstoqueMoto.DoesNotExist:
-                pass
-                
-        # Prepopula o proprietário selecionado, se houver
-        proprietario_id = self.request.session.get('proprietario_selecionado_id')
-        if proprietario_id:
-            try:
-                proprietario = Cliente.objects.get(id=proprietario_id)
-                initial['proprietario'] = proprietario
-                # Remover da sessão após usar
-                del self.request.session['proprietario_selecionado_id']
-            except Cliente.DoesNotExist:
-                pass
-                
-        # Prepopula o fornecedor selecionado, se houver
-        fornecedor_id = self.request.session.get('fornecedor_selecionado_id')
-        if fornecedor_id:
-            try:
-                fornecedor = Cliente.objects.get(id=fornecedor_id)
-                initial['fornecedor'] = fornecedor
-                # Remover da sessão após usar
-                del self.request.session['fornecedor_selecionado_id']
-            except Cliente.DoesNotExist:
-                pass
-        
-        # Define valores padrão
-        initial['vendedor'] = self.request.user
-        if not initial.get('data_atendimento'):
-            initial['data_atendimento'] = timezone.now().date()
-        
-        return initial
-    
-    def post(self, request, *args, **kwargs):
-        # Debug para entender o que está sendo enviado
-        print("==== POST DATA ====")
-        for key, value in request.POST.items():
-            print(f"{key}: {value}")
-        print("==================")
-        
-        # Tratar formulário de teste (simplificado)
-        if 'salvar_teste' in request.POST:
-            print("Processando formulário de teste simplificado")
-            
-            # Cria um objeto Venda com os dados básicos
-            venda = Venda(
-                nome_cliente=request.POST.get('nome_cliente', 'Cliente Teste'),
-                modelo_interesse=request.POST.get('modelo_interesse', 'Moto Teste'),
-                valor_venda=request.POST.get('valor_venda', 10000),
-                data_atendimento=timezone.now().date(),
-                vendedor=request.user,
-                status='EM NEGOCIAÇÃO'
-            )
-            
-            # Salva o objeto no banco de dados
-            try:
-                venda.save()
-                print(f"Venda de teste criada com sucesso! ID: {venda.id}")
-                messages.success(request, f"Venda de teste criada com sucesso! ID: {venda.id}")
-                return redirect('core:venda_list')
-            except Exception as e:
-                print(f"Erro ao salvar venda de teste: {str(e)}")
-                messages.error(request, f"Erro ao salvar venda de teste: {str(e)}")
-                return self.form_invalid(self.get_form())
-        
-        # Verifica se estamos lidando com uma solicitação de busca
-        if 'buscar_cliente' in request.POST:
-            print("Processando busca de cliente")
-            return super().get(request, *args, **kwargs)
-            
-        # Verifica se estamos lidando com uma solicitação de seleção de cliente
-        if 'selecionar_cliente' in request.POST and 'cliente_id' in request.POST:
-            print("Processando seleção de cliente")
-            cliente_id = request.POST['cliente_id']
-            request.session['cliente_selecionado_id'] = cliente_id
-            return redirect('core:venda_create')
-            
-        # Verifica se estamos lidando com uma solicitação de seleção de moto
-        if 'selecionar_moto' in request.POST and 'moto_id' in request.POST:
-            print("Processando seleção de moto")
-            moto_id = request.POST['moto_id']
-            request.session['moto_selecionada_id'] = moto_id
-            
-            # Se tiver um termo de busca na sessão, mantém para redirecionar de volta à busca
-            redirect_params = {}
-            termo_moto_anterior = request.session.get('termo_moto')
-            if termo_moto_anterior:
-                redirect_params['termo_moto'] = termo_moto_anterior
-                
-            # Redireciona com parâmetros, se houver
-            if redirect_params:
-                base_url = reverse('core:venda_create')
-                querystring = '&'.join([f"{k}={v}" for k, v in redirect_params.items()])
-                return redirect(f"{base_url}?{querystring}")
-            else:
-                return redirect('core:venda_create')
-
-        # Verifica se estamos lidando com uma solicitação de seleção de proprietário
-        if 'selecionar_proprietario' in request.POST and 'proprietario_id' in request.POST:
-            print("Processando seleção de proprietário")
-            proprietario_id = request.POST['proprietario_id']
-            request.session['proprietario_selecionado_id'] = proprietario_id
-            
-            # Copia os parâmetros de busca relevantes
-            redirect_params = {}
-            params_to_preserve = ['termo_proprietario', 'termo_fornecedor', 'termo_moto']
-            for param in params_to_preserve:
-                if param in request.GET:
-                    redirect_params[param] = request.GET[param]
-                    
-            # Redireciona com parâmetros, se houver
-            if redirect_params:
-                base_url = reverse('core:venda_create')
-                querystring = '&'.join([f"{k}={v}" for k, v in redirect_params.items()])
-                return redirect(f"{base_url}?{querystring}")
-            else:
-                return redirect('core:venda_create')
-                
-        # Verifica se estamos lidando com uma solicitação de seleção de fornecedor
-        if 'selecionar_fornecedor' in request.POST and 'fornecedor_id' in request.POST:
-            print("Processando seleção de fornecedor")
-            fornecedor_id = request.POST['fornecedor_id']
-            request.session['fornecedor_selecionado_id'] = fornecedor_id
-            
-            # Copia os parâmetros de busca relevantes
-            redirect_params = {}
-            params_to_preserve = ['termo_proprietario', 'termo_fornecedor', 'termo_moto']
-            for param in params_to_preserve:
-                if param in request.GET:
-                    redirect_params[param] = request.GET[param]
-                    
-            # Redireciona com parâmetros, se houver
-            if redirect_params:
-                base_url = reverse('core:venda_create')
-                querystring = '&'.join([f"{k}={v}" for k, v in redirect_params.items()])
-                return redirect(f"{base_url}?{querystring}")
-            else:
-                return redirect('core:venda_create')
-        
-        # Se for o botão principal de salvar ou qualquer envio normal do formulário
-        # que não tenha ações específicas, vamos processar como um formulário de venda
-        print("Processando formulário principal")
-        form = self.get_form()
+@login_required
+def cliente_create(request):
+    """Criação de novo cliente"""
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
         if form.is_valid():
-            print("Formulário válido, salvando...")
-            return self.form_valid(form)
+            cliente = form.save()
+            messages.success(request, 'Cliente registrado com sucesso!')
+            return redirect('core:cliente_list')
         else:
-            print("Formulário inválido, exibindo erros:")
-            for field, errors in form.errors.items():
-                print(f"Campo {field}: {errors}")
-            return self.form_invalid(form)
-        
-    def get(self, request, *args, **kwargs):
-        # Salva o termo de busca de moto na sessão para uso posterior
-        termo_moto = request.GET.get('termo_moto')
-        if termo_moto:
-            request.session['termo_moto'] = termo_moto
-            
-        return super().get(request, *args, **kwargs)
-
-class VendaUpdateView(LoginRequiredMixin, UpdateView):
-    model = Venda
-    form_class = VendaForm
-    template_name = 'core/venda_form.html'
-    success_url = reverse_lazy('core:venda_list')
-
-    def get_queryset(self):
-        if is_master(self.request.user) or is_gerente(self.request.user):
-            return Venda.objects.all()
-        return Venda.objects.filter(vendedor=self.request.user)
-        
-    def form_valid(self, form):
-        # Garante que o nome_cliente seja preenchido mesmo se não selecionar um cliente cadastrado
-        if not form.instance.cliente and form.cleaned_data.get('nome_cliente'):
-            form.instance.nome_cliente = form.cleaned_data.get('nome_cliente')
-            
-        # Se tiver cliente mas não tiver nome_cliente, usa o nome do cliente
-        elif form.instance.cliente and not form.cleaned_data.get('nome_cliente'):
-            form.instance.nome_cliente = form.instance.cliente.nome
-        
-        messages.success(self.request, "Venda atualizada com sucesso!")
-        return super().form_valid(form)
-        
-    def form_invalid(self, form):
-        # Exibe mensagens de erro específicas
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(self.request, f"Erro no campo {field}: {error}")
-        
-        return super().form_invalid(form)
-
-class VendaDeleteView(LoginRequiredMixin, DeleteView):
-    model = Venda
-    template_name = 'core/venda_confirm_delete.html'
-    success_url = reverse_lazy('core:venda_list')
-
-    def get_queryset(self):
-        if is_master(self.request.user) or is_gerente(self.request.user):
-            return Venda.objects.all()
-        return Venda.objects.filter(vendedor=self.request.user)
-
-@login_required
-def resumo_gerencial(request):
-    if not is_gerente(request.user):
-        return redirect('dashboard')
-    
-    # Obter vendas diretas
-    vendas = Venda.objects.all()
-    
-    # Obter consignações vendidas
-    consignacoes = Consignacao.objects.filter(status='VENDIDO')
-    
-    # Calcular estatísticas para vendas diretas
-    vendas_por_vendedor = vendas.values('vendedor__username', 'vendedor_id').annotate(
-        total_vendas=Count('id', filter=Q(status='VENDIDO')),
-        total_atendimentos=Count('id')
-    )
-    
-    # Calcular estatísticas para consignações vendidas
-    consignacoes_por_vendedor = consignacoes.values(
-        'vendedor_responsavel__username', 'vendedor_responsavel_id'
-    ).annotate(
-        total_vendas=Count('id'),
-        total_atendimentos=Count('id')
-    )
-    
-    # Combinar estatísticas
-    estatisticas_combinadas = {}
-    
-    # Adicionar dados de vendas diretas
-    for item in vendas_por_vendedor:
-        vendedor_id = item['vendedor_id']
-        vendedor_nome = item['vendedor__username']
-        
-        if vendedor_id not in estatisticas_combinadas:
-            estatisticas_combinadas[vendedor_id] = {
-                'vendedor__username': vendedor_nome,
-                'vendedor_id': vendedor_id,
-                'total_vendas': 0,
-                'total_atendimentos': 0
-            }
-            
-        estatisticas_combinadas[vendedor_id]['total_vendas'] += item['total_vendas']
-        estatisticas_combinadas[vendedor_id]['total_atendimentos'] += item['total_atendimentos']
-    
-    # Adicionar dados de consignações vendidas
-    for item in consignacoes_por_vendedor:
-        vendedor_id = item['vendedor_responsavel_id']
-        vendedor_nome = item['vendedor_responsavel__username']
-        
-        if vendedor_id not in estatisticas_combinadas:
-            estatisticas_combinadas[vendedor_id] = {
-                'vendedor__username': vendedor_nome,
-                'vendedor_id': vendedor_id,
-                'total_vendas': 0,
-                'total_atendimentos': 0
-            }
-            
-        estatisticas_combinadas[vendedor_id]['total_vendas'] += item['total_vendas']
-        estatisticas_combinadas[vendedor_id]['total_atendimentos'] += item['total_atendimentos']
-    
-    # Converter para lista para exibição na tabela
-    vendas_por_vendedor_combinado = list(estatisticas_combinadas.values())
-    
-    # Ordenar por total de vendas (decrescente)
-    vendas_por_vendedor_combinado = sorted(
-        vendas_por_vendedor_combinado,
-        key=lambda x: (-x['total_vendas'], -x['total_atendimentos'])
-    )
-    
-    context = {
-        'vendas_por_vendedor': vendas_por_vendedor_combinado,
-    }
-    
-    return render(request, 'core/resumo_gerencial.html', context)
-
-@login_required
-def importar_vendas(request):
-    if not (is_master(request.user) or is_gerente(request.user)):
-        messages.error(request, 'Você não tem permissão para importar vendas.')
-        return redirect('dashboard')
-    
-    if request.method == 'POST' and request.FILES.get('arquivo'):
-        arquivo = request.FILES['arquivo']
-        try:
-            # Ler o arquivo Excel
-            df = pd.read_excel(arquivo)
-            
-            # Encontrar a coluna de vendedor (aceitar variações)
-            col_vendedor = None
-            for col in df.columns:
-                if col.strip().lower() == 'vendedor':
-                    col_vendedor = col
-                    break
-            if not col_vendedor:
-                messages.error(request, 'Coluna de vendedor não encontrada. Certifique-se de que existe uma coluna chamada "vendedor".')
-                return redirect('importar-vendas')
-            
-            # Validar colunas obrigatórias
-            colunas_obrigatorias = [
-                'data_atendimento', 'nome_cliente', 'contato', 
-                'origem', 'modelo_interesse', 'forma_pagamento', 
-                'status'
-            ]
-            for coluna in colunas_obrigatorias:
-                if coluna not in df.columns:
-                    messages.error(request, f'Coluna obrigatória não encontrada: {coluna}')
-                    return redirect('importar-vendas')
-            
-            # Processar cada linha
-            vendas_importadas = 0
-            for _, row in df.iterrows():
-                try:
-                    vendedor_nome = str(row[col_vendedor]).strip()
-                    vendedor = User.objects.get(username=vendedor_nome)
-                    
-                    venda = Venda(
-                        data_atendimento=row['data_atendimento'],
-                        nome_cliente=row['nome_cliente'],
-                        contato=row['contato'],
-                        origem=row['origem'],
-                        modelo_interesse=row['modelo_interesse'],
-                        forma_pagamento=row['forma_pagamento'],
-                        status=row['status'],
-                        observacoes=row.get('observacoes', ''),
-                        vendedor=vendedor
-                    )
-                    venda.save()
-                    vendas_importadas += 1
-                except User.DoesNotExist:
-                    messages.warning(request, f'Vendedor não encontrado: {row[col_vendedor]}')
-                    continue
-                except Exception as e:
-                    messages.warning(request, f'Erro ao importar linha: {str(e)}')
-                    continue
-            
-            messages.success(request, f'{vendas_importadas} vendas importadas com sucesso!')
-            return redirect('dashboard')
-            
-        except Exception as e:
-            messages.error(request, f'Erro ao processar arquivo: {str(e)}')
-            return redirect('importar-vendas')
-            
-    return render(request, 'core/importar_vendas.html')
-
-@login_required
-def download_modelo_importacao(request):
-    if not (is_master(request.user) or is_gerente(request.user)):
-        messages.error(request, 'Você não tem permissão para baixar o modelo.')
-        return redirect('dashboard')
-    
-    file_path = os.path.join(settings.BASE_DIR, 'core', 'static', 'core', 'modelo_importacao_vendas.xlsx')
-    return FileResponse(open(file_path, 'rb'), as_attachment=True)
-
-def valor_por_extenso(valor):
-    """Converte um valor numérico para texto por extenso em português do Brasil."""
-    
-    # Trata o valor como decimal para evitar problemas de arredondamento
-    valor = decimal.Decimal(str(valor))
-    
-    # Separa reais e centavos
-    reais = int(valor)
-    centavos = int((valor - reais) * 100)
-    
-    # Listas com os nomes dos números
-    unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove']
-    dezenas = ['', 'dez', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa']
-    de_11_a_19 = ['', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove']
-    centenas = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos']
-    milhares = ['', 'mil', 'milhão', 'bilhão', 'trilhão']
-    milhares_plural = ['', 'mil', 'milhões', 'bilhões', 'trilhões']
-    
-    # Função para converter número até 999
-    def converter_ate_999(numero):
-        if numero == 0:
-            return ''
-        elif numero == 100:
-            return 'cem'
-        elif numero < 10:
-            return unidades[numero]
-        elif numero < 20:
-            return de_11_a_19[numero - 10]
-        else:
-            dezena = dezenas[numero // 10]
-            unidade = unidades[numero % 10]
-            if unidade:
-                return f"{dezena} e {unidade}"
-            return dezena
-            
-    # Função para converter centenas
-    def converter_centena(numero):
-        if numero == 0:
-            return ''
-        elif numero == 100:
-            return 'cem'
-        else:
-            centena = centenas[numero // 100]
-            resto = numero % 100
-            
-            if resto == 0:
-                return centena
-            else:
-                resto_str = converter_ate_999(resto)
-                return f"{centena} e {resto_str}"
-    
-    # Se o valor for zero
-    if reais == 0 and centavos == 0:
-        return 'zero reais'
-    
-    # Parte dos reais
-    texto_reais = ''
-    
-    if reais > 0:
-        # Divide o valor em grupos de 3 dígitos
-        grupos = []
-        temp = reais
-        while temp > 0:
-            grupos.append(temp % 1000)
-            temp //= 1000
-            
-        # Converte cada grupo em texto
-        textos_grupos = []
-        for i, grupo in enumerate(grupos):
-            if grupo > 0:
-                texto_grupo = converter_centena(grupo)
-                
-                # Adiciona o sufixo (mil, milhão, etc.)
-                if i > 0:
-                    if grupo == 1:
-                        texto_grupo = f"{texto_grupo} {milhares[i]}"
-                    else:
-                        texto_grupo = f"{texto_grupo} {milhares_plural[i]}"
-                        
-                textos_grupos.append(texto_grupo)
-        
-        # Junta os textos dos grupos
-        textos_grupos.reverse()
-        
-        if len(textos_grupos) == 1:
-            texto_reais = textos_grupos[0]
-        else:
-            texto_reais = " e ".join(textos_grupos)
-            # Substituir a última ocorrência de " e " por " e "
-            ultima_ocorrencia = texto_reais.rfind(" e ")
-            if ultima_ocorrencia != -1 and ultima_ocorrencia != 0:
-                texto_reais = texto_reais[:ultima_ocorrencia] + " e " + texto_reais[ultima_ocorrencia + 3:]
-    
-    # Parte dos centavos
-    texto_centavos = ''
-    if centavos > 0:
-        texto_centavos = converter_ate_999(centavos)
-    
-    # Monta o texto final
-    if reais == 0:
-        return f"{texto_centavos} centavos"
-    elif reais == 1:
-        if centavos == 0:
-            return f"{texto_reais} real"
-        else:
-            return f"{texto_reais} real e {texto_centavos} centavos"
+            messages.error(request, 'Erro ao registrar cliente. Verifique os dados.')
     else:
-        if centavos == 0:
-            return f"{texto_reais} reais"
-        else:
-            return f"{texto_reais} reais e {texto_centavos} centavos"
-
-@login_required
-def gerar_contrato(request, venda_id, tipo_contrato):
-    venda = get_object_or_404(Venda, id=venda_id)
+        form = ClienteForm()
     
-    # Verificar se o usuário tem permissão para visualizar esta venda
-    if not (is_master(request.user) or is_gerente(request.user)) and venda.vendedor != request.user:
-        messages.error(request, 'Você não tem permissão para visualizar este contrato.')
-        return redirect('dashboard')
-    
-    # Data atual formatada
-    data_atual = timezone.now().strftime('%d/%m/%Y')
-    
-    # Valor padrão para a venda (pode ser substituído por um valor real se disponível)
-    valor_venda = 50000.00
-    
-    # Dados base do contrato
-    context = {
-        'cliente': {
-            'nome': venda.nome_cliente or "Nome do Cliente",
-            'contato': venda.contato or "Telefone do Cliente",
-            'cpf': "000.000.000-00",  # Campo não existe no modelo, usando valor padrão
-            'rg': "00.000.000-0",     # Campo não existe no modelo, usando valor padrão
-            'endereco': "Endereço do Cliente",  # Campo não existe no modelo, usando valor padrão
-            'nacionalidade': 'brasileiro(a)',
-            'estado_civil': 'solteiro(a)',
-            'profissao': 'profissão',
-        },
-        'veiculo': {
-            'marca': "Honda",  # Campo não existe no modelo, usando valor padrão
-            'modelo': venda.modelo_interesse or "Modelo do Veículo",
-            'ano': "2023",  # Campo não existe no modelo, usando valor padrão
-            'modelo_ano': "2024",  # Campo não existe no modelo, usando valor padrão
-            'cor': "Prata",  # Campo não existe no modelo, usando valor padrão
-            'chassi': "0000000000000000",  # Campo não existe no modelo, usando valor padrão
-            'placa': "AAA-0000",  # Campo não existe no modelo, usando valor padrão
-            'renavam': "00000000000",  # Campo não existe no modelo, usando valor padrão
-            'km': 0,  # Campo não existe no modelo, usando valor padrão
-            'motor': "",  # Campo para número do motor
-        },
-        'venda': {
-            'valor_total': valor_venda,
-            'valor_total_extenso': valor_por_extenso(valor_venda),
-            'forma_pagamento': venda.forma_pagamento or "À Vista",
-            'forma_pagamento_detalhada': "Pagamento à vista via transferência bancária.",  # Campo não existe no modelo, usando valor padrão
-            'prazo_entrega': 5,  # Campo não existe no modelo, usando valor padrão
-            'data_venda': data_atual,  # Usando a data atual (Now)
-            'observacoes': venda.observacoes or "",
-        },
-        'vendedor': {
-            'nome': 'MARKETING PRADO MOTORS',
-            'cnpj': '02.968.496/0001-17',
-            'endereco': 'Rua Bruno Andrea, 24 - Parque das Palmeiras',
-            'cidade': 'Angra dos Reis',
-            'estado': 'RJ',
-            'cep': '23.906-410',
-            'telefone': '(24) 3365-3303',
-            'email': 'motorsprado@gmail.com',
-        },
-        'vendedor_texto_completo': 'Paraty auto zero Ltda., pessoa jurídica de direito privado, inscrita sob CNPJ 02.968.496/0001-17, com sede na Rua Bruno Andrea N° 24 – Parque das palmeiras- Angra dos reis – RJ – CEP: 23.906-410, neste ato representada por Alessandro Correa Barbosa, brasileiro, empresário, portador da carteira de identidade RG: 21.818.188-1, inscrito no CPF: 118.921.797-09.',
-        'data_atual': data_atual,
-    }
-    
-    # Adicionar dados específicos para consignação
-    if tipo_contrato == 'consignacao':
-        context['venda'].update({
-            'prazo_consignacao': 30,  # Exemplo: 30 dias
-            'comissao': 5,            # Exemplo: 5% de comissão
-        })
-    
-    # Escolher o template baseado no tipo de contrato
-    templates = {
-        'compra_venda': 'core/contratos_html/contrato_venda.html',
-        'consignacao': 'core/contratos_html/contrato_consignacao.html',
-        'sem_garantia': 'core/contratos_html/contrato_sem_garantia.html',
-        'veiculo_usado': 'core/contratos_html/contrato_veiculo_usado.html',
-        'sem_emplacamento': 'core/contratos_html/liberacao_sem_emplacamento.html',
-        'sem_intencao': 'core/contratos_html/liberacao_sem_intencao.html',
-    }
-    
-    if tipo_contrato not in templates:
-        messages.error(request, 'Tipo de contrato inválido.')
-        return redirect('venda-list')
-    
-    # Verificar se é uma requisição para nova aba
-    if request.GET.get('nova_aba'):
-        return render(request, templates[tipo_contrato], context)
-    
-    # Se não for nova aba, renderiza a página com o iframe
-    # Cria URL absoluta para garantir que o iframe carregue corretamente
-    iframe_url = request.build_absolute_uri(f"{request.path}?nova_aba=true")
-    
-    return render(request, 'core/contrato_view.html', {
-        'contrato_url': iframe_url,
-        'tipo_contrato': tipo_contrato
+    return render(request, 'core/cliente_form.html', {
+        'form': form,
+        'cliente': None,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
     })
 
-# Views de Consignação
-class ConsignacaoListView(LoginRequiredMixin, ListView):
-    model = Consignacao
-    template_name = 'core/consignacao_list.html'
-    context_object_name = 'consignacoes'
-    paginate_by = 10
-
-    def get_queryset(self):
-        queryset = Consignacao.objects.all().select_related('vendedor_responsavel') if is_master(self.request.user) or is_gerente(self.request.user) else Consignacao.objects.filter(vendedor_responsavel=self.request.user)
-        
-        # Filtro por status
-        status = self.request.GET.get('status')
-        if status:
-            queryset = queryset.filter(status=status)
-        
-        # Filtro por vendedor
-        vendedor_id = self.request.GET.get('vendedor')
-        if vendedor_id and (is_master(self.request.user) or is_gerente(self.request.user)):
-            queryset = queryset.filter(vendedor_responsavel_id=vendedor_id)
-            
-        # Filtros estilo Excel para cada coluna
-        # Filtro por marca/modelo
-        veiculo = self.request.GET.get('veiculo')
-        if veiculo:
-            queryset = queryset.filter(Q(marca__icontains=veiculo) | Q(modelo__icontains=veiculo))
-            
-        # Filtro por proprietário
-        proprietario = self.request.GET.get('proprietario')
-        if proprietario:
-            queryset = queryset.filter(nome_proprietario__icontains=proprietario)
-            
-        # Filtro por placa
-        placa = self.request.GET.get('placa')
-        if placa:
-            queryset = queryset.filter(placa__icontains=placa)
-            
-        # Filtro por valores (range)
-        valor_min = self.request.GET.get('valor_min')
-        valor_max = self.request.GET.get('valor_max')
-        if valor_min:
-            queryset = queryset.filter(valor_consignacao__gte=float(valor_min))
-        if valor_max:
-            queryset = queryset.filter(valor_consignacao__lte=float(valor_max))
-            
-        # Filtro por data de entrada (range)
-        data_inicio = self.request.GET.get('data_inicio')
-        data_fim = self.request.GET.get('data_fim')
-        if data_inicio:
-            queryset = queryset.filter(data_entrada__gte=data_inicio)
-        if data_fim:
-            queryset = queryset.filter(data_entrada__lte=data_fim)
-        
-        # Ordenação
-        ordem = self.request.GET.get('ordem', '-data_entrada')  # Padrão: mais recente primeiro
-        if ordem == 'data_asc':
-            queryset = queryset.order_by('data_entrada')
-        elif ordem == 'data_desc':
-            queryset = queryset.order_by('-data_entrada')
-        elif ordem == 'veiculo_asc':
-            queryset = queryset.order_by('marca', 'modelo')
-        elif ordem == 'veiculo_desc':
-            queryset = queryset.order_by('-marca', '-modelo')
-        elif ordem == 'proprietario_asc':
-            queryset = queryset.order_by('nome_proprietario')
-        elif ordem == 'proprietario_desc':
-            queryset = queryset.order_by('-nome_proprietario')
-        elif ordem == 'valor_asc':
-            queryset = queryset.order_by('valor_consignacao')
-        elif ordem == 'valor_desc':
-            queryset = queryset.order_by('-valor_consignacao')
-        
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['show_vendedor'] = is_master(self.request.user) or is_gerente(self.request.user)
-        
-        # Adiciona a ordem atual ao contexto
-        context['ordem_atual'] = self.request.GET.get('ordem', '-data_entrada')
-        context['status_atual'] = self.request.GET.get('status', '')
-        
-        # Adiciona todos os parâmetros de filtro ao contexto
-        context['filtros'] = {
-            'veiculo': self.request.GET.get('veiculo', ''),
-            'proprietario': self.request.GET.get('proprietario', ''),
-            'placa': self.request.GET.get('placa', ''),
-            'valor_min': self.request.GET.get('valor_min', ''),
-            'valor_max': self.request.GET.get('valor_max', ''),
-            'data_inicio': self.request.GET.get('data_inicio', ''),
-            'data_fim': self.request.GET.get('data_fim', ''),
-        }
-        
-        # Adiciona lista de vendedores para o filtro
-        if context['show_vendedor']:
-            context['vendedores'] = User.objects.filter(groups__name='vendedores')
-        
-        # Adiciona o vendedor selecionado ao contexto
-        vendedor_id = self.request.GET.get('vendedor')
-        if vendedor_id:
-            vendedor = User.objects.filter(id=vendedor_id).first()
-            context['vendedor_selecionado'] = vendedor_id
-            context['vendedor_nome'] = vendedor.get_full_name() or vendedor.username if vendedor else ''
-        
-        # Adiciona a data de hoje no contexto para verificação no template
-        context['hoje'] = timezone.now().date()
-        
-        # Estatísticas
-        context['total_disponiveis'] = Consignacao.objects.filter(status='DISPONÍVEL').count()
-        context['total_vendidos'] = Consignacao.objects.filter(status='VENDIDO').count()
-        
-        # Próximas a vencer (consignações que vencem nos próximos 7 dias)
-        hoje = timezone.now().date()
-        data_limite = hoje + timedelta(days=7)
-        context['proximas_vencer'] = Consignacao.objects.filter(
-            status='DISPONÍVEL', 
-            data_limite__gte=hoje,
-            data_limite__lte=data_limite
-        ).count()
-        
-        return context
-
-class ConsignacaoCreateView(LoginRequiredMixin, CreateView):
-    model = Consignacao
-    form_class = ConsignacaoForm
-    template_name = 'core/consignacao_form.html'
-    success_url = reverse_lazy('core:consignacao_list')
-
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        # Se não for gerente ou master, pré-seleciona o vendedor atual
-        if not is_gerente(self.request.user):
-            form.fields['vendedor_responsavel'].initial = self.request.user
-            form.fields['vendedor_responsavel'].widget.attrs['readonly'] = True
-        return form
-
-    def form_valid(self, form):
-        moto_estoque = form.cleaned_data.get('moto_estoque')
-        if not moto_estoque:
-            # Tenta encontrar o proprietário pelo nome (opcional)
-            proprietario = None
-            nome_proprietario = form.cleaned_data.get('nome_proprietario')
-            if nome_proprietario:
-                proprietario = Cliente.objects.filter(nome__iexact=nome_proprietario).first()
-            # Cria a moto no estoque
-            moto_estoque = EstoqueMoto.objects.create(
-                marca=form.cleaned_data.get('marca'),
-                modelo=form.cleaned_data.get('modelo'),
-                ano=form.cleaned_data.get('ano'),
-                cor=form.cleaned_data.get('cor'),
-                placa=form.cleaned_data.get('placa'),
-                renavam=form.cleaned_data.get('renavam'),
-                chassi=form.cleaned_data.get('chassi'),
-                categoria='CONSIGNACAO',
-                status='DISPONIVEL',
-                data_chegada=form.cleaned_data.get('data_entrada'),
-                observacao=form.cleaned_data.get('observacoes'),
-                proprietario=proprietario
-            )
-            messages.success(self.request, 'Moto cadastrada automaticamente no estoque!')
-        # (Opcional) Poderia salvar o vínculo da consignação com a moto criada, se o modelo tivesse esse campo
-        return super().form_valid(form)
-
-class ConsignacaoUpdateView(LoginRequiredMixin, UpdateView):
-    model = Consignacao
-    form_class = ConsignacaoForm
-    template_name = 'core/consignacao_form.html'
-    success_url = reverse_lazy('core:consignacao_list')
-
-    def get_queryset(self):
-        if is_master(self.request.user) or is_gerente(self.request.user):
-            return Consignacao.objects.all()
-        return Consignacao.objects.filter(vendedor_responsavel=self.request.user)
-
-    def form_valid(self, form):
-        messages.success(self.request, "Consignação atualizada com sucesso!")
-        return super().form_valid(form)
-
-class ConsignacaoDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    model = Consignacao
-    template_name = 'core/consignacao_confirm_delete.html'
-    success_url = reverse_lazy('core:consignacao_list')
+@login_required
+def cliente_detail(request, pk):
+    """Detalhes do cliente"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_cliente')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar clientes.'})
     
-    def test_func(self):
-        # Apenas gerentes e master podem excluir consignações
-        return is_gerente(self.request.user)
-
-    def get_queryset(self):
-        if is_master(self.request.user) or is_gerente(self.request.user):
-            return Consignacao.objects.all()
-        return Consignacao.objects.none()
-
-class ConsignacaoDetailView(LoginRequiredMixin, DetailView):
-    model = Consignacao
-    template_name = 'core/consignacao_detail.html'
-    context_object_name = 'consignacao'
-
-    def get_queryset(self):
-        if is_master(self.request.user) or is_gerente(self.request.user):
-            return Consignacao.objects.all()
-        return Consignacao.objects.filter(vendedor_responsavel=self.request.user)
+    cliente = get_object_or_404(Cliente, pk=pk)
+    
+    # Buscar dados relacionados
+    compras = cliente.compras.all().order_by('-data_venda')[:5]
+    motos_propriedade = cliente.motos_propriedade.all()
+    consignacoes = cliente.consignacoes.all().order_by('-data_entrada')[:5]
+    seguros = cliente.seguros.all().order_by('-data_venda')[:5]
+    
+    context = {
+        'cliente': cliente,
+        'compras': compras,
+        'motos_propriedade': motos_propriedade,
+        'consignacoes': consignacoes,
+        'seguros': seguros,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/cliente_detail.html', context)
 
 @login_required
-def registrar_venda_consignacao(request, pk):
-    consignacao = get_object_or_404(Consignacao, pk=pk)
+def cliente_update(request, pk):
+    """Atualização de cliente"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_cliente')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para editar clientes.'})
     
-    # Verificar permissões
-    if not (is_master(request.user) or is_gerente(request.user) or request.user == consignacao.vendedor_responsavel):
-        messages.error(request, "Você não tem permissão para registrar a venda desta consignação.")
+    cliente = get_object_or_404(Cliente, pk=pk)
+    if request.method == 'POST':
+        form = ClienteForm(request.POST, instance=cliente)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Cliente atualizado com sucesso!')
+            return redirect('core:cliente_detail', pk=cliente.pk)
+    else:
+        form = ClienteForm(instance=cliente)
+    
+    return render(request, 'core/cliente_form.html', {
+        'form': form,
+        'cliente': cliente,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def cliente_delete(request, pk):
+    """Exclusão de cliente"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_cliente')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir clientes.'})
+    
+    cliente = get_object_or_404(Cliente, pk=pk)
+    if request.method == 'POST':
+        cliente.ativo = False
+        cliente.save()
+        messages.success(request, 'Cliente marcado como inativo com sucesso!')
+        return redirect('core:cliente_list')
+    
+    return render(request, 'core/cliente_confirm_delete.html', {
+        'cliente': cliente,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def motocicleta_list(request):
+    """Lista de motocicletas com filtros e paginação"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_motocicleta')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar motocicletas.'})
+    
+    query = request.GET.get('q', '').strip()
+    marca = request.GET.get('marca', '')
+    modelo = request.GET.get('modelo', '')
+    ano = request.GET.get('ano', '')
+    status = request.GET.get('status', '')
+    ativo = request.GET.get('ativo', 'ativo')  # Filtro de ativo/inativo
+    
+    # Filtrar apenas motocicletas ativas por padrão
+    if ativo == 'ativo':
+        motocicletas = Motocicleta.objects.filter(ativo=True).order_by('-data_entrada')
+    elif ativo == 'inativo':
+        motocicletas = Motocicleta.objects.filter(ativo=False).order_by('-data_entrada')
+    else:
+        motocicletas = Motocicleta.objects.all().order_by('-data_entrada')
+    
+    # Filtros
+    if query:
+        motocicletas = motocicletas.filter(
+            Q(marca__icontains=query) |
+            Q(modelo__icontains=query) |
+            Q(placa__icontains=query) |
+            Q(chassi__icontains=query)
+        )
+    if marca:
+        motocicletas = motocicletas.filter(marca__icontains=marca)
+    if modelo:
+        motocicletas = motocicletas.filter(modelo__icontains=modelo)
+    if ano:
+        motocicletas = motocicletas.filter(ano=ano)
+    if status:
+        motocicletas = motocicletas.filter(status=status)
+    
+    # Paginação
+    paginator = Paginator(motocicletas, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'motocicletas': page_obj,
+        'query': query,
+        'marca': marca,
+        'modelo': modelo,
+        'ano': ano,
+        'status': status,
+        'ativo': ativo,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/motocicleta_list.html', context)
+
+@login_required
+def motocicleta_create(request):
+    """Criação de nova motocicleta"""
+    if request.method == 'POST':
+        form = MotocicletaForm(request.POST, request.FILES)
+        if form.is_valid():
+            motocicleta = form.save(commit=False)
+            # Definir o proprietário como o usuário logado se não foi especificado
+            if not motocicleta.proprietario:
+                motocicleta.proprietario = request.user
+            motocicleta.save()
+            messages.success(request, 'Motocicleta registrada com sucesso!')
+            return redirect('core:motocicleta_list')
+        else:
+            messages.error(request, 'Erro ao registrar motocicleta. Verifique os dados.')
+    else:
+        form = MotocicletaForm()
+        # Definir proprietário padrão como usuário logado
+        form.fields['proprietario'].initial = request.user
+    
+    return render(request, 'core/motocicleta_form.html', {
+        'form': form, 
+        'motocicleta': None, 
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def motocicleta_update(request, pk):
+    """Atualização de motocicleta"""
+    motocicleta = get_object_or_404(Motocicleta, pk=pk)
+    if request.method == 'POST':
+        form = MotocicletaForm(request.POST, request.FILES, instance=motocicleta)
+        if form.is_valid():
+            form.save()
+            return redirect('core:motocicleta_list')
+    else:
+        form = MotocicletaForm(instance=motocicleta)
+    return render(request, 'core/motocicleta_form.html', {
+        'form': form, 
+        'motocicleta': motocicleta, 
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def motocicleta_detail(request, pk):
+    """Detalhes da motocicleta"""
+    motocicleta = get_object_or_404(Motocicleta, pk=pk)
+    return render(request, 'core/motocicleta_detail.html', {
+        'motocicleta': motocicleta,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def motocicleta_delete(request, pk):
+    """Exclusão de motocicleta"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_motocicleta')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir motocicletas.'})
+    
+    motocicleta = get_object_or_404(Motocicleta, pk=pk)
+    if request.method == 'POST':
+        # Verificar se a moto pode ser excluída
+        if motocicleta.vendas.exists():
+            messages.error(request, 'Não é possível excluir uma motocicleta que possui vendas registradas.')
+            return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        
+        # Verificar se tem consignação
+        try:
+            consignacao = motocicleta.consignacao
+            if consignacao:
+                messages.error(request, 'Não é possível excluir uma motocicleta que possui consignação ativa.')
+                return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        except Exception:
+            pass  # Não tem consignação, pode continuar
+        
+        # Verificar se tem seguro
+        try:
+            seguro = motocicleta.seguro
+            if seguro:
+                messages.error(request, 'Não é possível excluir uma motocicleta que possui seguro ativo.')
+                return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        except Exception:
+            pass  # Não tem seguro, pode continuar
+        
+        if motocicleta.repasses.exists():
+            messages.error(request, 'Não é possível excluir uma motocicleta que possui repasses registrados.')
+            return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        
+        # Marcar como inativo (soft delete)
+        motocicleta.ativo = False
+        motocicleta.save()
+        messages.success(request, 'Motocicleta marcada como inativa com sucesso!')
+        return redirect('core:motocicleta_list')
+    
+    return render(request, 'core/motocicleta_confirm_delete.html', {
+        'moto': motocicleta,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def venda_list(request):
+    """Lista de vendas"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_venda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar vendas.'})
+    vendas = Venda.objects.all().order_by('-data_venda', '-data_atendimento')
+    return render(request, 'core/venda_list.html', {'vendas': vendas})
+
+@login_required
+def venda_create(request):
+    """Criação de nova venda"""
+    if request.method == 'POST':
+        form = VendaForm(request.POST)
+        if form.is_valid():
+            venda = form.save(commit=False)
+            # Definir o vendedor como o usuário logado se não foi especificado
+            if not venda.vendedor:
+                venda.vendedor = request.user
+            venda.save()
+            messages.success(request, 'Venda registrada com sucesso!')
+            return redirect('core:venda_list')
+    else:
+        form = VendaForm()
+        # Definir vendedor padrão como usuário logado
+        form.fields['vendedor'].initial = request.user
+    
+    return render(request, 'core/venda_form.html', {
+        'form': form,
+        'venda': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def venda_update(request, pk):
+    """Atualização de venda"""
+    venda = get_object_or_404(Venda, pk=pk)
+    if request.method == 'POST':
+        form = VendaForm(request.POST, instance=venda)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Venda atualizada com sucesso!')
+            return redirect('core:venda_list')
+    else:
+        form = VendaForm(instance=venda)
+    
+    return render(request, 'core/venda_form.html', {
+        'form': form,
+        'venda': venda,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def venda_detail(request, pk):
+    """Detalhes da venda"""
+    venda = get_object_or_404(Venda, pk=pk)
+    return render(request, 'core/venda_detail.html', {
+        'venda': venda,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def venda_delete(request, pk):
+    """Exclusão de venda"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_venda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir vendas.'})
+    
+    venda = get_object_or_404(Venda, pk=pk)
+    if request.method == 'POST':
+        # Verificar se a venda pode ser excluída
+        if venda.status == 'vendido':
+            messages.error(request, 'Não é possível excluir uma venda já concluída.')
+            return redirect('core:venda_detail', pk=venda.pk)
+        
+        venda.delete()
+        messages.success(request, 'Venda excluída com sucesso!')
+        return redirect('core:venda_list')
+    
+    return render(request, 'core/venda_confirm_delete.html', {
+        'venda': venda,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def consignacao_list(request):
+    """Lista de consignações"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_consignacao')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar consignações.'})
+    consignacoes = Consignacao.objects.all().order_by('-data_entrada')
+    return render(request, 'core/consignacao_list.html', {'consignacoes': consignacoes})
+
+@login_required
+def consignacao_create(request):
+    """Criação de nova consignação"""
+    if request.method == 'POST':
+        form = ConsignacaoForm(request.POST)
+        if form.is_valid():
+            consignacao = form.save(commit=False)
+            # Definir o vendedor responsável como o usuário logado se não foi especificado
+            if not consignacao.vendedor_responsavel:
+                consignacao.vendedor_responsavel = request.user
+            consignacao.save()
+            messages.success(request, 'Consignação registrada com sucesso!')
+            return redirect('core:consignacao_list')
+    else:
+        form = ConsignacaoForm()
+        # Definir vendedor responsável padrão como usuário logado
+        form.fields['vendedor_responsavel'].initial = request.user
+    
+    return render(request, 'core/consignacao_form.html', {
+        'form': form,
+        'consignacao': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def consignacao_update(request, pk):
+    """Atualização de consignação"""
+    consignacao = get_object_or_404(Consignacao, pk=pk)
+    if request.method == 'POST':
+        form = ConsignacaoForm(request.POST, instance=consignacao)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Consignação atualizada com sucesso!')
+            return redirect('core:consignacao_list')
+    else:
+        form = ConsignacaoForm(instance=consignacao)
+    
+    return render(request, 'core/consignacao_form.html', {
+        'form': form,
+        'consignacao': consignacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def consignacao_detail(request, pk):
+    """Detalhes da consignação"""
+    consignacao = get_object_or_404(Consignacao, pk=pk)
+    return render(request, 'core/consignacao_detail.html', {
+        'consignacao': consignacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def consignacao_delete(request, pk):
+    """Exclusão de consignação"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_consignacao')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir consignações.'})
+    
+    consignacao = get_object_or_404(Consignacao, pk=pk)
+    if request.method == 'POST':
+        # Verificar se a consignação pode ser excluída
+        if consignacao.status == 'vendido':
+            messages.error(request, 'Não é possível excluir uma consignação já vendida.')
+            return redirect('core:consignacao_detail', pk=consignacao.pk)
+        
+        consignacao.delete()
+        messages.success(request, 'Consignação excluída com sucesso!')
         return redirect('core:consignacao_list')
     
-    # Verificar se a consignação já foi vendida
-    if consignacao.status == 'VENDIDO':
-        messages.warning(request, "Esta consignação já foi vendida.")
-        return redirect('core:consignacao_detail', pk=pk)
-    
-    # Inicializar contexto para o template
-    context = {
-        'form': None,
+    return render(request, 'core/consignacao_confirm_delete.html', {
         'consignacao': consignacao,
-        'valor_venda': 0,
-        'valor_comissao': 0,
-        'valor_proprietario': 0
-    }
-    
-    if request.method == 'POST':
-        form = ConsignacaoVendaForm(request.POST, instance=consignacao)
-        
-        # Se o botão "Calcular" foi clicado
-        if 'calcular' in request.POST and form.is_valid():
-            # Não salve o formulário, apenas faça os cálculos
-            valor_venda = form.cleaned_data.get('valor_venda') or 0
-            comissao_pct = consignacao.comissao_percentual
-            
-            # Calcular valores
-            valor_comissao = (valor_venda * comissao_pct) / 100
-            valor_proprietario = valor_venda - valor_comissao
-            
-            # Adicionar ao contexto
-            context.update({
-                'form': form,
-                'valor_venda': valor_venda,
-                'valor_comissao': valor_comissao,
-                'valor_proprietario': valor_proprietario
-            })
-            
-            return render(request, 'core/consignacao_venda_form.html', context)
-            
-        # Se o botão "Confirmar Venda" foi clicado
-        elif 'confirmar' in request.POST and form.is_valid():
-            form.instance.status = 'VENDIDO'
-            if not form.instance.data_venda:
-                form.instance.data_venda = timezone.now().date()
-            form.save()
-            messages.success(request, "Venda registrada com sucesso!")
-            return redirect('core:consignacao_detail', pk=pk)
-        else:
-            context['form'] = form
-    else:
-        form = ConsignacaoVendaForm(instance=consignacao, initial={'status': 'VENDIDO', 'data_venda': timezone.now().date()})
-        context['form'] = form
-    
-    return render(request, 'core/consignacao_venda_form.html', context)
-
-@login_required
-def gerar_contrato_consignacao(request, pk):
-    consignacao = get_object_or_404(Consignacao, pk=pk)
-    
-    # Verificar permissões
-    if not (is_master(request.user) or is_gerente(request.user) or request.user == consignacao.vendedor_responsavel):
-        messages.error(request, "Você não tem permissão para gerar contratos para esta consignação.")
-        return redirect('consignacao-list')
-    
-    # Data atual formatada
-    data_atual = timezone.now().strftime('%d/%m/%Y')
-    
-    # Dados para o contrato
-    context = {
-        'consignacao': consignacao,
-        'proprietario': {
-            'nome': consignacao.nome_proprietario,
-            'cpf': consignacao.cpf_proprietario or '000.000.000-00',
-            'rg': consignacao.rg_proprietario or '00.000.000-0',
-            'endereco': consignacao.endereco_proprietario or 'Endereço do Proprietário',
-            'contato': consignacao.contato_proprietario,
-        },
-        'veiculo': {
-            'marca': consignacao.marca,
-            'modelo': consignacao.modelo,
-            'ano': consignacao.ano,
-            'cor': consignacao.cor,
-            'placa': consignacao.placa,
-            'chassi': consignacao.chassi or 'N/A',
-            'renavam': consignacao.renavam or 'N/A',
-            'motor': "",  # Campo para número do motor
-        },
-        'contrato': {
-            'valor_consignacao': consignacao.valor_consignacao,
-            'valor_consignacao_extenso': valor_por_extenso(consignacao.valor_consignacao),
-            'valor_minimo': consignacao.valor_minimo,
-            'valor_minimo_extenso': valor_por_extenso(consignacao.valor_minimo or consignacao.valor_consignacao),
-            'comissao_percentual': consignacao.comissao_percentual,
-            'data_entrada': consignacao.data_entrada,
-            'data_limite': consignacao.data_limite,
-            'prazo_dias': (consignacao.data_limite - consignacao.data_entrada).days,
-            'data_atual': data_atual,  # Adicionando a data atual também no contrato
-        },
-        'loja': {
-            'nome': 'MARKETING PRADO MOTORS',
-            'cnpj': '02.968.496/0001-17',
-            'endereco': 'Rua Bruno Andrea, 24 - Parque das Palmeiras',
-            'cidade': 'Angra dos Reis',
-            'estado': 'RJ',
-            'cep': '23.906-410',
-            'telefone': '(24) 3365-3303',
-            'email': 'motorsprado@gmail.com',
-        },
-        'loja_texto_completo': 'Paraty auto zero Ltda., pessoa jurídica de direito privado, inscrita sob CNPJ 02.968.496/0001-17, com sede na Rua Bruno Andrea N° 24 – Parque das palmeiras- Angra dos reis – RJ – CEP: 23.906-410, neste ato representada por Alessandro Correa Barbosa, brasileiro, empresário, portador da carteira de identidade RG: 21.818.188-1, inscrito no CPF: 118.921.797-09.',
-        'data_atual': data_atual,
-    }
-    
-    # Determinar qual template usar baseado no status da consignação
-    if consignacao.status == 'VENDIDO':
-        template_contrato = 'core/contratos_html/contrato_veiculo_usado.html'
-        tipo_contrato = 'Veículo Usado'
-        
-        # Adicionar dados do comprador quando vendido - usar apenas os campos disponíveis no modelo
-        context['cliente'] = {
-            'nome': consignacao.nome_comprador or "Nome do Comprador",
-            'cpf': "000.000.000-00",  # Campos não disponíveis no modelo, usando valor padrão
-            'rg': "00.000.000-0",
-            'endereco': "Endereço do Comprador", 
-            'contato': "Telefone do Comprador",
-            'nacionalidade': 'brasileiro(a)',
-            'estado_civil': 'solteiro(a)',
-            'profissao': 'profissão',
-        }
-        
-        # Adicionar dados da venda
-        valor_venda = consignacao.valor_venda or 0
-        context['venda'] = {
-            'valor_total': valor_venda,
-            'valor_total_extenso': valor_por_extenso(valor_venda),
-            'forma_pagamento': "À Vista",  # Campo não disponível no modelo, usando valor padrão
-            'data_venda': consignacao.data_venda.strftime('%d/%m/%Y') if consignacao.data_venda else data_atual,
-        }
-    else:
-        template_contrato = 'core/contratos_html/contrato_consignacao.html'
-        tipo_contrato = 'Consignação'
-    
-    # Verificar se é uma requisição para nova aba
-    if request.GET.get('nova_aba'):
-        return render(request, template_contrato, context)
-    
-    # Se não for nova aba, renderiza a página com o iframe
-    # Cria URL absoluta para garantir que o iframe carregue corretamente
-    iframe_url = request.build_absolute_uri(f"{request.path}?nova_aba=true")
-    
-    return render(request, 'core/contrato_view.html', {
-        'contrato_url': iframe_url,
-        'tipo_contrato': tipo_contrato
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
     })
 
-# Gerenciamento de Usuários
-class GerenciamentoUsuariosMixin(LoginRequiredMixin, UserPassesTestMixin):
-    def test_func(self):
-        return is_gerente(self.request.user)
+@login_required
+def seguro_list(request):
+    """Lista de seguros"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_seguro')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar seguros.'})
+    seguros = Seguro.objects.all().order_by('-data_venda')
+    return render(request, 'core/seguro_list.html', {'seguros': seguros})
 
-class UsuarioListView(GerenciamentoUsuariosMixin, ListView):
-    model = User
-    template_name = 'core/usuario_list.html'
-    context_object_name = 'usuarios'
-    
-    def get_queryset(self):
-        return User.objects.all().select_related('perfil')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['is_master'] = is_master(self.request.user)
-        return context
-
-class UsuarioCreateView(GerenciamentoUsuariosMixin, CreateView):
-    model = User
-    form_class = UsuarioCreateForm
-    template_name = 'core/usuario_form.html'
-    success_url = reverse_lazy('usuario-list')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['perfil_form'] = PerfilForm(self.request.POST)
-        else:
-            context['perfil_form'] = PerfilForm()
-        return context
-    
-    def form_valid(self, form):
-        context = self.get_context_data()
-        perfil_form = context['perfil_form']
-        if form.is_valid() and perfil_form.is_valid():
-            user = form.save()
-            
-            # Adicionar ao grupo de vendedores
-            grupo_vendedores, created = Group.objects.get_or_create(name='vendedores')
-            user.groups.add(grupo_vendedores)
-            
-            # Salvar perfil
-            perfil = perfil_form.save(commit=False)
-            perfil.usuario = user
-            perfil.save()
-            
-            messages.success(self.request, "Usuário criado com sucesso!")
-            return super().form_valid(form)
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
-
-class UsuarioUpdateView(GerenciamentoUsuariosMixin, UpdateView):
-    model = User
-    form_class = UsuarioUpdateForm
-    template_name = 'core/usuario_form.html'
-    success_url = reverse_lazy('usuario-list')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            try:
-                perfil = self.object.perfil
-                context['perfil_form'] = PerfilForm(self.request.POST, instance=perfil)
-            except Perfil.DoesNotExist:
-                context['perfil_form'] = PerfilForm(self.request.POST)
-        else:
-            try:
-                perfil = self.object.perfil
-                context['perfil_form'] = PerfilForm(instance=perfil)
-            except Perfil.DoesNotExist:
-                context['perfil_form'] = PerfilForm()
-        return context
-    
-    def form_valid(self, form):
-        context = self.get_context_data()
-        perfil_form = context['perfil_form']
-        if form.is_valid() and perfil_form.is_valid():
-            user = form.save()
-            
-            # Salvar perfil
-            try:
-                perfil = user.perfil
-                perfil_form = PerfilForm(self.request.POST, instance=perfil)
-            except Perfil.DoesNotExist:
-                perfil = perfil_form.save(commit=False)
-                perfil.usuario = user
-            
-            perfil_form.save()
-            
-            messages.success(self.request, "Usuário atualizado com sucesso!")
-            return super().form_valid(form)
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
-
-class AlterarSenhaView(GerenciamentoUsuariosMixin, FormView):
-    template_name = 'core/alterar_senha.html'
-    form_class = AlterarSenhaForm
-    success_url = reverse_lazy('usuario-list')
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = get_object_or_404(User, pk=self.kwargs['pk'])
-        return kwargs
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['usuario'] = get_object_or_404(User, pk=self.kwargs['pk'])
-        return context
-    
-    def form_valid(self, form):
-        form.save()
-        messages.success(self.request, "Senha alterada com sucesso!")
-        return super().form_valid(form)
-
-@csrf_exempt
-def salvar_assinatura(request):
+@login_required
+def seguro_create(request):
+    """Criação de novo seguro"""
     if request.method == 'POST':
+        form = SeguroForm(request.POST)
+        if form.is_valid():
+            seguro = form.save(commit=False)
+            # Definir o vendedor como o usuário logado se não foi especificado
+            if not seguro.vendedor:
+                seguro.vendedor = request.user
+            seguro.save()
+            messages.success(request, 'Seguro registrado com sucesso!')
+            return redirect('core:seguro_list')
+    else:
+        form = SeguroForm()
+        # Definir vendedor padrão como usuário logado
+        form.fields['vendedor'].initial = request.user
+    
+    return render(request, 'core/seguro_form.html', {
+        'form': form,
+        'seguro': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def seguro_update(request, pk):
+    """Atualização de seguro"""
+    seguro = get_object_or_404(Seguro, pk=pk)
+    if request.method == 'POST':
+        form = SeguroForm(request.POST, instance=seguro)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Seguro atualizado com sucesso!')
+            return redirect('core:seguro_list')
+    else:
+        form = SeguroForm(instance=seguro)
+    
+    return render(request, 'core/seguro_form.html', {
+        'form': form,
+        'seguro': seguro,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def seguro_detail(request, pk):
+    """Detalhes do seguro"""
+    seguro = get_object_or_404(Seguro, pk=pk)
+    return render(request, 'core/seguro_detail.html', {
+        'seguro': seguro,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def seguro_delete(request, pk):
+    """Exclusão de seguro"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_seguro')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir seguros.'})
+    
+    seguro = get_object_or_404(Seguro, pk=pk)
+    if request.method == 'POST':
+        # Verificar se o seguro pode ser excluído
+        if seguro.status == 'ativo':
+            messages.error(request, 'Não é possível excluir um seguro ativo. Cancele-o primeiro.')
+            return redirect('core:seguro_detail', pk=seguro.pk)
+        
+        seguro.delete()
+        messages.success(request, 'Seguro excluído com sucesso!')
+        return redirect('core:seguro_list')
+    
+    return render(request, 'core/seguro_confirm_delete.html', {
+        'seguro': seguro,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def cotacao_seguro_list(request):
+    """Lista de cotações de seguro"""
+    cotacoes = CotacaoSeguro.objects.all().order_by('-data_cotacao')
+    return render(request, 'core/cotacao_seguro_list.html', {'cotacoes': cotacoes})
+
+@login_required
+def cotacao_seguro_create(request):
+    """Criação de nova cotação de seguro"""
+    if request.method == 'POST':
+        form = CotacaoSeguroForm(request.POST)
+        if form.is_valid():
+            cotacao = form.save(commit=False)
+            # Definir o consultor como o usuário logado se não foi especificado
+            if not cotacao.consultor:
+                cotacao.consultor = request.user
+            cotacao.save()
+            messages.success(request, 'Cotação de seguro registrada com sucesso!')
+            return redirect('core:cotacao_seguro_list')
+    else:
+        form = CotacaoSeguroForm()
+        # Definir consultor padrão como usuário logado
+        form.fields['consultor'].initial = request.user
+    
+    return render(request, 'core/cotacao_seguro_form.html', {
+        'form': form,
+        'cotacao': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def cotacao_seguro_update(request, pk):
+    """Atualização de cotação de seguro"""
+    cotacao = get_object_or_404(CotacaoSeguro, pk=pk)
+    if request.method == 'POST':
+        form = CotacaoSeguroForm(request.POST, instance=cotacao)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Cotação de seguro atualizada com sucesso!')
+            return redirect('core:cotacao_seguro_list')
+    else:
+        form = CotacaoSeguroForm(instance=cotacao)
+    
+    return render(request, 'core/cotacao_seguro_form.html', {
+        'form': form,
+        'cotacao': cotacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def cotacao_seguro_detail(request, pk):
+    """Detalhes da cotação de seguro"""
+    cotacao = get_object_or_404(CotacaoSeguro, pk=pk)
+    return render(request, 'core/cotacao_seguro_detail.html', {
+        'cotacao': cotacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def cotacao_seguro_delete(request, pk):
+    """Exclusão de cotação de seguro"""
+    cotacao = get_object_or_404(CotacaoSeguro, pk=pk)
+    if request.method == 'POST':
+        cotacao.delete()
+        messages.success(request, 'Cotação de seguro excluída com sucesso!')
+        return redirect('core:cotacao_seguro_list')
+    return render(request, 'core/cotacao_seguro_confirm_delete.html', {
+        'cotacao': cotacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def seguradora_list(request):
+    """Lista de seguradoras"""
+    seguradoras = Seguradora.objects.all().order_by('nome')
+    return render(request, 'core/seguradora_list.html', {'seguradoras': seguradoras})
+
+@login_required
+def seguradora_create(request):
+    """Criação de nova seguradora"""
+    if request.method == 'POST':
+        form = SeguradoraForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Seguradora registrada com sucesso!')
+            return redirect('core:seguradora_list')
+    else:
+        form = SeguradoraForm()
+    
+    return render(request, 'core/seguradora_form.html', {
+        'form': form,
+        'seguradora': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def seguradora_update(request, pk):
+    """Atualização de seguradora"""
+    seguradora = get_object_or_404(Seguradora, pk=pk)
+    if request.method == 'POST':
+        form = SeguradoraForm(request.POST, instance=seguradora)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Seguradora atualizada com sucesso!')
+            return redirect('core:seguradora_list')
+    else:
+        form = SeguradoraForm(instance=seguradora)
+    
+    return render(request, 'core/seguradora_form.html', {
+        'form': form,
+        'seguradora': seguradora,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def seguradora_detail(request, pk):
+    """Detalhes da seguradora"""
+    seguradora = get_object_or_404(Seguradora, pk=pk)
+    return render(request, 'core/seguradora_detail.html', {
+        'seguradora': seguradora,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def seguradora_delete(request, pk):
+    """Exclusão de seguradora"""
+    seguradora = get_object_or_404(Seguradora, pk=pk)
+    if request.method == 'POST':
+        seguradora.delete()
+        messages.success(request, 'Seguradora excluída com sucesso!')
+        return redirect('core:seguradora_list')
+    return render(request, 'core/seguradora_confirm_delete.html', {
+        'seguradora': seguradora,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def plano_seguro_list(request):
+    """Lista de planos de seguro"""
+    planos = PlanoSeguro.objects.all().order_by('seguradora__nome', 'nome')
+    return render(request, 'core/plano_seguro_list.html', {'planos': planos})
+
+@login_required
+def plano_seguro_create(request):
+    """Criação de novo plano de seguro"""
+    if request.method == 'POST':
+        form = PlanoSeguroForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Plano de seguro registrado com sucesso!')
+            return redirect('core:plano_seguro_list')
+    else:
+        form = PlanoSeguroForm()
+    
+    return render(request, 'core/plano_seguro_form.html', {
+        'form': form,
+        'plano': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def plano_seguro_update(request, pk):
+    """Atualização de plano de seguro"""
+    plano = get_object_or_404(PlanoSeguro, pk=pk)
+    if request.method == 'POST':
+        form = PlanoSeguroForm(request.POST, instance=plano)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Plano de seguro atualizado com sucesso!')
+            return redirect('core:plano_seguro_list')
+    else:
+        form = PlanoSeguroForm(instance=plano)
+    
+    return render(request, 'core/plano_seguro_form.html', {
+        'form': form,
+        'plano': plano,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def plano_seguro_detail(request, pk):
+    """Detalhes do plano de seguro"""
+    plano = get_object_or_404(PlanoSeguro, pk=pk)
+    return render(request, 'core/plano_seguro_detail.html', {
+        'plano': plano,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def plano_seguro_delete(request, pk):
+    """Exclusão de plano de seguro"""
+    plano = get_object_or_404(PlanoSeguro, pk=pk)
+    if request.method == 'POST':
+        plano.delete()
+        messages.success(request, 'Plano de seguro excluído com sucesso!')
+        return redirect('core:plano_seguro_list')
+    return render(request, 'core/plano_seguro_confirm_delete.html', {
+        'plano': plano,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def bem_list(request):
+    """Lista de bens"""
+    bens = Bem.objects.all().order_by('tipo', 'descricao')
+    return render(request, 'core/bem_list.html', {'bens': bens})
+
+@login_required
+def bem_create(request):
+    """Criação de novo bem"""
+    if request.method == 'POST':
+        form = BemForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Bem registrado com sucesso!')
+            return redirect('core:bem_list')
+    else:
+        form = BemForm()
+    
+    return render(request, 'core/bem_form.html', {
+        'form': form,
+        'bem': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def bem_update(request, pk):
+    """Atualização de bem"""
+    bem = get_object_or_404(Bem, pk=pk)
+    if request.method == 'POST':
+        form = BemForm(request.POST, instance=bem)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Bem atualizado com sucesso!')
+            return redirect('core:bem_list')
+    else:
+        form = BemForm(instance=bem)
+    
+    return render(request, 'core/bem_form.html', {
+        'form': form,
+        'bem': bem,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def bem_detail(request, pk):
+    """Detalhes do bem"""
+    bem = get_object_or_404(Bem, pk=pk)
+    return render(request, 'core/bem_detail.html', {
+        'bem': bem,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def bem_delete(request, pk):
+    """Exclusão de bem"""
+    bem = get_object_or_404(Bem, pk=pk)
+    if request.method == 'POST':
+        bem.delete()
+        messages.success(request, 'Bem excluído com sucesso!')
+        return redirect('core:bem_list')
+    return render(request, 'core/bem_confirm_delete.html', {
+        'bem': bem,
+        'usuario_sistema': request.user
+    })
+
+# Views administrativas
+@login_required
+def usuario_list(request):
+    """Lista de usuários do sistema"""
+    status = request.GET.get('status', 'ativo')  # Filtro de status
+    
+    # Filtrar apenas usuários ativos por padrão
+    if status == 'ativo':
+        usuarios = Usuario.objects.filter(status='ativo').order_by('user__first_name', 'user__last_name')
+    elif status == 'inativo':
+        usuarios = Usuario.objects.filter(status='inativo').order_by('user__first_name', 'user__last_name')
+    elif status == 'bloqueado':
+        usuarios = Usuario.objects.filter(status='bloqueado').order_by('user__first_name', 'user__last_name')
+    else:
+        usuarios = Usuario.objects.all().order_by('user__first_name', 'user__last_name')
+    
+    lojas = Loja.objects.filter(ativo=True).order_by('nome')
+    return render(request, 'core/usuario_list.html', {
+        'usuarios': usuarios,
+        'lojas': lojas,
+        'status': status
+    })
+
+@login_required
+def usuario_create(request):
+    """Criação de novo usuário"""
+    if request.method == 'POST':
+        form = UsuarioForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Usuário registrado com sucesso!')
+            return redirect('core:usuario_list')
+    else:
+        form = UsuarioForm()
+    
+    return render(request, 'core/usuario_form.html', {
+        'form': form,
+        'usuario': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def usuario_update(request, pk):
+    """Atualização de usuário"""
+    usuario = get_object_or_404(Usuario, pk=pk)
+    if request.method == 'POST':
+        form = UsuarioForm(request.POST, instance=usuario)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Usuário atualizado com sucesso!')
+            return redirect('core:usuario_list')
+    else:
+        form = UsuarioForm(instance=usuario)
+    
+    return render(request, 'core/usuario_form.html', {
+        'form': form,
+        'usuario': usuario,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def usuario_detail(request, pk):
+    """Detalhes do usuário"""
+    usuario = get_object_or_404(Usuario, pk=pk)
+    return render(request, 'core/usuario_detail.html', {
+        'usuario': usuario,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def usuario_delete(request, pk):
+    """Exclusão de usuário"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_usuario')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir usuários.'})
+    
+    usuario = get_object_or_404(Usuario, pk=pk)
+    if request.method == 'POST':
+        # Verificar se o usuário pode ser excluído
+        if usuario.vendas_realizadas.exists():
+            messages.error(request, 'Não é possível excluir um usuário que possui vendas registradas.')
+            return redirect('core:usuario_detail', pk=usuario.pk)
+        
+        if usuario.consignacoes_responsavel.exists():
+            messages.error(request, 'Não é possível excluir um usuário que possui consignações responsável.')
+            return redirect('core:usuario_detail', pk=usuario.pk)
+        
+        if usuario.seguros_vendidos.exists():
+            messages.error(request, 'Não é possível excluir um usuário que possui seguros vendidos.')
+            return redirect('core:usuario_detail', pk=usuario.pk)
+        
+        usuario.status = 'inativo'
+        usuario.save()
+        messages.success(request, 'Usuário marcado como inativo com sucesso!')
+        return redirect('core:usuario_list')
+    
+    return render(request, 'core/usuario_confirm_delete.html', {
+        'usuario': usuario,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def loja_list(request):
+    """Lista de lojas"""
+    status = request.GET.get('status', 'ativo')  # Filtro de status
+    
+    # Filtrar apenas lojas ativas por padrão
+    if status == 'ativo':
+        lojas = Loja.objects.filter(ativo=True).order_by('nome')
+    elif status == 'inativo':
+        lojas = Loja.objects.filter(ativo=False).order_by('nome')
+    else:
+        lojas = Loja.objects.all().order_by('nome')
+    
+    return render(request, 'core/loja_list.html', {
+        'lojas': lojas,
+        'status': status
+    })
+
+@login_required
+def loja_create(request):
+    """Criação de nova loja"""
+    if request.method == 'POST':
+        form = LojaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Loja registrada com sucesso!')
+            return redirect('core:loja_list')
+    else:
+        form = LojaForm()
+    # Não existe loja ainda, então não há usuários ativos
+    return render(request, 'core/loja_form.html', {
+        'form': form,
+        'loja': None,
+        'usuarios_ativos': 0,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def loja_update(request, pk):
+    """Atualização de loja"""
+    loja = get_object_or_404(Loja, pk=pk)
+    if request.method == 'POST':
+        form = LojaForm(request.POST, instance=loja)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Loja atualizada com sucesso!')
+            return redirect('core:loja_list')
+    else:
+        form = LojaForm(instance=loja)
+    usuarios_ativos = loja.usuarios.filter(status='ativo').count()
+    return render(request, 'core/loja_form.html', {
+        'form': form,
+        'loja': loja,
+        'usuarios_ativos': usuarios_ativos,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def loja_detail(request, pk):
+    """Detalhes da loja"""
+    loja = get_object_or_404(Loja, pk=pk)
+    usuarios_ativos = loja.usuarios.filter(status='ativo').count()
+    return render(request, 'core/loja_detail.html', {
+        'loja': loja,
+        'usuarios_ativos': usuarios_ativos,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def loja_delete(request, pk):
+    """Exclusão de loja"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_loja')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir lojas.'})
+    
+    loja = get_object_or_404(Loja, pk=pk)
+    if request.method == 'POST':
+        # Verificar se a loja pode ser excluída
+        if loja.usuarios.exists():
+            messages.error(request, 'Não é possível excluir uma loja que possui usuários cadastrados.')
+            return redirect('core:loja_detail', pk=loja.pk)
+        
+        if loja.vendas.exists():
+            messages.error(request, 'Não é possível excluir uma loja que possui vendas registradas.')
+            return redirect('core:loja_detail', pk=loja.pk)
+        
+        loja.ativo = False
+        loja.save()
+        messages.success(request, 'Loja marcada como inativa com sucesso!')
+        return redirect('core:loja_list')
+    
+    return render(request, 'core/loja_confirm_delete.html', {
+        'loja': loja,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+# Views de ocorrências
+@login_required
+def ocorrencia_list(request):
+    """Lista de ocorrências"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_ocorrencia')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar ocorrências.'})
+    ocorrencias = Ocorrencia.objects.all().order_by('-data_abertura')
+    return render(request, 'core/ocorrencia_list.html', {'ocorrencias': ocorrencias})
+
+@login_required
+def ocorrencia_create(request):
+    """Criação de nova ocorrência"""
+    if request.method == 'POST':
+        form = OcorrenciaForm(request.POST, request.FILES)
+        if form.is_valid():
+            ocorrencia = form.save(commit=False)
+            # Definir o solicitante como o usuário logado
+            ocorrencia.solicitante = request.user
+            ocorrencia.save()
+            messages.success(request, 'Ocorrência registrada com sucesso!')
+            return redirect('core:ocorrencia_list')
+    else:
+        form = OcorrenciaForm(initial={'loja': request.user.usuario_sistema.loja})
+    
+    return render(request, 'core/ocorrencia_form.html', {
+        'form': form,
+        'ocorrencia': None,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def ocorrencia_update(request, pk):
+    """Atualização de ocorrência"""
+    ocorrencia = get_object_or_404(Ocorrencia, pk=pk)
+    if request.method == 'POST':
+        form = OcorrenciaForm(request.POST, request.FILES, instance=ocorrencia)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Ocorrência atualizada com sucesso!')
+            return redirect('core:ocorrencia_list')
+    else:
+        form = OcorrenciaForm(instance=ocorrencia)
+    
+    return render(request, 'core/ocorrencia_form.html', {
+        'form': form,
+        'ocorrencia': ocorrencia,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def ocorrencia_detail(request, pk):
+    """Detalhes da ocorrência"""
+    ocorrencia = get_object_or_404(Ocorrencia, pk=pk)
+    comentarios = ocorrencia.comentarios.all()
+    
+    if request.method == 'POST':
+        comentario_form = ComentarioOcorrenciaForm(request.POST)
+        if comentario_form.is_valid():
+            comentario = comentario_form.save(commit=False)
+            comentario.ocorrencia = ocorrencia
+            comentario.autor = request.user
+            comentario.save()
+            messages.success(request, 'Comentário adicionado com sucesso!')
+            return redirect('core:ocorrencia_detail', pk=pk)
+    else:
+        comentario_form = ComentarioOcorrenciaForm()
+    
+    return render(request, 'core/ocorrencia_detail.html', {
+        'ocorrencia': ocorrencia,
+        'comentarios': comentarios,
+        'comentario_form': comentario_form,
+        'usuario_sistema': request.user
+    })
+
+# Views de Importação
+@login_required
+def import_data(request):
+    """Página principal de importação de dados"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+    
+    return render(request, 'core/import_data.html', {
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def import_lojas(request):
+    """Importação de lojas"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+    
+    if request.method == 'POST' and request.FILES.get('file'):
         try:
-            data = json.loads(request.body)
-            assinatura_data = data.get('assinatura')
-            tipo = data.get('tipo', 'cliente')
-            id_venda = data.get('id_venda')
-            id_consignacao = data.get('id_consignacao')
+            importer = DataImporter()
+            success = importer.import_lojas(request.FILES['file'])
+            summary = importer.get_import_summary()
             
-            if not assinatura_data:
-                return JsonResponse({'status': 'erro', 'mensagem': 'Dados da assinatura não fornecidos'}, status=400)
-                
-            # Verificar se está associada a uma venda ou consignação
-            venda = None
-            consignacao = None
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} lojas importadas com sucesso.')
+            else:
+                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} lojas importadas, {summary["error_count"]} erros.')
+                for error in summary.get('errors', [])[:5]:  # Mostra apenas os primeiros 5 erros
+                    messages.error(request, f'Erro: {error}')
             
-            if id_venda:
-                try:
-                    venda = Venda.objects.get(id=id_venda)
-                except Venda.DoesNotExist:
-                    return JsonResponse({'status': 'erro', 'mensagem': 'Venda não encontrada'}, status=404)
-            
-            if id_consignacao:
-                try:
-                    consignacao = Consignacao.objects.get(id=id_consignacao)
-                except Consignacao.DoesNotExist:
-                    return JsonResponse({'status': 'erro', 'mensagem': 'Contrato de consignação não encontrado'}, status=404)
-            
-            if not venda and not consignacao:
-                return JsonResponse({'status': 'erro', 'mensagem': 'É necessário fornecer um ID de venda ou consignação'}, status=400)
-            
-            # Criar a assinatura
-            assinatura = AssinaturaDigital(
-                venda=venda,
-                consignacao=consignacao,
-                imagem_assinatura=assinatura_data,
-                tipo=tipo
-            )
-            assinatura.save()
-            
-            return JsonResponse({'status': 'sucesso', 'mensagem': 'Assinatura salva com sucesso', 'id': assinatura.id})
-            
+            return redirect('core:import_data')
         except Exception as e:
-            return JsonResponse({'status': 'erro', 'mensagem': str(e)}, status=500)
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            return redirect('core:import_data')
     
-    return JsonResponse({'status': 'erro', 'mensagem': 'Método não permitido'}, status=405)
+    return render(request, 'core/import_lojas.html', {
+        'usuario_sistema': request.user
+    })
 
-class ContratoDetailView(LoginRequiredMixin, DetailView):
-    model = Venda
-    template_name = 'core/contrato_detalhes.html'
-    context_object_name = 'contrato'
+@login_required
+def import_clientes(request):
+    """Importação de clientes"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        contrato = self.object
-        # Buscar assinaturas relacionadas
-        assinaturas = AssinaturaDigital.objects.filter(venda=contrato)
-        context['assinaturas'] = assinaturas
-        return context
-
-def motos_do_cliente_ajax(request, cliente_id):
-    motos = EstoqueMoto.objects.filter(proprietario_id=cliente_id)
-    data = {
-        'motos': [
-            {'id': moto.id, 'label': f'{moto.marca} {moto.modelo} - {moto.placa}'}
-            for moto in motos
-        ]
-    }
-    return JsonResponse(data)
-
-class EstoqueMotoListView(ListView):
-    model = EstoqueMoto
-    template_name = 'core/estoque_moto_list.html'
-    context_object_name = 'motos'
-    paginate_by = 10
-
-    def get_queryset(self):
-        queryset = EstoqueMoto.objects.all()
-        # Filtros básicos (marca, modelo, placa, categoria, status)
-        marca = self.request.GET.get('marca')
-        modelo = self.request.GET.get('modelo')
-        placa = self.request.GET.get('placa')
-        categoria = self.request.GET.get('categoria')
-        status = self.request.GET.get('status')
-        if marca:
-            queryset = queryset.filter(marca__icontains=marca)
-        if modelo:
-            queryset = queryset.filter(modelo__icontains=modelo)
-        if placa:
-            queryset = queryset.filter(placa__icontains=placa)
-        if categoria:
-            queryset = queryset.filter(categoria=categoria)
-        if status:
-            queryset = queryset.filter(status=status)
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Estatísticas para cards
-        context['total_disponiveis'] = EstoqueMoto.objects.filter(status='DISPONIVEL').count()
-        context['total_vendidas'] = EstoqueMoto.objects.filter(status='VENDIDO').count()
-        context['total_oficina'] = EstoqueMoto.objects.filter(status='OFICINA').count()
-        context['total_pendencia'] = EstoqueMoto.objects.filter(status='PENDENCIA').count()
-        # Filtros atuais
-        context['filtros'] = {
-            'marca': self.request.GET.get('marca', ''),
-            'modelo': self.request.GET.get('modelo', ''),
-            'placa': self.request.GET.get('placa', ''),
-            'categoria': self.request.GET.get('categoria', ''),
-            'status': self.request.GET.get('status', ''),
-        }
-        return context
-
-class EstoqueMotoDetailView(DetailView):
-    model = EstoqueMoto
-    template_name = 'core/estoque_moto_detail.html'
-    context_object_name = 'moto'
-
-class EstoqueMotoCreateView(CreateView):
-    model = EstoqueMoto
-    form_class = EstoqueMotoForm
-    template_name = 'core/estoque_moto_form.html'
-    success_url = reverse_lazy('estoque-moto-list')
-
-class EstoqueMotoUpdateView(UpdateView):
-    model = EstoqueMoto
-    form_class = EstoqueMotoForm
-    template_name = 'core/estoque_moto_form.html'
-    success_url = reverse_lazy('estoque-moto-list')
-
-class EstoqueMotoDeleteView(DeleteView):
-    model = EstoqueMoto
-    template_name = 'core/estoque_moto_confirm_delete.html'
-    success_url = reverse_lazy('estoque-moto-list')
-
-class ClienteListView(LoginRequiredMixin, ListView):
-    model = Cliente
-    template_name = 'core/cliente_list.html'
-    context_object_name = 'clientes'
-    paginate_by = 10
+    if request.method == 'POST' and request.FILES.get('file'):
+        try:
+            importer = DataImporter()
+            success = importer.import_clientes(request.FILES['file'])
+            summary = importer.get_import_summary()
+            
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} clientes importados com sucesso.')
+            else:
+                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} clientes importados, {summary["error_count"]} erros.')
+                for error in summary.get('errors', [])[:5]:
+                    messages.error(request, f'Erro: {error}')
+            
+            return redirect('core:import_data')
+        except Exception as e:
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            return redirect('core:import_data')
     
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        search_query = self.request.GET.get('search', '')
-        if search_query:
-            queryset = queryset.filter(
-                models.Q(nome__icontains=search_query) |
-                models.Q(cpf__icontains=search_query) |
-                models.Q(telefone__icontains=search_query)
-            )
-        return queryset.order_by('nome')
+    return render(request, 'core/import_clientes.html', {
+        'usuario_sistema': request.user
+    })
 
-class ClienteCreateView(LoginRequiredMixin, CreateView):
-    model = Cliente
-    form_class = ClienteForm
-    template_name = 'core/cliente_form.html'
-    success_url = reverse_lazy('cliente-list')
+@login_required
+def import_motocicletas(request):
+    """Importação de motocicletas"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
     
-    def form_valid(self, form):
-        messages.success(self.request, 'Cliente cadastrado com sucesso!')
-        return super().form_valid(form)
-
-class ClienteUpdateView(LoginRequiredMixin, UpdateView):
-    model = Cliente
-    form_class = ClienteForm
-    template_name = 'core/cliente_form.html'
-    success_url = reverse_lazy('cliente-list')
+    if request.method == 'POST' and request.FILES.get('file'):
+        try:
+            importer = DataImporter()
+            success = importer.import_motocicletas(request.FILES['file'])
+            summary = importer.get_import_summary()
+            
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} motocicletas importadas com sucesso.')
+            else:
+                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} motocicletas importadas, {summary["error_count"]} erros.')
+                for error in summary.get('errors', [])[:5]:
+                    messages.error(request, f'Erro: {error}')
+            
+            return redirect('core:import_data')
+        except Exception as e:
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            return redirect('core:import_data')
     
-    def form_valid(self, form):
-        messages.success(self.request, 'Cliente atualizado com sucesso!')
-        return super().form_valid(form)
+    return render(request, 'core/import_motocicletas.html', {
+        'usuario_sistema': request.user
+    })
 
-class ClienteDeleteView(LoginRequiredMixin, DeleteView):
-    model = Cliente
-    template_name = 'core/cliente_confirm_delete.html'
-    success_url = reverse_lazy('cliente-list')
+@login_required
+def import_vendas(request):
+    """Importação de vendas"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
     
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, 'Cliente excluído com sucesso!')
-        return super().delete(request, *args, **kwargs)
+    if request.method == 'POST' and request.FILES.get('file'):
+        try:
+            importer = DataImporter()
+            success = importer.import_vendas(request.FILES['file'])
+            summary = importer.get_import_summary()
+            
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} vendas importadas com sucesso.')
+            else:
+                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} vendas importadas, {summary["error_count"]} erros.')
+                for error in summary.get('errors', [])[:5]:
+                    messages.error(request, f'Erro: {error}')
+            
+            return redirect('core:import_data')
+        except Exception as e:
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            return redirect('core:import_data')
+    
+    return render(request, 'core/import_vendas.html', {
+        'usuario_sistema': request.user
+    })
 
-def dados_moto_estoque_ajax(request, moto_id):
-    try:
-        moto = EstoqueMoto.objects.get(id=moto_id, categoria='CONSIGNACAO')
-        data = {
-            'marca': moto.marca,
-            'modelo': moto.modelo,
-            'ano': moto.ano,
-            'cor': moto.cor,
-            'placa': moto.placa,
-            'renavam': moto.renavam,
-            'chassi': moto.chassi,
-        }
-        return JsonResponse({'success': True, 'moto': data})
-    except EstoqueMoto.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Moto não encontrada ou não é da categoria Consignação.'})
+@login_required
+def import_seguradoras(request):
+    """Importação de seguradoras"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+    
+    if request.method == 'POST' and request.FILES.get('file'):
+        try:
+            importer = DataImporter()
+            success = importer.import_seguradoras(request.FILES['file'])
+            summary = importer.get_import_summary()
+            
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} seguradoras importadas com sucesso.')
+            else:
+                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} seguradoras importadas, {summary["error_count"]} erros.')
+                for error in summary.get('errors', [])[:5]:
+                    messages.error(request, f'Erro: {error}')
+            
+            return redirect('core:import_data')
+        except Exception as e:
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            return redirect('core:import_data')
+    
+    return render(request, 'core/import_seguradoras.html', {
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def import_planos_seguro(request):
+    """Importação de planos de seguro"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+    
+    if request.method == 'POST' and request.FILES.get('file'):
+        try:
+            importer = DataImporter()
+            success = importer.import_planos_seguro(request.FILES['file'])
+            summary = importer.get_import_summary()
+            
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} planos importados com sucesso.')
+            else:
+                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} planos importados, {summary["error_count"]} erros.')
+                for error in summary.get('errors', [])[:5]:
+                    messages.error(request, f'Erro: {error}')
+            
+            return redirect('core:import_data')
+        except Exception as e:
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            return redirect('core:import_data')
+    
+    return render(request, 'core/import_planos_seguro.html', {
+        'usuario_sistema': request.user
+    }) 

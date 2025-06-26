@@ -203,13 +203,7 @@ function atualizarCamposCliente(cliente) {
     }
   }
   
-  // Preenche o campo contato automaticamente com o telefone
-  if (cliente.telefone) {
-    const contatoField = document.querySelector('input[name="contato"]');
-    if (contatoField && !contatoField.value) {
-      contatoField.value = cliente.telefone;
-    }
-  }
+  // Não preencher o campo contato automaticamente
 }
 
 // Verifica se a moto está disponível para venda

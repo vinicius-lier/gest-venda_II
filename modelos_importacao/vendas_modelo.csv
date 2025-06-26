@@ -1,0 +1,6 @@
+cliente_nome,motocicleta_placa,vendedor_nome,data_venda,valor_venda,forma_pagamento,comissao_percentual,observacoes
+João Silva Santos,ABC1234,Vendedor 1,2024-01-15,12000.00,dinheiro,5.0,Venda à vista
+Maria Oliveira Costa,DEF5678,Vendedor 2,2024-01-20,11000.00,financiamento,5.0,Financiamento 12x
+Pedro Almeida Lima,GHI9012,Vendedor 1,2024-01-25,22000.00,dinheiro,5.0,Venda à vista
+Ana Paula Ferreira,JKL3456,Vendedor 3,2024-02-01,25000.00,financiamento,5.0,Financiamento 24x
+Carlos Eduardo Souza,MNO7890,Vendedor 2,2024-02-05,23000.00,dinheiro,5.0,Venda à vista 

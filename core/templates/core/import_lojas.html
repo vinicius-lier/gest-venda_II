@@ -1,0 +1,75 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Importar Lojas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-store"></i> Importar Lojas
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:import_data' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="file">Selecione o arquivo CSV/Excel:</label>
+                                    <input type="file" class="form-control-file" id="file" name="file" accept=".csv,.xlsx,.xls" required>
+                                    <small class="form-text text-muted">
+                                        Formatos aceitos: CSV, Excel (.xlsx, .xls)
+                                    </small>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-3">
+                                    <i class="fas fa-upload"></i> Importar Lojas
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-info-circle"></i> Informações
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <h6>Colunas necessárias:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>nome</strong> - Nome da loja</li>
+                                        <li><strong>cnpj</strong> - CNPJ da loja</li>
+                                        <li><strong>cidade</strong> - Cidade</li>
+                                        <li><strong>endereco</strong> - Endereço completo</li>
+                                        <li><strong>telefone</strong> - Telefone</li>
+                                        <li><strong>email</strong> - Email</li>
+                                        <li><strong>ativo</strong> - Status (True/False)</li>
+                                    </ul>
+                                    <hr>
+                                    <h6>Modelo de exemplo:</h6>
+                                    <a href="/static/modelos/lojas_modelo.csv" class="btn btn-success btn-sm" download>
+                                        <i class="fas fa-download"></i> Baixar Modelo CSV
+                                    </a>
+                                    <hr>
+                                    <h6>Exemplo de CSV:</h6>
+                                    <pre class="small">nome,cnpj,cidade,endereco,telefone,email,ativo
+Loja Centro,12.345.678/0001-90,São Paulo,Rua A 123,11999999999,loja@email.com,True
+Loja Norte,98.765.432/0001-10,Rio de Janeiro,Av B 456,21988888888,norte@email.com,True</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,166 @@
+{% extends 'core/base.html' %}
+{% load core_extras %}
+
+{% block title %}Lojas Parceiras{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-store"></i> Lojas Parceiras
+        </h1>
+        {% if perms.core.add_loja %}
+        <a href="{% url 'core:loja_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nova Loja
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ request.GET.search }}" placeholder="Nome, CNPJ ou cidade">
+                </div>
+                <div class="col-md-3">
+                    <label for="cidade" class="form-label">Cidade</label>
+                    <input type="text" class="form-control" id="cidade" name="cidade" 
+                           value="{{ request.GET.cidade }}" placeholder="Nome da cidade">
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="ativo" {% if status == 'ativo' %}selected{% endif %}>Ativas</option>
+                        <option value="inativo" {% if status == 'inativo' %}selected{% endif %}>Inativas</option>
+                        <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{% url 'core:loja_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Lojas -->
+    <div class="card shadow">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Lojas ({{ lojas.count }})</h6>
+        </div>
+        <div class="card-body">
+            {% if lojas %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>CNPJ</th>
+                            <th>Cidade</th>
+                            <th>Telefone</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Usuários</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loja in lojas %}
+                        <tr>
+                            <td>
+                                <strong>{{ loja.nome }}</strong>
+                            </td>
+                            <td>{{ loja.cnpj }}</td>
+                            <td>{{ loja.cidade }}</td>
+                            <td>
+                                {% if loja.telefone %}
+                                    <a href="tel:{{ loja.telefone }}">{{ loja.telefone }}</a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loja.email %}
+                                    <a href="mailto:{{ loja.email }}">{{ loja.email }}</a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loja.ativo %}
+                                    <span class="badge bg-success">Ativa</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inativa</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ loja.usuarios.count }} usuários</span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    {% if perms.core.view_loja %}
+                                    <a href="{% url 'core:loja_detail' loja.pk %}" 
+                                       class="btn btn-sm btn-info" title="Visualizar">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.core.change_loja %}
+                                    <a href="{% url 'core:loja_update' loja.pk %}" 
+                                       class="btn btn-sm btn-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.core.delete_loja and loja.ativo %}
+                                    <a href="{% url 'core:loja_delete' loja.pk %}" 
+                                       class="btn btn-sm btn-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Nenhuma loja encontrada</h5>
+                <p class="text-muted">Não há lojas cadastradas no sistema.</p>
+                {% if perms.core.add_loja %}
+                <a href="{% url 'core:loja_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Cadastrar Primeira Loja
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+$(document).ready(function() {
+    // DataTable
+    $('#dataTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+        },
+        order: [[0, 'asc']],
+        pageLength: 25,
+        responsive: true
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,174 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Importação de Dados{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-upload"></i> Sistema de Importação de Dados
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> Instruções de Importação</h5>
+                        <ul class="mb-0">
+                            <li>Os arquivos devem estar nos formatos CSV ou Excel (.xlsx, .xls)</li>
+                            <li>Para CSV, use codificação UTF-8 ou Latin1</li>
+                            <li>As colunas devem corresponder aos campos dos modelos</li>
+                            <li>Importe primeiro as entidades base (Lojas, Clientes, Seguradoras)</li>
+                            <li>Depois importe as entidades que dependem delas (Motocicletas, Vendas, etc.)</li>
+                        </ul>
+                    </div>
+
+                    <div class="row">
+                        <!-- Lojas -->
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-store"></i> Lojas
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">Importe dados das lojas do sistema.</p>
+                                    <p class="small text-muted">
+                                        <strong>Colunas necessárias:</strong><br>
+                                        nome, cnpj, cidade, endereco, telefone, email, ativo
+                                    </p>
+                                    <a href="{% url 'core:import_lojas' %}" class="btn btn-primary">
+                                        <i class="fas fa-upload"></i> Importar Lojas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clientes -->
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-users"></i> Clientes
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">Importe dados dos clientes.</p>
+                                    <p class="small text-muted">
+                                        <strong>Colunas necessárias:</strong><br>
+                                        nome, cpf_cnpj, rg, telefone, email, endereco, cidade, estado, cep, tipo, observacoes, ativo
+                                    </p>
+                                    <a href="{% url 'core:import_clientes' %}" class="btn btn-success">
+                                        <i class="fas fa-upload"></i> Importar Clientes
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Motocicletas -->
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-motorcycle"></i> Motocicletas
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">Importe dados das motocicletas.</p>
+                                    <p class="small text-muted">
+                                        <strong>Colunas necessárias:</strong><br>
+                                        chassi, placa, renavam, marca, modelo, ano, cor, cilindrada, tipo_entrada, origem, status, valor_entrada, valor_atual, data_entrada, observacoes
+                                    </p>
+                                    <a href="{% url 'core:import_motocicletas' %}" class="btn btn-warning">
+                                        <i class="fas fa-upload"></i> Importar Motocicletas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vendas -->
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-shopping-cart"></i> Vendas
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">Importe dados das vendas realizadas.</p>
+                                    <p class="small text-muted">
+                                        <strong>Colunas necessárias:</strong><br>
+                                        moto_chassi, comprador_cpf, vendedor_username, loja_nome, origem, forma_pagamento, status, valor_venda, valor_entrada, comissao_vendedor, data_atendimento, data_venda, observacoes
+                                    </p>
+                                    <a href="{% url 'core:import_vendas' %}" class="btn btn-info">
+                                        <i class="fas fa-upload"></i> Importar Vendas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seguradoras -->
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-secondary">
+                                <div class="card-header bg-secondary text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-shield-alt"></i> Seguradoras
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">Importe dados das seguradoras.</p>
+                                    <p class="small text-muted">
+                                        <strong>Colunas necessárias:</strong><br>
+                                        nome, cnpj, telefone, email, site, ativo
+                                    </p>
+                                    <a href="{% url 'core:import_seguradoras' %}" class="btn btn-secondary">
+                                        <i class="fas fa-upload"></i> Importar Seguradoras
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Planos de Seguro -->
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border-dark">
+                                <div class="card-header bg-dark text-white">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-file-contract"></i> Planos de Seguro
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">Importe dados dos planos de seguro.</p>
+                                    <p class="small text-muted">
+                                        <strong>Colunas necessárias:</strong><br>
+                                        seguradora_nome, nome, tipo_bem, descricao, comissao_padrao, ativo
+                                    </p>
+                                    <a href="{% url 'core:import_planos_seguro' %}" class="btn btn-dark">
+                                        <i class="fas fa-upload"></i> Importar Planos
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Ordem Recomendada de Importação</h6>
+                            <ol class="mb-0">
+                                <li><strong>Lojas</strong> - Entidades base do sistema</li>
+                                <li><strong>Clientes</strong> - Necessários para motocicletas e vendas</li>
+                                <li><strong>Seguradoras</strong> - Necessárias para planos de seguro</li>
+                                <li><strong>Planos de Seguro</strong> - Dependem das seguradoras</li>
+                                <li><strong>Motocicletas</strong> - Podem referenciar clientes como proprietários/fornecedores</li>
+                                <li><strong>Vendas</strong> - Dependem de motocicletas, clientes, usuários e lojas</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

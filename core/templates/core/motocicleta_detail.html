@@ -1,0 +1,291 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{{ motocicleta.marca }} {{ motocicleta.modelo }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-motorcycle"></i> Detalhes da Motocicleta
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:motocicleta_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                        <a href="{% url 'core:motocicleta_update' motocicleta.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Informações Principais -->
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5 class="text-primary">Informações Básicas</h5>
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Marca:</strong></td>
+                                            <td>{{ motocicleta.marca }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Modelo:</strong></td>
+                                            <td>{{ motocicleta.modelo }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Ano:</strong></td>
+                                            <td>{{ motocicleta.ano }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Cor:</strong></td>
+                                            <td>{{ motocicleta.cor }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Cilindrada:</strong></td>
+                                            <td>{{ motocicleta.cilindrada|default:"Não informado" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="text-primary">Documentação</h5>
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Chassi:</strong></td>
+                                            <td>{{ motocicleta.chassi }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Placa:</strong></td>
+                                            <td>{{ motocicleta.placa|default:"Não informado" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Renavam:</strong></td>
+                                            <td>{{ motocicleta.renavam|default:"Não informado" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Matrícula:</strong></td>
+                                            <td>{{ motocicleta.matricula|default:"Não informado" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <h5 class="text-primary">Classificação</h5>
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Tipo de Entrada:</strong></td>
+                                            <td>
+                                                <span class="badge bg-{% if motocicleta.tipo_entrada == '0km' %}success{% elif motocicleta.tipo_entrada == 'usada' %}warning{% else %}info{% endif %}">
+                                                    {{ motocicleta.get_tipo_entrada_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Origem:</strong></td>
+                                            <td>{{ motocicleta.get_origem_display }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                <span class="badge bg-{% if motocicleta.status == 'estoque' %}success{% elif motocicleta.status == 'vendida' %}danger{% elif motocicleta.status == 'reservada' %}warning{% else %}secondary{% endif %}">
+                                                    {{ motocicleta.get_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="text-primary">Valores</h5>
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Valor de Entrada:</strong></td>
+                                            <td>R$ {{ motocicleta.valor_entrada|floatformat:2 }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Valor Atual:</strong></td>
+                                            <td>R$ {{ motocicleta.valor_atual|floatformat:2 }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Data de Entrada:</strong></td>
+                                            <td>{{ motocicleta.data_entrada|date:"d/m/Y" }}</td>
+                                        </tr>
+                                        {% if motocicleta.data_venda %}
+                                        <tr>
+                                            <td><strong>Data de Venda:</strong></td>
+                                            <td>{{ motocicleta.data_venda|date:"d/m/Y" }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    </table>
+                                </div>
+                            </div>
+
+                            {% if motocicleta.observacoes %}
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary">Observações</h5>
+                                    <div class="alert alert-info">
+                                        {{ motocicleta.observacoes|linebreaks }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Sidebar com Relacionamentos -->
+                        <div class="col-md-4">
+                            <!-- Proprietário -->
+                            {% if motocicleta.proprietario %}
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-user"></i> Proprietário
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>{{ motocicleta.proprietario.nome }}</strong></p>
+                                    <p class="text-muted small mb-1">{{ motocicleta.proprietario.cpf_cnpj }}</p>
+                                    <p class="text-muted small mb-0">{{ motocicleta.proprietario.telefone }}</p>
+                                    <a href="{% url 'core:cliente_detail' motocicleta.proprietario.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                        Ver Detalhes
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Fornecedor -->
+                            {% if motocicleta.fornecedor %}
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-truck"></i> Fornecedor
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>{{ motocicleta.fornecedor.nome }}</strong></p>
+                                    <p class="text-muted small mb-1">{{ motocicleta.fornecedor.cpf_cnpj }}</p>
+                                    <p class="text-muted small mb-0">{{ motocicleta.fornecedor.telefone }}</p>
+                                    <a href="{% url 'core:cliente_detail' motocicleta.fornecedor.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                        Ver Detalhes
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Loja de Origem -->
+                            {% if motocicleta.loja_origem %}
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-store"></i> Loja de Origem
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>{{ motocicleta.loja_origem.nome }}</strong></p>
+                                    <p class="text-muted small mb-1">{{ motocicleta.loja_origem.cidade }}</p>
+                                    <p class="text-muted small mb-0">{{ motocicleta.loja_origem.telefone }}</p>
+                                    <a href="{% url 'core:loja_detail' motocicleta.loja_origem.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                        Ver Detalhes
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Ações Rápidas -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-cogs"></i> Ações
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'core:venda_create' %}?moto={{ motocicleta.pk }}" class="btn btn-success btn-sm">
+                                            <i class="fas fa-shopping-cart"></i> Registrar Venda
+                                        </a>
+                                        <a href="{% url 'core:consignacao_create' %}?moto={{ motocicleta.pk }}" class="btn btn-warning btn-sm">
+                                            <i class="fas fa-handshake"></i> Registrar Consignação
+                                        </a>
+                                        <a href="{% url 'core:motocicleta_update' motocicleta.pk %}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        <a href="{% url 'core:motocicleta_delete' motocicleta.pk %}" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-trash"></i> Excluir
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fotos da Motocicleta -->
+                    {% if motocicleta.foto_principal or motocicleta.foto_frontal or motocicleta.foto_traseira or motocicleta.foto_lado_esquerdo or motocicleta.foto_lado_direito %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">Fotos da Motocicleta</h5>
+                            <div class="row">
+                                {% if motocicleta.foto_principal %}
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <img src="{{ motocicleta.foto_principal.url }}" class="card-img-top" alt="Foto Principal">
+                                        <div class="card-body">
+                                            <p class="card-text text-center">Foto Principal</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if motocicleta.foto_frontal %}
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <img src="{{ motocicleta.foto_frontal.url }}" class="card-img-top" alt="Foto Frontal">
+                                        <div class="card-body">
+                                            <p class="card-text text-center">Foto Frontal</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if motocicleta.foto_traseira %}
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <img src="{{ motocicleta.foto_traseira.url }}" class="card-img-top" alt="Foto Traseira">
+                                        <div class="card-body">
+                                            <p class="card-text text-center">Foto Traseira</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if motocicleta.foto_lado_esquerdo %}
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <img src="{{ motocicleta.foto_lado_esquerdo.url }}" class="card-img-top" alt="Foto Lado Esquerdo">
+                                        <div class="card-body">
+                                            <p class="card-text text-center">Lado Esquerdo</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if motocicleta.foto_lado_direito %}
+                                <div class="col-md-3 mb-3">
+                                    <div class="card">
+                                        <img src="{{ motocicleta.foto_lado_direito.url }}" class="card-img-top" alt="Foto Lado Direito">
+                                        <div class="card-body">
+                                            <p class="card-text text-center">Lado Direito</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

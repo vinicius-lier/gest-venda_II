@@ -1,0 +1,198 @@
+{% extends 'core/base.html' %}
+{% load core_extras %}
+
+{% block title %}Ocorrências{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-exclamation-triangle"></i> Ocorrências
+        </h1>
+        <a href="{% url 'core:ocorrencia_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nova Ocorrência
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ request.GET.search }}" placeholder="Título ou descrição">
+                </div>
+                <div class="col-md-2">
+                    <label for="tipo" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipo" name="tipo">
+                        <option value="">Todos</option>
+                        <option value="incidente" {% if request.GET.tipo == 'incidente' %}selected{% endif %}>Incidente</option>
+                        <option value="problema_tecnico" {% if request.GET.tipo == 'problema_tecnico' %}selected{% endif %}>Problema Técnico</option>
+                        <option value="solicitacao" {% if request.GET.tipo == 'solicitacao' %}selected{% endif %}>Solicitação</option>
+                        <option value="reclamacao" {% if request.GET.tipo == 'reclamacao' %}selected{% endif %}>Reclamação</option>
+                        <option value="sugestao" {% if request.GET.tipo == 'sugestao' %}selected{% endif %}>Sugestão</option>
+                        <option value="manutencao" {% if request.GET.tipo == 'manutencao' %}selected{% endif %}>Manutenção</option>
+                        <option value="seguranca" {% if request.GET.tipo == 'seguranca' %}selected{% endif %}>Segurança</option>
+                        <option value="outros" {% if request.GET.tipo == 'outros' %}selected{% endif %}>Outros</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="prioridade" class="form-label">Prioridade</label>
+                    <select class="form-select" id="prioridade" name="prioridade">
+                        <option value="">Todas</option>
+                        <option value="baixa" {% if request.GET.prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
+                        <option value="media" {% if request.GET.prioridade == 'media' %}selected{% endif %}>Média</option>
+                        <option value="alta" {% if request.GET.prioridade == 'alta' %}selected{% endif %}>Alta</option>
+                        <option value="critica" {% if request.GET.prioridade == 'critica' %}selected{% endif %}>Crítica</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">Todos</option>
+                        <option value="aberta" {% if request.GET.status == 'aberta' %}selected{% endif %}>Aberta</option>
+                        <option value="em_analise" {% if request.GET.status == 'em_analise' %}selected{% endif %}>Em Análise</option>
+                        <option value="em_andamento" {% if request.GET.status == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
+                        <option value="resolvida" {% if request.GET.status == 'resolvida' %}selected{% endif %}>Resolvida</option>
+                        <option value="fechada" {% if request.GET.status == 'fechada' %}selected{% endif %}>Fechada</option>
+                        <option value="cancelada" {% if request.GET.status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{% url 'core:ocorrencia_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Ocorrências -->
+    <div class="card shadow">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Ocorrências ({{ ocorrencias.count }})</h6>
+        </div>
+        <div class="card-body">
+            {% if ocorrencias %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Título</th>
+                            <th>Loja</th>
+                            <th>Tipo</th>
+                            <th>Prioridade</th>
+                            <th>Status</th>
+                            <th>Solicitante</th>
+                            <th>Responsável</th>
+                            <th>Data Abertura</th>
+                            <th>Dias</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ocorrencia in ocorrencias %}
+                        <tr {% if ocorrencia.atrasada %}class="table-danger"{% endif %}>
+                            <td>#{{ ocorrencia.id }}</td>
+                            <td>
+                                <strong>{{ ocorrencia.titulo }}</strong>
+                                {% if ocorrencia.atrasada %}
+                                    <span class="badge bg-danger ms-1">ATRASADA</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ocorrencia.loja.nome }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ ocorrencia.get_tipo_display }}</span>
+                            </td>
+                            <td>
+                                {% if ocorrencia.prioridade == 'baixa' %}
+                                    <span class="badge bg-success">Baixa</span>
+                                {% elif ocorrencia.prioridade == 'media' %}
+                                    <span class="badge bg-warning">Média</span>
+                                {% elif ocorrencia.prioridade == 'alta' %}
+                                    <span class="badge bg-danger">Alta</span>
+                                {% else %}
+                                    <span class="badge bg-dark">Crítica</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ocorrencia.status == 'aberta' %}
+                                    <span class="badge bg-primary">Aberta</span>
+                                {% elif ocorrencia.status == 'em_analise' %}
+                                    <span class="badge bg-info">Em Análise</span>
+                                {% elif ocorrencia.status == 'em_andamento' %}
+                                    <span class="badge bg-warning">Em Andamento</span>
+                                {% elif ocorrencia.status == 'resolvida' %}
+                                    <span class="badge bg-success">Resolvida</span>
+                                {% elif ocorrencia.status == 'fechada' %}
+                                    <span class="badge bg-secondary">Fechada</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Cancelada</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ocorrencia.solicitante.user.get_full_name }}</td>
+                            <td>
+                                {% if ocorrencia.responsavel %}
+                                    {{ ocorrencia.responsavel.user.get_full_name }}
+                                {% else %}
+                                    <span class="text-muted">Não atribuído</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ocorrencia.data_abertura|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ ocorrencia.dias_aberta }} dias</span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'core:ocorrencia_detail' ocorrencia.pk %}" 
+                                       class="btn btn-sm btn-info" title="Visualizar">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'core:ocorrencia_update' ocorrencia.pk %}" 
+                                       class="btn btn-sm btn-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Nenhuma ocorrência encontrada</h5>
+                <p class="text-muted">Não há ocorrências registradas no sistema.</p>
+                <a href="{% url 'core:ocorrencia_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Registrar Primeira Ocorrência
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+$(document).ready(function() {
+    // DataTable
+    $('#dataTable').DataTable({
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+        },
+        order: [[8, 'desc']], // Ordenar por data de abertura
+        pageLength: 25,
+        responsive: true
+    });
+});
+</script>
+{% endblock %} 

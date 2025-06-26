@@ -1,110 +1,223 @@
 {% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
 
-{% block title %}Clientes{% endblock %}
+{% block title %}Clientes - Gestão Operacional de Vendas{% endblock %}
+
+{% block page_title %}Clientes{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="fas fa-users me-2"></i>Clientes
-        </h5>
-        <a href="{% url 'core:cliente_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i>Novo Cliente
-        </a>
-    </div>
-    <div class="card-body">
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <form method="get" class="form-inline">
-                    <div class="input-group">
-                        <input type="text" name="search" class="form-control" placeholder="Buscar cliente..." value="{{ request.GET.search }}">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-users me-2"></i>Clientes
+    </h1>
+    
+    {% if perms.core.add_cliente %}
+    <a href="{% url 'core:cliente_create' %}" class="btn btn-primary">Novo Cliente</a>
+    {% endif %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-users me-2"></i>Lista de Clientes
+                </h6>
+                {% if perms.core.add_cliente %}
+                <a href="{% url 'core:cliente_create' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Novo Cliente
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <form method="get" class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label for="q" class="form-label">Buscar</label>
+                        <input type="text" class="form-control" id="q" name="q" 
+                               value="{{ query }}" placeholder="Nome, CPF/CNPJ ou telefone">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="tipo" class="form-label">Tipo</label>
+                        <select class="form-select" id="tipo" name="tipo">
+                            <option value="">Todos</option>
+                            {% for value, label in tipos %}
+                            <option value="{{ value }}" {% if tipo == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="ativo" {% if status == 'ativo' %}selected{% endif %}>Ativos</option>
+                            <option value="inativo" {% if status == 'inativo' %}selected{% endif %}>Inativos</option>
+                            <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Buscar
                         </button>
+                        <a href="{% url 'core:cliente_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Limpar
+                        </a>
                     </div>
                 </form>
-            </div>
-        </div>
 
-        {% if clientes %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th><i class="fas fa-user me-1"></i>Nome</th>
-                            <th><i class="fas fa-id-card me-1"></i>CPF</th>
-                            <th><i class="fas fa-phone me-1"></i>Telefone</th>
-                            <th><i class="fas fa-cog me-1"></i>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for cliente in clientes %}
+                <!-- Tabela -->
+                {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
-                                <td>{{ cliente.nome }}</td>
-                                <td>{{ cliente.cpf|default:"-" }}</td>
-                                <td>{{ cliente.telefone|default:"-" }}</td>
+                                <th>Nome</th>
+                                <th>CPF/CNPJ</th>
+                                <th>Tipo</th>
+                                <th>Telefone</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cliente in page_obj %}
+                            <tr>
                                 <td>
-                                    <a href="{% url 'core:cliente_update' cliente.pk %}" class="btn btn-sm btn-info" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'core:cliente_delete' cliente.pk %}" class="btn btn-sm btn-danger" title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
+                                    <strong>{{ cliente.nome }}</strong>
+                                    {% if cliente.observacoes %}
+                                    <br><small class="text-muted">{{ cliente.observacoes|truncatechars:50 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ cliente.cpf_cnpj }}</td>
+                                <td>
+                                    <span class="badge bg-{{ cliente.get_tipo_color }}">
+                                        {{ cliente.get_tipo_display }}
+                                    </span>
+                                </td>
+                                <td>{{ cliente.telefone|default:"-" }}</td>
+                                <td>{{ cliente.email|default:"-" }}</td>
+                                <td>
+                                    {% if cliente.ativo %}
+                                    <span class="badge bg-success">Ativo</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        {% if perms.core.view_cliente %}
+                                        <a href="{% url 'core:cliente_detail' cliente.pk %}" 
+                                           class="btn btn-sm btn-outline-primary" title="Visualizar">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% endif %}
+                                        
+                                        {% if perms.core.change_cliente %}
+                                        <a href="{% url 'core:cliente_update' cliente.pk %}" 
+                                           class="btn btn-sm btn-outline-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                        
+                                        {% if perms.core.delete_cliente %}
+                                        <a href="{% url 'core:cliente_delete' cliente.pk %}" 
+                                           class="btn btn-sm btn-outline-danger" title="Excluir">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
 
-            {% if is_paginated %}
-                <nav aria-label="Navegação de páginas">
+                <!-- Paginação -->
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="Paginação">
                     <ul class="pagination justify-content-center">
                         {% if page_obj.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Primeira">
-                                    <span aria-hidden="true">&laquo;&laquo;</span>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Anterior">
-                                    <span aria-hidden="true">&laquo;</span>
-                                </a>
-                            </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if tipo %}&tipo={{ tipo }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if tipo %}&tipo={{ tipo }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
                         {% endif %}
 
                         {% for num in page_obj.paginator.page_range %}
                             {% if page_obj.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
                             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
-                                </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if tipo %}&tipo={{ tipo }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a>
+                            </li>
                             {% endif %}
                         {% endfor %}
 
                         {% if page_obj.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Próxima">
-                                    <span aria-hidden="true">&raquo;</span>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Última">
-                                    <span aria-hidden="true">&raquo;&raquo;</span>
-                                </a>
-                            </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if tipo %}&tipo={{ tipo }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if tipo %}&tipo={{ tipo }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
                         {% endif %}
                     </ul>
                 </nav>
-            {% endif %}
-        {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>Nenhum cliente encontrado.
+                {% endif %}
+
+                <!-- Informações da paginação -->
+                <div class="text-center text-muted">
+                    <small>
+                        Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} 
+                        de {{ page_obj.paginator.count }} clientes
+                    </small>
+                </div>
+
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhum cliente encontrado</h5>
+                    <p class="text-muted">
+                        {% if query or tipo %}
+                        Tente ajustar os filtros de busca.
+                        {% else %}
+                        Comece adicionando o primeiro cliente.
+                        {% endif %}
+                    </p>
+                    {% if perms.core.add_cliente %}
+                    <a href="{% url 'core:cliente_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Adicionar Cliente
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
-        {% endif %}
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit do formulário quando mudar os filtros
+document.getElementById('tipo').addEventListener('change', function() {
+    this.form.submit();
+});
+</script>
 {% endblock %} 

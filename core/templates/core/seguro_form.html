@@ -1,0 +1,435 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if seguro %}Editar Seguro{% else %}Novo Seguro{% endif %} - Sistema de Gestão
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho da página -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-shield-alt me-2"></i>
+                {% if seguro %}Editar Seguro{% else %}Novo Seguro{% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if seguro %}
+                    Editando seguro #{{ seguro.apolice }} - {{ seguro.cliente.nome }}
+                {% else %}
+                    Registre um novo seguro
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'core:seguro_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-1"></i>Dados do Seguro
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="seguroForm">
+                        {% csrf_token %}
+                        
+                        <!-- Cliente e Bem -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cliente.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Cliente
+                                </label>
+                                {{ form.cliente }}
+                                {% if form.cliente.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.cliente.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="mt-1">
+                                    <a href="{% url 'core:cliente_create' %}" class="btn btn-outline-secondary btn-sm" target="_blank" title="Cadastro completo">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.bem.id_for_label }}" class="form-label">
+                                    <i class="fas fa-home me-1"></i>Bem Segurado
+                                </label>
+                                {{ form.bem }}
+                                {% if form.bem.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.bem.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="mt-1">
+                                    <a href="{% url 'core:bem_create' %}" class="btn btn-outline-secondary btn-sm" target="_blank" title="Cadastrar bem">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Plano e Cotação -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.plano.id_for_label }}" class="form-label">
+                                    <i class="fas fa-file-contract me-1"></i>Plano de Seguro
+                                </label>
+                                {{ form.plano }}
+                                {% if form.plano.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.plano.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cotacao.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calculator me-1"></i>Cotação (opcional)
+                                </label>
+                                {{ form.cotacao }}
+                                {% if form.cotacao.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.cotacao.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Vendedor e Loja -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.vendedor.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user-tie me-1"></i>Vendedor
+                                </label>
+                                {{ form.vendedor }}
+                                {% if form.vendedor.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.vendedor.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.loja.id_for_label }}" class="form-label">
+                                    <i class="fas fa-store me-1"></i>Loja
+                                </label>
+                                {{ form.loja }}
+                                {% if form.loja.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.loja.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Apólice e Status -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.apolice.id_for_label }}" class="form-label">
+                                    <i class="fas fa-file-alt me-1"></i>Número da Apólice
+                                </label>
+                                {{ form.apolice }}
+                                {% if form.apolice.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.apolice.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">
+                                    <i class="fas fa-info-circle me-1"></i>Status
+                                </label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.status.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Valores -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.valor_seguro.id_for_label }}" class="form-label">
+                                    <i class="fas fa-dollar-sign me-1"></i>Valor do Seguro
+                                </label>
+                                {{ form.valor_seguro }}
+                                {% if form.valor_seguro.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.valor_seguro.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.comissao_percentual.id_for_label }}" class="form-label">
+                                    <i class="fas fa-percentage me-1"></i>Comissão (%)
+                                </label>
+                                {{ form.comissao_percentual }}
+                                {% if form.comissao_percentual.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.comissao_percentual.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Datas -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.data_inicio.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar me-1"></i>Data de Início
+                                </label>
+                                {{ form.data_inicio }}
+                                {% if form.data_inicio.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.data_inicio.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.data_fim.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar-times me-1"></i>Data de Fim
+                                </label>
+                                {{ form.data_fim }}
+                                {% if form.data_fim.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.data_fim.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                                    <i class="fas fa-sticky-note me-1"></i>Observações
+                                </label>
+                                {{ form.observacoes }}
+                                {% if form.observacoes.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.observacoes.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'core:seguro_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {% if seguro %}Atualizar{% else %}Salvar{% endif %} Seguro
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar com informações -->
+        <div class="col-lg-4">
+            <!-- Informações do cliente -->
+            <div class="card mb-4" id="clienteInfo" style="display: none;">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-user me-1"></i>Informações do Cliente
+                    </h6>
+                </div>
+                <div class="card-body" id="clienteInfoContent">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Informações do bem -->
+            <div class="card mb-4" id="bemInfo" style="display: none;">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-home me-1"></i>Informações do Bem
+                    </h6>
+                </div>
+                <div class="card-body" id="bemInfoContent">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Resumo do seguro -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-calculator me-1"></i>Resumo do Seguro
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Valor do Seguro:</small>
+                            <div class="fw-bold text-success" id="resumoValorSeguro">R$ 0,00</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Comissão:</small>
+                            <div class="fw-bold text-info" id="resumoComissao">0%</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Valor Comissão:</small>
+                            <div class="fw-bold text-primary" id="resumoValorComissao">R$ 0,00</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Duração:</small>
+                            <div class="fw-bold text-warning" id="resumoDuracao">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clienteSelect = document.getElementById('{{ form.cliente.id_for_label }}');
+    const bemSelect = document.getElementById('{{ form.bem.id_for_label }}');
+    const valorSeguroInput = document.getElementById('{{ form.valor_seguro.id_for_label }}');
+    const comissaoInput = document.getElementById('{{ form.comissao_percentual.id_for_label }}');
+    const dataInicioInput = document.getElementById('{{ form.data_inicio.id_for_label }}');
+    const dataFimInput = document.getElementById('{{ form.data_fim.id_for_label }}');
+
+    // Função para carregar informações do cliente
+    function carregarInfoCliente() {
+        const clienteId = clienteSelect.value;
+        if (clienteId) {
+            fetch(`/api/clientes/${clienteId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const clienteInfo = document.getElementById('clienteInfo');
+                    const clienteInfoContent = document.getElementById('clienteInfoContent');
+                    
+                    clienteInfoContent.innerHTML = `
+                        <div class="mb-2">
+                            <strong>${data.nome}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">CPF/CNPJ: ${data.cpf_cnpj}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Telefone: ${data.telefone}</small>
+                        </div>
+                        ${data.email ? `<div class="mb-2"><small class="text-muted">Email: ${data.email}</small></div>` : ''}
+                        ${data.endereco ? `<div class="mb-2"><small class="text-muted">Endereço: ${data.endereco}</small></div>` : ''}
+                    `;
+                    clienteInfo.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar informações do cliente:', error);
+                });
+        } else {
+            document.getElementById('clienteInfo').style.display = 'none';
+        }
+    }
+
+    // Função para carregar informações do bem
+    function carregarInfoBem() {
+        const bemId = bemSelect.value;
+        if (bemId) {
+            fetch(`/api/bens/${bemId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const bemInfo = document.getElementById('bemInfo');
+                    const bemInfoContent = document.getElementById('bemInfoContent');
+                    
+                    bemInfoContent.innerHTML = `
+                        <div class="mb-2">
+                            <strong>${data.descricao}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Tipo: ${data.tipo_display}</small>
+                        </div>
+                        ${data.marca ? `<div class="mb-2"><small class="text-muted">Marca: ${data.marca}</small></div>` : ''}
+                        ${data.modelo ? `<div class="mb-2"><small class="text-muted">Modelo: ${data.modelo}</small></div>` : ''}
+                        ${data.ano ? `<div class="mb-2"><small class="text-muted">Ano: ${data.ano}</small></div>` : ''}
+                        <div class="mb-2">
+                            <small class="text-muted">Valor Atual: <strong class="text-success">R$ ${parseFloat(data.valor_atual).toFixed(2)}</strong></small>
+                        </div>
+                    `;
+                    bemInfo.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar informações do bem:', error);
+                });
+        } else {
+            document.getElementById('bemInfo').style.display = 'none';
+        }
+    }
+
+    // Função para calcular resumo
+    function calcularResumo() {
+        const valorSeguro = parseFloat(valorSeguroInput.value) || 0;
+        const comissao = parseFloat(comissaoInput.value) || 0;
+
+        document.getElementById('resumoValorSeguro').textContent = `R$ ${valorSeguro.toFixed(2)}`;
+        document.getElementById('resumoComissao').textContent = `${comissao}%`;
+        document.getElementById('resumoValorComissao').textContent = `R$ ${(valorSeguro * comissao / 100).toFixed(2)}`;
+
+        // Calcular duração
+        if (dataInicioInput.value && dataFimInput.value) {
+            const dataInicio = new Date(dataInicioInput.value);
+            const dataFim = new Date(dataFimInput.value);
+            const diffTime = dataFim - dataInicio;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 0) {
+                const meses = Math.floor(diffDays / 30);
+                const dias = diffDays % 30;
+                let duracao = '';
+                if (meses > 0) {
+                    duracao += `${meses} mes${meses > 1 ? 'es' : ''}`;
+                }
+                if (dias > 0) {
+                    duracao += `${duracao ? ' e ' : ''}${dias} dia${dias > 1 ? 's' : ''}`;
+                }
+                document.getElementById('resumoDuracao').textContent = duracao;
+            } else {
+                document.getElementById('resumoDuracao').textContent = 'Data inválida';
+            }
+        } else {
+            document.getElementById('resumoDuracao').textContent = '-';
+        }
+    }
+
+    // Event listeners
+    clienteSelect.addEventListener('change', carregarInfoCliente);
+    bemSelect.addEventListener('change', carregarInfoBem);
+    valorSeguroInput.addEventListener('input', calcularResumo);
+    comissaoInput.addEventListener('input', calcularResumo);
+    dataInicioInput.addEventListener('change', calcularResumo);
+    dataFimInput.addEventListener('change', calcularResumo);
+
+    // Carregar informações iniciais se já há valores selecionados
+    if (clienteSelect.value) carregarInfoCliente();
+    if (bemSelect.value) carregarInfoBem();
+    calcularResumo();
+});
+</script>
+{% endblock %} 

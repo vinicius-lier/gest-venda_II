@@ -1,0 +1,92 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Teste do Menu{% endblock %}
+
+{% block page_title %}Teste do Menu{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Teste de Permissões</h5>
+            </div>
+            <div class="card-body">
+                <h6>Informações do Usuário:</h6>
+                <ul>
+                    <li><strong>Usuário:</strong> {{ user.username }}</li>
+                    <li><strong>Nome:</strong> {{ user.get_full_name|default:"Não informado" }}</li>
+                    <li><strong>Autenticado:</strong> {{ user.is_authenticated }}</li>
+                    <li><strong>Superuser:</strong> {{ user.is_superuser }}</li>
+                </ul>
+                
+                {% if usuario_sistema %}
+                <h6>Informações do Sistema:</h6>
+                <ul>
+                    <li><strong>Nome:</strong> {{ usuario_sistema.user.get_full_name|default:usuario_sistema.user.username }}</li>
+                    <li><strong>Perfil:</strong> {{ usuario_sistema.perfil.get_nome_display }}</li>
+                    <li><strong>Loja:</strong> {{ usuario_sistema.loja.nome }}</li>
+                    <li><strong>Status:</strong> {{ usuario_sistema.status }}</li>
+                </ul>
+                
+                <h6>Teste de Permissões:</h6>
+                <ul>
+                    <li><strong>Clientes - Listar:</strong> 
+                        {% if perms.core.view_cliente %}✅ Sim{% else %}❌ Não{% endif %}
+                    </li>
+                    <li><strong>Motos - Listar:</strong> 
+                        {% if perms.core.view_motocicleta %}✅ Sim{% else %}❌ Não{% endif %}
+                    </li>
+                    <li><strong>Vendas - Listar:</strong> 
+                        {% if perms.core.view_venda %}✅ Sim{% else %}❌ Não{% endif %}
+                    </li>
+                    <li><strong>Consignações - Listar:</strong> 
+                        {% if perms.core.view_consignacao %}✅ Sim{% else %}❌ Não{% endif %}
+                    </li>
+                    <li><strong>Seguros - Listar:</strong> 
+                        {% if perms.core.view_seguro %}✅ Sim{% else %}❌ Não{% endif %}
+                    </li>
+                    <li><strong>Relatórios - Visualizar:</strong> 
+                        {% if perms.core.view_relatorios %}✅ Sim{% else %}❌ Não{% endif %}
+                    </li>
+                </ul>
+                
+                <h6>Links de Teste:</h6>
+                <div class="btn-group" role="group">
+                    {% if perms.core.view_cliente %}
+                    <a href="{% url 'core:cliente_list' %}" class="btn btn-primary">Clientes</a>
+                    {% endif %}
+                    
+                    {% if perms.core.view_motocicleta %}
+                    <a href="{% url 'core:motocicleta_list' %}" class="btn btn-success">Motocicletas</a>
+                    {% endif %}
+                    
+                    {% if perms.core.view_venda %}
+                    <a href="{% url 'core:venda_list' %}" class="btn btn-info">Vendas</a>
+                    {% endif %}
+                    
+                    {% if perms.core.view_consignacao %}
+                    <a href="{% url 'core:consignacao_list' %}" class="btn btn-warning">Consignações</a>
+                    {% endif %}
+                    
+                    {% if perms.core.view_seguro %}
+                    <a href="{% url 'core:seguro_list' %}" class="btn btn-secondary">Seguros</a>
+                    {% endif %}
+                    
+                    {% if perms.core.view_relatorios %}
+                    <a href="{% url 'core:relatorios' %}" class="btn btn-dark">Relatórios</a>
+                    {% endif %}
+                </div>
+                
+                {% else %}
+                <div class="alert alert-warning">
+                    <strong>Atenção:</strong> usuario_sistema não está disponível no contexto!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

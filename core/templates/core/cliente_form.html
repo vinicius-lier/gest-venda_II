@@ -1,225 +1,212 @@
 {% extends 'core/base.html' %}
-{% load crispy_forms_tags %}
-{% load static %}
 
 {% block title %}
-    {% if form.instance.pk %}Editar Cliente{% else %}Novo Cliente{% endif %}
+{% if cliente %}Editar Cliente{% else %}Novo Cliente{% endif %} - Gestão Operacional de Vendas
 {% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'core/css/autocomplete.css' %}">
-<style>
-    .motos-disponiveis {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 10px;
-        margin-top: 10px;
-    }
-    .moto-item {
-        border: 1px solid #eee;
-        border-radius: 4px;
-        padding: 10px;
-        margin-bottom: 10px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .moto-item:hover {
-        background-color: #f8f9fa;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .moto-item.selected {
-        background-color: #e2f4e2;
-        border-color: #28a745;
-    }
-    .moto-details {
-        margin-top: 5px;
-        font-size: 0.9em;
-        color: #6c757d;
-    }
-    .cadastro-rapido-btn {
-        margin-top: 10px;
-    }
-</style>
+{% block page_title %}
+{% if cliente %}Editar Cliente{% else %}Novo Cliente{% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-user me-2"></i>
-            {% if form.instance.pk %}Editar Cliente{% else %}Novo Cliente{% endif %}
-        </h5>
-    </div>
-    <div class="card-body">
-        <form method="post" id="clienteForm" class="needs-validation" novalidate>
-            {% csrf_token %}
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <h4 class="border-bottom pb-2 mb-3">Dados Pessoais</h4>
-                </div>
-                <div class="col-md-6">
-                    {{ form.nome|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.cpf|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.rg|as_crispy_field }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.telefone|as_crispy_field }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.email|as_crispy_field }}
-                </div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-user me-2"></i>
+                    {% if cliente %}Editar Cliente{% else %}Novo Cliente{% endif %}
+                </h6>
             </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <h4 class="border-bottom pb-2 mb-3">Endereço e Informações Adicionais</h4>
-                </div>
-                <div class="col-md-8">
-                    {{ form.endereco|as_crispy_field }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.data_cadastro|as_crispy_field }}
-                </div>
-                <div class="col-md-12">
-                    {{ form.observacoes|as_crispy_field }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.tipo|as_crispy_field }}
-                </div>
-            </div>
-            
-            <div class="row mb-4" id="motoSecaoContainer">
-                <div class="col-md-12">
-                    <h4 class="border-bottom pb-2 mb-3">Moto Associada</h4>
-                </div>
-                
-                <div class="col-md-12">
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="radio" name="tipoMotoSelecao" id="tipoMotoExistente" value="existente" checked>
-                        <label class="form-check-label" for="tipoMotoExistente">
-                            Selecionar moto do estoque
-                        </label>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="radio" name="tipoMotoSelecao" id="tipoMotoNova" value="nova">
-                        <label class="form-check-label" for="tipoMotoNova">
-                            Cadastrar nova moto
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Seção para selecionar moto existente -->
-                <div class="col-md-12 mb-3" id="motoBuscaSection">
-                    <div class="input-group">
-                        <input type="text" id="buscarMoto" class="form-control" placeholder="Buscar moto (marca, modelo, placa, chassi)">
-                        <button class="btn btn-primary" type="button" id="btnBuscarMoto">
-                            <i class="fas fa-search"></i> Buscar
-                        </button>
-                    </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
                     
-                    <div class="motos-disponiveis mt-3">
-                        <div id="motosLista">
-                            <div class="text-center py-4">
-                                <p>Digite para buscar motos disponíveis no sistema</p>
+                    <div class="row">
+                        <!-- Nome -->
+                        <div class="col-md-8 mb-3">
+                            <label for="nome" class="form-label">
+                                <i class="fas fa-user me-1"></i>Nome Completo *
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ cliente.nome|default:'' }}" required>
+                            <div class="invalid-feedback">
+                                Por favor, informe o nome completo.
+                            </div>
+                        </div>
+                        
+                        <!-- Tipo -->
+                        <div class="col-md-4 mb-3">
+                            <label for="tipo" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Tipo *
+                            </label>
+                            <select class="form-select" id="tipo" name="tipo" required>
+                                <option value="">Selecione...</option>
+                                <option value="pf" {% if cliente.tipo == 'pf' %}selected{% endif %}>Pessoa Física</option>
+                                <option value="pj" {% if cliente.tipo == 'pj' %}selected{% endif %}>Pessoa Jurídica</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor, selecione o tipo.
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Botão para cadastro rápido -->
-                <div class="col-md-12 mb-3 text-center" id="motoCadastroRapidoSection" style="display: none;">
-                    <button type="button" class="btn btn-primary" id="btnModalNovaMoto">
-                        <i class="fas fa-plus"></i> Cadastrar Nova Moto
-                    </button>
-                </div>
-                
-                <div class="col-md-12">
-                    <!-- Campo oculto que armazena o ID da moto selecionada -->
-                    <input type="hidden" name="moto_id" id="motoSelecionadaId">
-                    {{ form.motos|as_crispy_field }}
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
+                    
+                    <div class="row">
+                        <!-- CPF/CNPJ -->
+                        <div class="col-md-6 mb-3">
+                            <label for="cpf_cnpj" class="form-label">
+                                <i class="fas fa-id-card me-1"></i>CPF/CNPJ *
+                            </label>
+                            <input type="text" class="form-control" id="cpf_cnpj" name="cpf_cnpj" 
+                                   value="{{ cliente.cpf_cnpj|default:'' }}" required>
+                            <div class="invalid-feedback">
+                                Por favor, informe o CPF ou CNPJ.
+                            </div>
+                        </div>
+                        
+                        <!-- RG/IE -->
+                        <div class="col-md-6 mb-3">
+                            <label for="rg_ie" class="form-label">
+                                <i class="fas fa-id-badge me-1"></i>RG/IE
+                            </label>
+                            <input type="text" class="form-control" id="rg_ie" name="rg_ie" 
+                                   value="{{ cliente.rg_ie|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Telefone -->
+                        <div class="col-md-6 mb-3">
+                            <label for="telefone" class="form-label">
+                                <i class="fas fa-phone me-1"></i>Telefone *
+                            </label>
+                            <input type="tel" class="form-control" id="telefone" name="telefone" 
+                                   value="{{ cliente.telefone|default:'' }}" required>
+                            <div class="invalid-feedback">
+                                Por favor, informe o telefone.
+                            </div>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-1"></i>Email
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ cliente.email|default:'' }}">
+                            <div class="invalid-feedback">
+                                Por favor, informe um email válido.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Data de Nascimento -->
+                        <div class="col-md-6 mb-3">
+                            <label for="data_nascimento" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>Data de Nascimento
+                            </label>
+                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" 
+                                   value="{{ cliente.data_nascimento|date:'Y-m-d'|default:'' }}">
+                        </div>
+                        
+                        <!-- Sexo -->
+                        <div class="col-md-6 mb-3">
+                            <label for="sexo" class="form-label">
+                                <i class="fas fa-venus-mars me-1"></i>Sexo
+                            </label>
+                            <select class="form-select" id="sexo" name="sexo">
+                                <option value="">Selecione...</option>
+                                <option value="M" {% if cliente.sexo == 'M' %}selected{% endif %}>Masculino</option>
+                                <option value="F" {% if cliente.sexo == 'F' %}selected{% endif %}>Feminino</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Endereço -->
+                    <div class="mb-3">
+                        <label for="endereco" class="form-label">
+                            <i class="fas fa-map-marker-alt me-1"></i>Endereço
+                        </label>
+                        <textarea class="form-control" id="endereco" name="endereco" rows="2">{{ cliente.endereco|default:'' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Cidade -->
+                        <div class="col-md-6 mb-3">
+                            <label for="cidade" class="form-label">
+                                <i class="fas fa-city me-1"></i>Cidade
+                            </label>
+                            <input type="text" class="form-control" id="cidade" name="cidade" 
+                                   value="{{ cliente.cidade|default:'' }}">
+                        </div>
+                        
+                        <!-- Estado -->
+                        <div class="col-md-3 mb-3">
+                            <label for="estado" class="form-label">
+                                <i class="fas fa-map me-1"></i>Estado
+                            </label>
+                            <select class="form-select" id="estado" name="estado">
+                                <option value="">Selecione...</option>
+                                <option value="AC" {% if cliente.estado == 'AC' %}selected{% endif %}>Acre</option>
+                                <option value="AL" {% if cliente.estado == 'AL' %}selected{% endif %}>Alagoas</option>
+                                <option value="AP" {% if cliente.estado == 'AP' %}selected{% endif %}>Amapá</option>
+                                <option value="AM" {% if cliente.estado == 'AM' %}selected{% endif %}>Amazonas</option>
+                                <option value="BA" {% if cliente.estado == 'BA' %}selected{% endif %}>Bahia</option>
+                                <option value="CE" {% if cliente.estado == 'CE' %}selected{% endif %}>Ceará</option>
+                                <option value="DF" {% if cliente.estado == 'DF' %}selected{% endif %}>Distrito Federal</option>
+                                <option value="ES" {% if cliente.estado == 'ES' %}selected{% endif %}>Espírito Santo</option>
+                                <option value="GO" {% if cliente.estado == 'GO' %}selected{% endif %}>Goiás</option>
+                                <option value="MA" {% if cliente.estado == 'MA' %}selected{% endif %}>Maranhão</option>
+                                <option value="MT" {% if cliente.estado == 'MT' %}selected{% endif %}>Mato Grosso</option>
+                                <option value="MS" {% if cliente.estado == 'MS' %}selected{% endif %}>Mato Grosso do Sul</option>
+                                <option value="MG" {% if cliente.estado == 'MG' %}selected{% endif %}>Minas Gerais</option>
+                                <option value="PA" {% if cliente.estado == 'PA' %}selected{% endif %}>Pará</option>
+                                <option value="PB" {% if cliente.estado == 'PB' %}selected{% endif %}>Paraíba</option>
+                                <option value="PR" {% if cliente.estado == 'PR' %}selected{% endif %}>Paraná</option>
+                                <option value="PE" {% if cliente.estado == 'PE' %}selected{% endif %}>Pernambuco</option>
+                                <option value="PI" {% if cliente.estado == 'PI' %}selected{% endif %}>Piauí</option>
+                                <option value="RJ" {% if cliente.estado == 'RJ' %}selected{% endif %}>Rio de Janeiro</option>
+                                <option value="RN" {% if cliente.estado == 'RN' %}selected{% endif %}>Rio Grande do Norte</option>
+                                <option value="RS" {% if cliente.estado == 'RS' %}selected{% endif %}>Rio Grande do Sul</option>
+                                <option value="RO" {% if cliente.estado == 'RO' %}selected{% endif %}>Rondônia</option>
+                                <option value="RR" {% if cliente.estado == 'RR' %}selected{% endif %}>Roraima</option>
+                                <option value="SC" {% if cliente.estado == 'SC' %}selected{% endif %}>Santa Catarina</option>
+                                <option value="SP" {% if cliente.estado == 'SP' %}selected{% endif %}>São Paulo</option>
+                                <option value="SE" {% if cliente.estado == 'SE' %}selected{% endif %}>Sergipe</option>
+                                <option value="TO" {% if cliente.estado == 'TO' %}selected{% endif %}>Tocantins</option>
+                            </select>
+                        </div>
+                        
+                        <!-- CEP -->
+                        <div class="col-md-3 mb-3">
+                            <label for="cep" class="form-label">
+                                <i class="fas fa-mail-bulk me-1"></i>CEP
+                            </label>
+                            <input type="text" class="form-control" id="cep" name="cep" 
+                                   value="{{ cliente.cep|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Observações -->
+                    <div class="mb-4">
+                        <label for="observacoes" class="form-label">
+                            <i class="fas fa-sticky-note me-1"></i>Observações
+                        </label>
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3">{{ cliente.observacoes|default:'' }}</textarea>
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between">
                         <a href="{% url 'core:cliente_list' %}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-1"></i>Voltar
                         </a>
-                        <button type="submit" class="btn btn-primary" id="btnSalvarCliente">
-                            <i class="fas fa-save me-1"></i>Salvar
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if cliente %}Atualizar{% else %}Salvar{% endif %}
                         </button>
                     </div>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Modal para cadastro rápido de moto -->
-<div class="modal fade" id="modalNovaMoto" tabindex="-1" aria-labelledby="modalNovaMotoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalNovaMotoLabel">Cadastro Rápido de Moto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <div class="modal-body">
-                <form id="formNovaMoto">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="novaMotoMarca" class="form-label">Marca*</label>
-                            <input type="text" class="form-control" id="novaMotoMarca" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="novaMotoModelo" class="form-label">Modelo*</label>
-                            <input type="text" class="form-control" id="novaMotoModelo" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="novaMotoAno" class="form-label">Ano*</label>
-                            <input type="text" class="form-control" id="novaMotoAno" required>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="novaMotoCor" class="form-label">Cor*</label>
-                            <input type="text" class="form-control" id="novaMotoCor" required>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="novaMotoPlaca" class="form-label">Placa</label>
-                            <input type="text" class="form-control" id="novaMotoPlaca">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="novaMotoChassi" class="form-label">Chassi*</label>
-                            <input type="text" class="form-control" id="novaMotoChassi" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="novaMotoValor" class="form-label">Valor*</label>
-                            <div class="input-group">
-                                <span class="input-group-text">R$</span>
-                                <input type="number" step="0.01" class="form-control" id="novaMotoValor" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="novaMotoObservacoes" class="form-label">Observações</label>
-                        <textarea class="form-control" id="novaMotoObservacoes" rows="3"></textarea>
-                    </div>
-                    <input type="hidden" id="novaMotoProprietarioId">
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="btnSalvarNovaMoto">Salvar Moto</button>
             </div>
         </div>
     </div>
@@ -227,275 +214,51 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/js/autocomplete.js' %}"></script>
 <script>
-$(document).ready(function() {
-    // Função para alternar a visibilidade da seção de motos com base no tipo
-    function toggleMotoSection(tipoValor) {
-        const motoSecaoContainer = $('#motoSecaoContainer');
-        
-        if (tipoValor === 'PROPRIETARIO' || tipoValor === 'AMBOS') {
-            motoSecaoContainer.show();
-        } else {
-            motoSecaoContainer.hide();
-            $('#motoSelecionadaId').val('');
-        }
-    }
-    
-    // Inicializa a visibilidade baseada no tipo selecionado
-    toggleMotoSection($('#id_tipo').val());
-    
-    // Monitora a mudança no tipo
-    $('#id_tipo').on('change', function() {
-        toggleMotoSection($(this).val());
-    });
-    
-    // Verifica se há erro de "cliente já existe" pelo CPF
-    const cpfField = $('#id_cpf');
-    if (cpfField.length) {
-        cpfField.on('blur', function() {
-            const cpf = $(this).val().trim();
-            if (cpf) {
-                $.ajax({
-                    url: '{% url "core:api_buscar_clientes" %}',
-                    data: { termo: cpf },
-                    success: function(data) {
-                        if (data.results.length > 0) {
-                            const cliente = data.results[0];
-                            alert(`Atenção! Já existe um cliente com este CPF: ${cliente.nome}`);
-                        }
-                    }
-                });
-            }
-        });
-    }
-    
-    // Alternar entre selecionar moto existente ou cadastrar nova
-    $('input[name="tipoMotoSelecao"]').on('change', function() {
-        const tipo = $(this).val();
-        
-        if (tipo === 'existente') {
-            $('#motoBuscaSection').show();
-            $('#motoCadastroRapidoSection').hide();
-        } else {
-            $('#motoBuscaSection').hide();
-            $('#motoCadastroRapidoSection').show();
-        }
-    });
-    
-    // Busca de motos
-    $('#btnBuscarMoto').on('click', function(e) {
-        e.preventDefault();
-        buscarMotos();
-    });
-    
-    // Busca também ao pressionar Enter no campo
-    $('#buscarMoto').on('keypress', function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            buscarMotos();
-        }
-    });
-    
-    // Função para buscar motos
-    function buscarMotos() {
-        const termo = $('#buscarMoto').val().trim();
-        
-        if (termo.length < 2 && termo.length > 0) {
-            alert('Digite pelo menos 2 caracteres para buscar');
-            return;
-        }
-        
-        const motosLista = $('#motosLista');
-        motosLista.html('<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Buscando motos...</p></div>');
-        
-        $.ajax({
-            url: '{% url "core:api_buscar_motos" %}',
-            data: { 
-                termo: termo,
-                disponivel: true
-            },
-            success: function(data) {
-                motosLista.empty();
-                
-                if (data.results.length === 0) {
-                    motosLista.html('<div class="alert alert-info">Nenhuma moto encontrada com os critérios de busca.</div>');
-                    return;
+// Validação do formulário
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
                 }
-                
-                // Criar itens para cada moto
-                data.results.forEach(function(moto) {
-                    const motoItem = $(`
-                        <div class="moto-item" data-moto-id="${moto.id}" data-moto-text="${moto.text}">
-                            <div class="fw-bold">${moto.marca} ${moto.modelo} (${moto.ano})</div>
-                            <div class="moto-details">
-                                <span class="badge bg-secondary">${moto.cor}</span>
-                                ${moto.placa ? `<span class="badge bg-info">Placa: ${moto.placa}</span>` : ''}
-                                <div class="mt-1">Chassi: ${moto.chassi}</div>
-                                <div>Valor: R$ ${parseFloat(moto.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-                            </div>
-                        </div>
-                    `);
-                    
-                    motosLista.append(motoItem);
-                });
-                
-                // Selecionar moto quando clicada
-                $('.moto-item').on('click', function() {
-                    $('.moto-item').removeClass('selected');
-                    $(this).addClass('selected');
-                    
-                    const motoId = $(this).data('moto-id');
-                    const motoText = $(this).data('moto-text');
-                    
-                    // Preenche o campo oculto
-                    $('#motoSelecionadaId').val(motoId);
-                    
-                    // Também preenche o campo do formulário de motos (dropdown)
-                    const motoField = $('select[name="motos"]');
-                    if (motoField.length) {
-                        motoField.val(motoId);
-                    }
-                });
-            },
-            error: function() {
-                motosLista.html('<div class="alert alert-danger">Erro ao buscar motos. Tente novamente.</div>');
-            }
+                form.classList.add('was-validated');
+            }, false);
         });
+    }, false);
+})();
+
+// Máscara para CPF/CNPJ
+document.getElementById('cpf_cnpj').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+        value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    } else {
+        value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
     }
-    
-    // Abrir modal de cadastro rápido
-    $('#btnModalNovaMoto').on('click', function() {
-        // Limpa o formulário
-        $('#formNovaMoto')[0].reset();
-        
-        // Define o proprietário como o cliente atual sendo cadastrado (se já tiver ID)
-        const clienteId = $('input[name="id"]').val();
-        if (clienteId) {
-            $('#novaMotoProprietarioId').val(clienteId);
-        }
-        
-        // Abre o modal
-        var myModal = new bootstrap.Modal(document.getElementById('modalNovaMoto'));
-        myModal.show();
-    });
-    
-    // Salvar nova moto
-    $('#btnSalvarNovaMoto').on('click', function() {
-        // Validação básica
-        const marca = $('#novaMotoMarca').val().trim();
-        const modelo = $('#novaMotoModelo').val().trim();
-        const ano = $('#novaMotoAno').val().trim();
-        const cor = $('#novaMotoCor').val().trim();
-        const chassi = $('#novaMotoChassi').val().trim();
-        const valor = $('#novaMotoValor').val().trim();
-        
-        if (!marca || !modelo || !ano || !cor || !chassi || !valor) {
-            alert('Preencha todos os campos obrigatórios (marcados com *)');
-            return;
-        }
-        
-        // Salvar por AJAX
-        $.ajax({
-            url: '{% url "core:api_criar_moto_rapida" %}',
-            method: 'POST',
-            data: {
-                marca: marca,
-                modelo: modelo,
-                ano: ano,
-                cor: cor,
-                placa: $('#novaMotoPlaca').val().trim(),
-                chassi: chassi,
-                valor: valor,
-                observacoes: $('#novaMotoObservacoes').val().trim(),
-                proprietario_id: $('#novaMotoProprietarioId').val(),
-                csrfmiddlewaretoken: $('input[name="csrfmiddlewaretoken"]').val()
-            },
-            success: function(data) {
-                if (data.success) {
-                    // Fecha o modal
-                    var myModalEl = document.getElementById('modalNovaMoto');
-                    var modal = bootstrap.Modal.getInstance(myModalEl);
-                    modal.hide();
-                    
-                    // Seleciona a moto recém-cadastrada
-                    const motoId = data.moto.id;
-                    $('#motoSelecionadaId').val(motoId);
-                    
-                    // Preenche o select também
-                    const motoField = $('select[name="motos"]');
-                    if (motoField.length) {
-                        // Adiciona a opção se não existir
-                        if (motoField.find(`option[value="${motoId}"]`).length === 0) {
-                            motoField.append(new Option(data.moto.text, motoId, true, true));
-                        }
-                        motoField.val(motoId);
-                    }
-                    
-                    // Exibe mensagem
-                    alert('Moto cadastrada com sucesso!');
-                    
-                    // Altera para o modo de seleção e exibe a moto cadastrada
-                    $('input[name="tipoMotoSelecao"][value="existente"]').prop('checked', true).trigger('change');
-                    buscarMotos();
-                } else {
-                    alert('Erro ao cadastrar moto: ' + data.error);
-                }
-            },
-            error: function(xhr) {
-                alert('Erro ao cadastrar moto. Verifique os dados e tente novamente.');
-                console.error(xhr.responseText);
-            }
-        });
-    });
-    
-    // Se já existir uma moto associada, carrega-a inicialmente
-    {% if form.instance.pk %}
-        $.ajax({
-            url: '{% url "core:motos_cliente_ajax" form.instance.pk %}',
-            success: function(data) {
-                if (data.motos && data.motos.length > 0) {
-                    const motosLista = $('#motosLista');
-                    motosLista.empty();
-                    
-                    data.motos.forEach(function(moto) {
-                        const motoItem = $(`
-                            <div class="moto-item ${moto.selecionada ? 'selected' : ''}" data-moto-id="${moto.id}" data-moto-text="${moto.text}">
-                                <div class="fw-bold">${moto.marca} ${moto.modelo} (${moto.ano})</div>
-                                <div class="moto-details">
-                                    <span class="badge bg-secondary">${moto.cor}</span>
-                                    ${moto.placa ? `<span class="badge bg-info">Placa: ${moto.placa}</span>` : ''}
-                                    <div class="mt-1">Chassi: ${moto.chassi}</div>
-                                    <div>Valor: R$ ${parseFloat(moto.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-                                </div>
-                            </div>
-                        `);
-                        
-                        motosLista.append(motoItem);
-                        
-                        if (moto.selecionada) {
-                            $('#motoSelecionadaId').val(moto.id);
-                        }
-                    });
-                    
-                    // Selecionar moto quando clicada
-                    $('.moto-item').on('click', function() {
-                        $('.moto-item').removeClass('selected');
-                        $(this).addClass('selected');
-                        
-                        const motoId = $(this).data('moto-id');
-                        $('#motoSelecionadaId').val(motoId);
-                        
-                        // Atualiza também o select
-                        const motoField = $('select[name="motos"]');
-                        if (motoField.length) {
-                            motoField.val(motoId);
-                        }
-                    });
-                }
-            }
-        });
-    {% endif %}
+    e.target.value = value;
+});
+
+// Máscara para telefone
+document.getElementById('telefone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 10) {
+        value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    } else {
+        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    e.target.value = value;
+});
+
+// Máscara para CEP
+document.getElementById('cep').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    value = value.replace(/(\d{5})(\d{3})/, '$1-$2');
+    e.target.value = value;
 });
 </script>
-{% endblock %} 
+{% endblock %}

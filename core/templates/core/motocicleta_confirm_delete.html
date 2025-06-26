@@ -1,0 +1,147 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Excluir Motocicleta{% endblock %}
+
+{% block content %}
+{% if perms.core.delete_motocicleta %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        Confirmar Exclusão
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Atenção!</h5>
+                        <p>Você está prestes a marcar como inativa a motocicleta:</p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Informações da Motocicleta</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Marca/Modelo:</th>
+                                    <td>{{ moto.marca }} {{ moto.modelo }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Ano:</th>
+                                    <td>{{ moto.ano }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Placa:</th>
+                                    <td>{{ moto.placa|default:"Não informada" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Chassi:</th>
+                                    <td>{{ moto.chassi }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        <span class="badge badge-{{ moto.get_status_color }}">
+                                            {{ moto.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Proprietário:</th>
+                                    <td>{{ moto.proprietario.nome|default:"Não informado" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Verificações de Segurança</h5>
+                            <div class="alert alert-info">
+                                <p><strong>Antes de marcar como inativa, verifique se:</strong></p>
+                                <ul>
+                                    <li>A motocicleta não possui vendas registradas</li>
+                                    <li>A motocicleta não possui consignações ativas</li>
+                                    <li>A motocicleta não possui seguros ativos</li>
+                                    <li>A motocicleta não possui repasses registrados</li>
+                                </ul>
+                            </div>
+                            
+                            {% if moto.vendas.exists %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-times-circle"></i> Não é possível excluir!</h6>
+                                <p>Esta motocicleta possui {{ moto.vendas.count }} venda(s) registrada(s).</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if moto.consignacao %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-times-circle"></i> Não é possível excluir!</h6>
+                                <p>Esta motocicleta possui consignação ativa.</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if moto.seguro %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-times-circle"></i> Não é possível excluir!</h6>
+                                <p>Esta motocicleta possui seguro ativo.</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if moto.repasses.exists %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-times-circle"></i> Não é possível excluir!</h6>
+                                <p>Esta motocicleta possui {{ moto.repasses.count }} repasse(s) registrado(s).</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Ação Reversível</h6>
+                        <p>A motocicleta será marcada como inativa e removida das listagens ativas, mas os dados serão preservados.</p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <a href="{% url 'core:motocicleta_detail' moto.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancelar
+                            </a>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            {% if not moto.vendas.exists and not moto.consignacao and not moto.seguro and not moto.repasses.exists %}
+                            <form method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> Confirmar Exclusão
+                                </button>
+                            </form>
+                            {% else %}
+                            <button type="button" class="btn btn-danger" disabled>
+                                <i class="fas fa-lock"></i> Exclusão Bloqueada
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Acesso Negado
+    </h4>
+    <p>Você não tem permissão para excluir motocicletas.</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{% url 'core:motocicleta_list' %}" class="btn btn-outline-danger">
+            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+        </a>
+    </p>
+</div>
+{% endif %}
+{% endblock %} 

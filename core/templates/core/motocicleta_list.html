@@ -1,0 +1,345 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Motocicletas - Gestão Operacional de Vendas{% endblock %}
+
+{% block page_title %}Motocicletas{% endblock %}
+
+{% block content %}
+{% if request.user.is_superuser or perms.core.view_motocicleta %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-motorcycle me-2"></i>Motocicletas
+    </h1>
+    
+    {% if perms.core.add_motocicleta %}
+    <a href="{% url 'core:motocicleta_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Nova Motocicleta
+    </a>
+    {% endif %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-motorcycle me-2"></i>Lista de Motocicletas
+                </h6>
+                {% if perms.core.add_motocicleta %}
+                <a href="{% url 'core:motocicleta_create' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Nova Motocicleta
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <form method="get" class="row mb-4">
+                    <div class="col-md-2">
+                        <label for="ativo" class="form-label">Status</label>
+                        <select class="form-select" id="ativo" name="ativo">
+                            <option value="ativo" {% if ativo == 'ativo' %}selected{% endif %}>Ativas</option>
+                            <option value="inativo" {% if ativo == 'inativo' %}selected{% endif %}>Inativas</option>
+                            <option value="todos" {% if ativo == 'todos' %}selected{% endif %}>Todas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">Status Operacional</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">Todos</option>
+                            <option value="estoque" {% if status == 'estoque' %}selected{% endif %}>Em Estoque</option>
+                            <option value="vendida" {% if status == 'vendida' %}selected{% endif %}>Vendida</option>
+                            <option value="repasse" {% if status == 'repasse' %}selected{% endif %}>Repasse</option>
+                            <option value="reservada" {% if status == 'reservada' %}selected{% endif %}>Reservada</option>
+                            <option value="manutencao" {% if status == 'manutencao' %}selected{% endif %}>Em Manutenção</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="marca" class="form-label">Marca</label>
+                        <input type="text" class="form-control" id="marca" name="marca" value="{{ marca|default:'' }}" placeholder="Filtrar por marca">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="q" class="form-label">Buscar</label>
+                        <input type="text" class="form-control" id="q" name="q" value="{{ query|default:'' }}" placeholder="Chassi, placa, modelo...">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Filtrar
+                        </button>
+                        <a href="{% url 'core:motocicleta_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Limpar
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Tabela de Motocicletas -->
+                {% if motocicletas %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Marca/Modelo</th>
+                                <th>Ano</th>
+                                <th>Placa</th>
+                                <th>Chassi</th>
+                                <th>Status</th>
+                                <th>Ativo</th>
+                                <th>Valor Atual</th>
+                                <th>Proprietário</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for moto in motocicletas %}
+                            <tr>
+                                <td>
+                                    <strong>{{ moto.marca }} {{ moto.modelo }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ moto.cor }}</small>
+                                </td>
+                                <td>{{ moto.ano }}</td>
+                                <td>
+                                    {% if moto.placa %}
+                                    <span class="badge bg-secondary">{{ moto.placa }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ moto.chassi|truncatechars:15 }}</small>
+                                </td>
+                                <td>
+                                    {% if moto.status == 'estoque' %}
+                                    <span class="badge bg-success">Em Estoque</span>
+                                    {% elif moto.status == 'vendida' %}
+                                    <span class="badge bg-danger">Vendida</span>
+                                    {% elif moto.status == 'repasse' %}
+                                    <span class="badge bg-warning">Repasse</span>
+                                    {% elif moto.status == 'reservada' %}
+                                    <span class="badge bg-info">Reservada</span>
+                                    {% elif moto.status == 'manutencao' %}
+                                    <span class="badge bg-secondary">Em Manutenção</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ moto.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if moto.ativo %}
+                                    <span class="badge bg-success">Ativa</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inativa</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>R$ {{ moto.valor_atual|floatformat:2 }}</strong>
+                                </td>
+                                <td>
+                                    {% if moto.proprietario %}
+                                    <small>{{ moto.proprietario.nome|truncatechars:20 }}</small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        {% if perms.core.view_motocicleta %}
+                                        <a href="{% url 'core:motocicleta_detail' moto.pk %}" 
+                                           class="btn btn-sm btn-outline-primary" title="Visualizar">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% endif %}
+                                        
+                                        {% if perms.core.change_motocicleta %}
+                                        <a href="{% url 'core:motocicleta_update' moto.pk %}" 
+                                           class="btn btn-sm btn-outline-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                        
+                                        {% if perms.core.delete_motocicleta and moto.ativo %}
+                                        <a href="{% url 'core:motocicleta_delete' moto.pk %}" 
+                                           class="btn btn-sm btn-outline-danger" title="Excluir">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginação -->
+                {% if motocicletas.has_other_pages %}
+                <nav aria-label="Navegação de páginas">
+                    <ul class="pagination justify-content-center">
+                        {% if motocicletas.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ motocicletas.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if ativo %}&ativo={{ ativo }}{% endif %}{% if marca %}&marca={{ marca }}{% endif %}{% if query %}&q={{ query }}{% endif %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in motocicletas.paginator.page_range %}
+                        {% if motocicletas.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > motocicletas.number|add:'-3' and num < motocicletas.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if status %}&status={{ status }}{% endif %}{% if ativo %}&ativo={{ ativo }}{% endif %}{% if marca %}&marca={{ marca }}{% endif %}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if motocicletas.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ motocicletas.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if ativo %}&ativo={{ ativo }}{% endif %}{% if marca %}&marca={{ marca }}{% endif %}{% if query %}&q={{ query }}{% endif %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+                <!-- Estatísticas -->
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Total de Motos
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_motos }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-motorcycle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Disponíveis
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ disponiveis }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Consignadas
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ consignadas }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-handshake fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-left-danger shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                            Vendidas
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ vendidas }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-motorcycle fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhuma motocicleta encontrada</h5>
+                    <p class="text-muted">
+                        {% if status or ativo or marca or query %}
+                        Tente ajustar os filtros de busca.
+                        {% else %}
+                        Comece adicionando a primeira motocicleta.
+                        {% endif %}
+                    </p>
+                    {% if perms.core.add_motocicleta %}
+                    <a href="{% url 'core:motocicleta_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Adicionar Motocicleta
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Acesso Negado
+    </h4>
+    <p>Você não tem permissão para visualizar motocicletas.</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-outline-danger">
+            <i class="fas fa-arrow-left me-1"></i>Voltar ao Dashboard
+        </a>
+    </p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit do formulário quando mudar os filtros
+document.getElementById('status').addEventListener('change', function() {
+    this.form.submit();
+});
+
+document.getElementById('ativo').addEventListener('change', function() {
+    this.form.submit();
+});
+
+// Busca com delay
+let searchTimeout;
+document.getElementById('q').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        this.form.submit();
+    }, 500);
+});
+
+document.getElementById('marca').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        this.form.submit();
+    }, 500);
+});
+</script>
+{% endblock %} 

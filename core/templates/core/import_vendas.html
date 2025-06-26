@@ -1,0 +1,71 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Importar Vendas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-shopping-cart"></i> Importar Vendas
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:import_data' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="file">Selecione o arquivo CSV/Excel:</label>
+                                    <input type="file" class="form-control-file" id="file" name="file" accept=".csv,.xlsx,.xls" required>
+                                    <small class="form-text text-muted">
+                                        Formatos aceitos: CSV, Excel (.xlsx, .xls)
+                                    </small>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-3">
+                                    <i class="fas fa-upload"></i> Importar Vendas
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-info-circle"></i> Informações
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <h6>Colunas necessárias:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>cliente_nome</strong> - Nome do cliente</li>
+                                        <li><strong>motocicleta_placa</strong> - Placa da moto</li>
+                                        <li><strong>vendedor_nome</strong> - Nome do vendedor</li>
+                                        <li><strong>data_venda</strong> - Data (YYYY-MM-DD)</li>
+                                        <li><strong>valor_venda</strong> - Valor da venda</li>
+                                        <li><strong>forma_pagamento</strong> - Forma de pagamento</li>
+                                        <li><strong>comissao_percentual</strong> - % de comissão</li>
+                                        <li><strong>observacoes</strong> - Observações</li>
+                                    </ul>
+                                    <hr>
+                                    <h6>Exemplo de CSV:</h6>
+                                    <pre class="small">cliente_nome,motocicleta_placa,vendedor_nome,data_venda,valor_venda,forma_pagamento,comissao_percentual,observacoes
+João Silva,ABC1234,Vendedor 1,2024-01-15,12000.00,dinheiro,5.0,Venda à vista
+Maria Santos,DEF5678,Vendedor 2,2024-01-20,11000.00,financiamento,5.0,Financiamento 12x</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

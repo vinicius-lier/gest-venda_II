@@ -1,113 +1,441 @@
 {% extends 'core/base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}
-    {% if form.instance.pk %}Editar Consignação{% else %}Nova Consignação{% endif %}
+    {% if consignacao %}Editar Consignação{% else %}Nova Consignação{% endif %} - Sistema de Gestão
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-motorcycle me-2"></i>
-            {% if form.instance.pk %}Editar Consignação{% else %}Nova Consignação{% endif %}
-        </h5>
+<div class="container-fluid">
+    <!-- Cabeçalho da página -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-handshake me-2"></i>
+                {% if consignacao %}Editar Consignação{% else %}Nova Consignação{% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if consignacao %}
+                    Editando consignação #{{ consignacao.id }} - {{ consignacao.moto }}
+                {% else %}
+                    Registre uma nova consignação de motocicleta
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'core:consignacao_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+        </div>
     </div>
-    <div class="card-body">
-        <form method="post" class="needs-validation" novalidate>
-            {% csrf_token %}
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <h4 class="border-bottom pb-2 mb-3">Dados do Proprietário</h4>
+
+    <!-- Formulário -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-1"></i>Dados da Consignação
+                    </h5>
                 </div>
-                <div class="col-md-6">
-                    {{ form.nome_proprietario|as_crispy_field }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.contato_proprietario|as_crispy_field }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.cpf_proprietario|as_crispy_field }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.rg_proprietario|as_crispy_field }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.endereco_proprietario|as_crispy_field }}
+                <div class="card-body">
+                    <form method="post" id="consignacaoForm">
+                        {% csrf_token %}
+                        
+                        <!-- Motocicleta -->
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.moto.id_for_label }}" class="form-label">
+                                    <i class="fas fa-motorcycle me-1"></i>Motocicleta
+                                </label>
+                                {{ form.moto }}
+                                {% if form.moto.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.moto.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Selecione a motocicleta que será consignada</div>
+                            </div>
+                        </div>
+
+                        <!-- Consignante e Vendedor Responsável -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.consignante.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Consignante
+                                </label>
+                                {{ form.consignante }}
+                                {% if form.consignante.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.consignante.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="mt-1">
+                                    <a href="{% url 'core:cliente_create' %}" class="btn btn-outline-secondary btn-sm" target="_blank" title="Cadastro completo">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.vendedor_responsavel.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user-tie me-1"></i>Vendedor Responsável
+                                </label>
+                                {{ form.vendedor_responsavel }}
+                                {% if form.vendedor_responsavel.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.vendedor_responsavel.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Loja e Status -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.loja.id_for_label }}" class="form-label">
+                                    <i class="fas fa-store me-1"></i>Loja
+                                </label>
+                                {{ form.loja }}
+                                {% if form.loja.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.loja.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">
+                                    <i class="fas fa-info-circle me-1"></i>Status
+                                </label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.status.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Valores -->
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.valor_pretendido.id_for_label }}" class="form-label">
+                                    <i class="fas fa-dollar-sign me-1"></i>Valor Pretendido
+                                </label>
+                                {{ form.valor_pretendido }}
+                                {% if form.valor_pretendido.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.valor_pretendido.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.valor_minimo.id_for_label }}" class="form-label">
+                                    <i class="fas fa-hand-holding-usd me-1"></i>Valor Mínimo
+                                </label>
+                                {{ form.valor_minimo }}
+                                {% if form.valor_minimo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.valor_minimo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.comissao_percentual.id_for_label }}" class="form-label">
+                                    <i class="fas fa-percentage me-1"></i>Comissão (%)
+                                </label>
+                                {{ form.comissao_percentual }}
+                                {% if form.comissao_percentual.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.comissao_percentual.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Datas -->
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.data_entrada.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar me-1"></i>Data de Entrada
+                                </label>
+                                {{ form.data_entrada }}
+                                {% if form.data_entrada.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.data_entrada.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.data_limite.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar-times me-1"></i>Data Limite
+                                </label>
+                                {{ form.data_limite }}
+                                {% if form.data_limite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.data_limite.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.data_venda.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar-check me-1"></i>Data da Venda
+                                </label>
+                                {{ form.data_venda }}
+                                {% if form.data_venda.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.data_venda.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                                    <i class="fas fa-sticky-note me-1"></i>Observações
+                                </label>
+                                {{ form.observacoes }}
+                                {% if form.observacoes.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.observacoes.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'core:consignacao_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {% if consignacao %}Atualizar{% else %}Salvar{% endif %} Consignação
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <h4 class="border-bottom pb-2 mb-3">Dados do Veículo</h4>
+        </div>
+
+        <!-- Sidebar com informações -->
+        <div class="col-lg-4">
+            <!-- Informações da moto selecionada -->
+            <div class="card mb-4" id="motoInfo" style="display: none;">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-motorcycle me-1"></i>Informações da Motocicleta
+                    </h6>
                 </div>
-                <div class="col-md-4">
-                    {{ form.marca|as_crispy_field }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.modelo|as_crispy_field }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.ano|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.cor|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.placa|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.renavam|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.chassi|as_crispy_field }}
+                <div class="card-body" id="motoInfoContent">
+                    <!-- Preenchido via JavaScript -->
                 </div>
             </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <h4 class="border-bottom pb-2 mb-3">Dados da Consignação</h4>
+
+            <!-- Informações do consignante -->
+            <div class="card mb-4" id="consignanteInfo" style="display: none;">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-user me-1"></i>Informações do Consignante
+                    </h6>
                 </div>
-                <div class="col-md-3">
-                    {{ form.data_entrada|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.data_limite|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.valor_consignacao|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.valor_minimo|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.comissao_percentual|as_crispy_field }}
-                </div>
-                <div class="col-md-3">
-                    {{ form.status|as_crispy_field }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.vendedor_responsavel|as_crispy_field }}
-                </div>
-                <div class="col-md-12">
-                    {{ form.observacoes|as_crispy_field }}
+                <div class="card-body" id="consignanteInfoContent">
+                    <!-- Preenchido via JavaScript -->
                 </div>
             </div>
-            
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <a href="{% url 'core:consignacao_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Voltar
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>Salvar
-                        </button>
+
+            <!-- Resumo da consignação -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-calculator me-1"></i>Resumo da Consignação
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Valor Pretendido:</small>
+                            <div class="fw-bold text-primary" id="resumoValorPretendido">R$ 0,00</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Valor Mínimo:</small>
+                            <div class="fw-bold" id="resumoValorMinimo">R$ 0,00</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Comissão:</small>
+                            <div class="fw-bold text-info" id="resumoComissao">0%</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Valor Comissão:</small>
+                            <div class="fw-bold text-success" id="resumoValorComissao">R$ 0,00</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">Dias Restantes:</small>
+                            <div class="fw-bold text-warning" id="resumoDiasRestantes">-</div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const motoSelect = document.getElementById('{{ form.moto.id_for_label }}');
+    const consignanteSelect = document.getElementById('{{ form.consignante.id_for_label }}');
+    const valorPretendidoInput = document.getElementById('{{ form.valor_pretendido.id_for_label }}');
+    const valorMinimoInput = document.getElementById('{{ form.valor_minimo.id_for_label }}');
+    const comissaoInput = document.getElementById('{{ form.comissao_percentual.id_for_label }}');
+    const dataLimiteInput = document.getElementById('{{ form.data_limite.id_for_label }}');
+
+    // Função para carregar informações da moto
+    function carregarInfoMoto() {
+        const motoId = motoSelect.value;
+        if (motoId) {
+            fetch(`/api/motocicletas/${motoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const motoInfo = document.getElementById('motoInfo');
+                    const motoInfoContent = document.getElementById('motoInfoContent');
+                    
+                    motoInfoContent.innerHTML = `
+                        <div class="text-center mb-3">
+                            ${data.foto_principal ? 
+                                `<img src="${data.foto_principal}" class="img-fluid rounded" style="max-height: 150px;">` :
+                                `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">
+                                    <i class="fas fa-motorcycle fa-3x text-muted"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="mb-2">
+                            <strong>${data.marca} ${data.modelo}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Ano: ${data.ano}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Placa: ${data.placa || 'N/A'}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Chassi: ${data.chassi}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Cor: ${data.cor}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Valor Atual: <strong class="text-success">R$ ${parseFloat(data.valor_atual).toFixed(2)}</strong></small>
+                        </div>
+                    `;
+                    motoInfo.style.display = 'block';
+                    
+                    // Definir valor pretendido como valor atual da moto
+                    if (!valorPretendidoInput.value) {
+                        valorPretendidoInput.value = data.valor_atual;
+                        calcularResumo();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar informações da moto:', error);
+                });
+        } else {
+            document.getElementById('motoInfo').style.display = 'none';
+        }
+    }
+
+    // Função para carregar informações do consignante
+    function carregarInfoConsignante() {
+        const consignanteId = consignanteSelect.value;
+        if (consignanteId) {
+            fetch(`/api/clientes/${consignanteId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const consignanteInfo = document.getElementById('consignanteInfo');
+                    const consignanteInfoContent = document.getElementById('consignanteInfoContent');
+                    
+                    consignanteInfoContent.innerHTML = `
+                        <div class="mb-2">
+                            <strong>${data.nome}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">CPF/CNPJ: ${data.cpf_cnpj}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Telefone: ${data.telefone}</small>
+                        </div>
+                        ${data.email ? `<div class="mb-2"><small class="text-muted">Email: ${data.email}</small></div>` : ''}
+                        ${data.endereco ? `<div class="mb-2"><small class="text-muted">Endereço: ${data.endereco}</small></div>` : ''}
+                    `;
+                    consignanteInfo.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar informações do consignante:', error);
+                });
+        } else {
+            document.getElementById('consignanteInfo').style.display = 'none';
+        }
+    }
+
+    // Função para calcular resumo
+    function calcularResumo() {
+        const valorPretendido = parseFloat(valorPretendidoInput.value) || 0;
+        const valorMinimo = parseFloat(valorMinimoInput.value) || 0;
+        const comissao = parseFloat(comissaoInput.value) || 0;
+
+        document.getElementById('resumoValorPretendido').textContent = `R$ ${valorPretendido.toFixed(2)}`;
+        document.getElementById('resumoValorMinimo').textContent = `R$ ${valorMinimo.toFixed(2)}`;
+        document.getElementById('resumoComissao').textContent = `${comissao}%`;
+        document.getElementById('resumoValorComissao').textContent = `R$ ${(valorPretendido * comissao / 100).toFixed(2)}`;
+
+        // Calcular dias restantes
+        if (dataLimiteInput.value) {
+            const hoje = new Date();
+            const dataLimite = new Date(dataLimiteInput.value);
+            const diffTime = dataLimite - hoje;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 0) {
+                document.getElementById('resumoDiasRestantes').textContent = `${diffDays} dias`;
+                document.getElementById('resumoDiasRestantes').className = 'fw-bold text-warning';
+            } else if (diffDays === 0) {
+                document.getElementById('resumoDiasRestantes').textContent = 'Vence hoje';
+                document.getElementById('resumoDiasRestantes').className = 'fw-bold text-danger';
+            } else {
+                document.getElementById('resumoDiasRestantes').textContent = `${Math.abs(diffDays)} dias vencido`;
+                document.getElementById('resumoDiasRestantes').className = 'fw-bold text-danger';
+            }
+        } else {
+            document.getElementById('resumoDiasRestantes').textContent = '-';
+        }
+    }
+
+    // Event listeners
+    motoSelect.addEventListener('change', carregarInfoMoto);
+    consignanteSelect.addEventListener('change', carregarInfoConsignante);
+    valorPretendidoInput.addEventListener('input', calcularResumo);
+    valorMinimoInput.addEventListener('input', calcularResumo);
+    comissaoInput.addEventListener('input', calcularResumo);
+    dataLimiteInput.addEventListener('change', calcularResumo);
+
+    // Carregar informações iniciais se já há valores selecionados
+    if (motoSelect.value) carregarInfoMoto();
+    if (consignanteSelect.value) carregarInfoConsignante();
+    calcularResumo();
+});
+</script>
 {% endblock %} 

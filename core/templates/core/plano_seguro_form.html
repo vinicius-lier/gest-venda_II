@@ -1,0 +1,265 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}
+    {% if plano.pk %}
+        Editar Plano de Seguro
+    {% else %}
+        Novo Plano de Seguro
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if perms.core.add_planoseguro or perms.core.change_planoseguro %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-file-contract text-primary me-2"></i>
+                            {% if plano.pk %}
+                                Editar Plano de Seguro
+                            {% else %}
+                                Novo Plano de Seguro
+                            {% endif %}
+                        </h4>
+                        <a href="{% url 'core:plano_seguro_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Informações Básicas -->
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Informações Básicas
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="{{ form.seguradora.id_for_label }}" class="form-label">
+                                                <i class="fas fa-shield-alt me-1"></i>
+                                                Seguradora *
+                                            </label>
+                                            {{ form.seguradora }}
+                                            {% if form.seguradora.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.seguradora.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="{{ form.nome.id_for_label }}" class="form-label">
+                                                <i class="fas fa-tag me-1"></i>
+                                                Nome do Plano *
+                                            </label>
+                                            {{ form.nome }}
+                                            {% if form.nome.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.nome.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="{{ form.tipo_bem.id_for_label }}" class="form-label">
+                                                <i class="fas fa-car me-1"></i>
+                                                Tipo de Bem *
+                                            </label>
+                                            {{ form.tipo_bem }}
+                                            {% if form.tipo_bem.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.tipo_bem.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Configurações e Status -->
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-cogs me-2"></i>
+                                            Configurações e Status
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="{{ form.comissao_padrao.id_for_label }}" class="form-label">
+                                                <i class="fas fa-percentage me-1"></i>
+                                                Comissão Padrão (%) *
+                                            </label>
+                                            {{ form.comissao_padrao }}
+                                            {% if form.comissao_padrao.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.comissao_padrao.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">
+                                                Percentual padrão de comissão para este plano
+                                            </small>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="{{ form.descricao.id_for_label }}" class="form-label">
+                                                <i class="fas fa-align-left me-1"></i>
+                                                Descrição
+                                            </label>
+                                            {{ form.descricao }}
+                                            {% if form.descricao.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.descricao.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted">
+                                                Descrição detalhada do plano e suas coberturas
+                                            </small>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.ativo }}
+                                                <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
+                                                    <i class="fas fa-check-circle me-1"></i>
+                                                    Plano Ativo
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Ação -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'core:plano_seguro_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>
+                                        Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {% if plano.pk %}
+                                            Atualizar Plano
+                                        {% else %}
+                                            Cadastrar Plano
+                                        {% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Informações -->
+<div class="modal fade" id="infoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    Informações sobre Planos de Seguro
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>O que é um Plano de Seguro?</strong></p>
+                <p>Um plano de seguro define as características e coberturas oferecidas por uma seguradora para um tipo específico de bem.</p>
+                
+                <p><strong>Campos Obrigatórios:</strong></p>
+                <ul>
+                    <li><strong>Seguradora:</strong> Empresa que oferece o plano</li>
+                    <li><strong>Nome:</strong> Nome identificador do plano</li>
+                    <li><strong>Tipo de Bem:</strong> Categoria do bem segurado</li>
+                    <li><strong>Comissão Padrão:</strong> Percentual padrão de comissão</li>
+                </ul>
+                
+                <p><strong>Tipos de Bem Disponíveis:</strong></p>
+                <ul>
+                    <li><strong>Motocicleta:</strong> Seguros para motos</li>
+                    <li><strong>Automóvel:</strong> Seguros para carros</li>
+                    <li><strong>Caminhão:</strong> Seguros para veículos pesados</li>
+                    <li><strong>Casa/Apartamento:</strong> Seguros residenciais</li>
+                    <li><strong>Empresa:</strong> Seguros empresariais</li>
+                    <li><strong>Vida:</strong> Seguros de vida</li>
+                    <li><strong>Saúde:</strong> Seguros de saúde</li>
+                    <li><strong>Outros:</strong> Outros tipos de seguro</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Acesso Negado
+    </h4>
+    <p>Você não tem permissão para {% if plano.pk %}editar{% else %}criar{% endif %} planos de seguro.</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{% url 'core:plano_seguro_list' %}" class="btn btn-outline-danger">
+            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+        </a>
+    </p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Validação do formulário
+    (function() {
+        'use strict';
+        window.addEventListener('load', function() {
+            var forms = document.getElementsByClassName('needs-validation');
+            var validation = Array.prototype.filter.call(forms, function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }, false);
+    })();
+
+    // Validação da comissão
+    document.addEventListener('DOMContentLoaded', function() {
+        var comissaoField = document.getElementById('{{ form.comissao_padrao.id_for_label }}');
+        if (comissaoField) {
+            comissaoField.addEventListener('input', function(e) {
+                var value = parseFloat(e.target.value);
+                if (value < 0) {
+                    e.target.value = 0;
+                } else if (value > 100) {
+                    e.target.value = 100;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %} 

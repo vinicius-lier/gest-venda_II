@@ -1,0 +1,47 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Excluir Cotação de Seguro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-trash text-danger"></i>
+                        Confirmar Exclusão
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Atenção!</h5>
+                        <p>Você está prestes a excluir a cotação de seguro:</p>
+                        <ul>
+                            <li><strong>Cliente:</strong> {{ cotacao.cliente.nome }}</li>
+                            <li><strong>Bem:</strong> {{ cotacao.bem.descricao }}</li>
+                            <li><strong>Plano:</strong> {{ cotacao.plano }}</li>
+                            <li><strong>Data da Cotação:</strong> {{ cotacao.data_cotacao|date:"d/m/Y" }}</li>
+                            <li><strong>Valor:</strong> R$ {{ cotacao.valor_cotacao|floatformat:2 }}</li>
+                        </ul>
+                        <p class="mb-0"><strong>Esta ação não pode ser desfeita!</strong></p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'core:cotacao_seguro_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Confirmar Exclusão
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

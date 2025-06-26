@@ -1,0 +1,285 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}{{ cliente.nome }} - Detalhes do Cliente{% endblock %}
+
+{% block page_title %}Detalhes do Cliente{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-user me-2"></i>{{ cliente.nome }}
+    </h1>
+    
+    <div class="btn-group" role="group">
+        {% if perms.core.change_cliente %}
+        <a href="{% url 'core:cliente_update' cliente.pk %}" class="btn btn-warning">
+            <i class="fas fa-edit me-1"></i>Editar
+        </a>
+        {% endif %}
+        
+        {% if perms.core.delete_cliente %}
+        <a href="{% url 'core:cliente_delete' cliente.pk %}" class="btn btn-danger">
+            <i class="fas fa-trash me-1"></i>Excluir
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Informações do Cliente -->
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-user me-2"></i>Informações do Cliente
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="font-weight-bold">Dados Pessoais</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Nome:</strong></td>
+                                <td>{{ cliente.nome }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tipo:</strong></td>
+                                <td>
+                                    <span class="badge bg-{{ cliente.get_tipo_color }}">
+                                        {{ cliente.get_tipo_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>CPF/CNPJ:</strong></td>
+                                <td>{{ cliente.cpf_cnpj }}</td>
+                            </tr>
+                            {% if cliente.rg_ie %}
+                            <tr>
+                                <td><strong>RG/IE:</strong></td>
+                                <td>{{ cliente.rg_ie }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if cliente.data_nascimento %}
+                            <tr>
+                                <td><strong>Data Nasc.:</strong></td>
+                                <td>{{ cliente.data_nascimento|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if cliente.sexo %}
+                            <tr>
+                                <td><strong>Sexo:</strong></td>
+                                <td>{{ cliente.get_sexo_display }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="font-weight-bold">Contato</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Telefone:</strong></td>
+                                <td>{{ cliente.telefone }}</td>
+                            </tr>
+                            {% if cliente.email %}
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>{{ cliente.email }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if cliente.endereco %}
+                            <tr>
+                                <td><strong>Endereço:</strong></td>
+                                <td>{{ cliente.endereco }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if cliente.cidade %}
+                            <tr>
+                                <td><strong>Cidade:</strong></td>
+                                <td>{{ cliente.cidade }}{% if cliente.estado %}, {{ cliente.estado }}{% endif %}</td>
+                            </tr>
+                            {% endif %}
+                            {% if cliente.cep %}
+                            <tr>
+                                <td><strong>CEP:</strong></td>
+                                <td>{{ cliente.cep }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+                
+                {% if cliente.observacoes %}
+                <div class="mt-3">
+                    <h6 class="font-weight-bold">Observações</h6>
+                    <p class="text-muted">{{ cliente.observacoes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-bar me-2"></i>Estatísticas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-primary">{{ compras.count }}</h4>
+                            <small class="text-muted">Compras</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-success">{{ motos_propriedade.count }}</h4>
+                            <small class="text-muted">Motos</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-warning">{{ consignacoes.count }}</h4>
+                            <small class="text-muted">Consignações</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-info">{{ seguros.count }}</h4>
+                            <small class="text-muted">Seguros</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>Status
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if cliente.ativo %}
+                <span class="badge bg-success fs-6">Cliente Ativo</span>
+                {% else %}
+                <span class="badge bg-danger fs-6">Cliente Inativo</span>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        Cadastrado em: {{ cliente.data_cadastro|date:"d/m/Y" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Histórico -->
+<div class="row">
+    <!-- Compras Recentes -->
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-shopping-cart me-2"></i>Compras Recentes
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if compras %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Moto</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venda in compras %}
+                            <tr>
+                                <td>{{ venda.data_venda|date:"d/m/Y" }}</td>
+                                <td>{{ venda.moto.marca }} {{ venda.moto.modelo }}</td>
+                                <td>R$ {{ venda.valor_venda|floatformat:2 }}</td>
+                                <td>
+                                    <span class="badge bg-{{ venda.get_status_color }}">
+                                        {{ venda.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">Nenhuma compra registrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Motocicletas em Propriedade -->
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-motorcycle me-2"></i>Motocicletas em Propriedade
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if motos_propriedade %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Moto</th>
+                                <th>Placa</th>
+                                <th>Ano</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for moto in motos_propriedade %}
+                            <tr>
+                                <td>{{ moto.marca }} {{ moto.modelo }}</td>
+                                <td>{{ moto.placa|default:"-" }}</td>
+                                <td>{{ moto.ano }}</td>
+                                <td>
+                                    <span class="badge bg-{{ moto.get_status_color }}">
+                                        {{ moto.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">Nenhuma motocicleta em propriedade.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botão Voltar -->
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{% url 'core:cliente_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+        </a>
+    </div>
+</div>
+{% endblock %} 

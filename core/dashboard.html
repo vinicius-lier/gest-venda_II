@@ -52,7 +52,7 @@
                             {% for v in ranking %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'venda-list' %}?vendedor={{ v.vendedor_id }}">
+                                    <a href="{% url 'core:venda_list' %}?vendedor={{ v.vendedor_id }}">
                                         {{ v.vendedor__username }}
                                     </a>
                                 </td>
@@ -85,13 +85,13 @@
             </div>
             <div class="card-body">
                 <div class="d-flex gap-2">
-                    <a href="{% url 'importar-vendas' %}" class="btn btn-success">
+                    <a href="{% url 'core:importar_vendas' %}" class="btn btn-success">
                         <i class="fas fa-file-import me-1"></i>Importar Vendas
                     </a>
-                    <a href="{% url 'modelo-importacao' %}" class="btn btn-outline-primary ms-2" download>
+                    <a href="{% url 'core:modelo_importacao' %}" class="btn btn-outline-primary ms-2" download>
                         <i class="fas fa-download me-1"></i>Baixar Modelo de Importação
                     </a>
-                    <a href="{% url 'resumo-gerencial' %}" class="btn btn-info">
+                    <a href="{% url 'core:resumo_gerencial' %}" class="btn btn-info">
                         <i class="fas fa-chart-bar me-1"></i>Resumo Gerencial
                     </a>
                 </div>
@@ -108,7 +108,7 @@
                 <h5 class="mb-0">
                     <i class="fas fa-list me-2"></i>Meus Atendimentos
                 </h5>
-                <a href="{% url 'venda-create' %}" class="btn btn-primary btn-sm">
+                <a href="{% url 'core:venda_create' %}" class="btn btn-primary btn-sm">
                     <i class="fas fa-plus me-1"></i>Novo Atendimento
                 </a>
             </div>
@@ -138,7 +138,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="{% url 'venda-update' venda.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <a href="{% url 'core:venda_update' venda.pk %}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 </td>

@@ -1,0 +1,424 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}
+    {% if bem.pk %}
+        Editar Bem
+    {% else %}
+        Novo Bem
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if perms.core.add_bem or perms.core.change_bem %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-box text-primary me-2"></i>
+                            {% if bem.pk %}
+                                Editar Bem
+                            {% else %}
+                                Novo Bem
+                            {% endif %}
+                        </h4>
+                        <a href="{% url 'core:bem_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Informações Básicas -->
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Informações Básicas
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                                                <i class="fas fa-tag me-1"></i>
+                                                Tipo de Bem *
+                                            </label>
+                                            {{ form.tipo }}
+                                            {% if form.tipo.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.tipo.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="{{ form.descricao.id_for_label }}" class="form-label">
+                                                <i class="fas fa-align-left me-1"></i>
+                                                Descrição *
+                                            </label>
+                                            {{ form.descricao }}
+                                            {% if form.descricao.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.descricao.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="{{ form.proprietario.id_for_label }}" class="form-label">
+                                                <i class="fas fa-user me-1"></i>
+                                                Proprietário *
+                                            </label>
+                                            <div class="input-group">
+                                                {{ form.proprietario }}
+                                                {% if perms.core.add_cliente %}
+                                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#clienteModal">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                            {% if form.proprietario.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.proprietario.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="{{ form.valor_atual.id_for_label }}" class="form-label">
+                                                <i class="fas fa-dollar-sign me-1"></i>
+                                                Valor Atual *
+                                            </label>
+                                            {{ form.valor_atual }}
+                                            {% if form.valor_atual.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.valor_atual.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detalhes Específicos -->
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-cogs me-2"></i>
+                                            Detalhes Específicos
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Campos para veículos -->
+                                        <div id="campos-veiculo" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="{{ form.marca.id_for_label }}" class="form-label">
+                                                            <i class="fas fa-car me-1"></i>
+                                                            Marca
+                                                        </label>
+                                                        {{ form.marca }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="{{ form.modelo.id_for_label }}" class="form-label">
+                                                            <i class="fas fa-car me-1"></i>
+                                                            Modelo
+                                                        </label>
+                                                        {{ form.modelo }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="mb-3">
+                                                        <label for="{{ form.ano.id_for_label }}" class="form-label">
+                                                            <i class="fas fa-calendar me-1"></i>
+                                                            Ano
+                                                        </label>
+                                                        {{ form.ano }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="mb-3">
+                                                        <label for="{{ form.placa.id_for_label }}" class="form-label">
+                                                            <i class="fas fa-id-card me-1"></i>
+                                                            Placa
+                                                        </label>
+                                                        {{ form.placa }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="mb-3">
+                                                        <label for="{{ form.chassi.id_for_label }}" class="form-label">
+                                                            <i class="fas fa-barcode me-1"></i>
+                                                            Chassi
+                                                        </label>
+                                                        {{ form.chassi }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="{{ form.renavam.id_for_label }}" class="form-label">
+                                                    <i class="fas fa-hashtag me-1"></i>
+                                                    RENAVAM
+                                                </label>
+                                                {{ form.renavam }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Campos para imóveis -->
+                                        <div id="campos-imovel" style="display: none;">
+                                            <div class="mb-3">
+                                                <label for="{{ form.endereco.id_for_label }}" class="form-label">
+                                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                                    Endereço
+                                                </label>
+                                                {{ form.endereco }}
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="{{ form.area.id_for_label }}" class="form-label">
+                                                    <i class="fas fa-ruler-combined me-1"></i>
+                                                    Área (m²)
+                                                </label>
+                                                {{ form.area }}
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                                                <i class="fas fa-sticky-note me-1"></i>
+                                                Observações
+                                            </label>
+                                            {{ form.observacoes }}
+                                            {% if form.observacoes.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.observacoes.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Ação -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'core:bem_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>
+                                        Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {% if bem.pk %}
+                                            Atualizar Bem
+                                        {% else %}
+                                            Cadastrar Bem
+                                        {% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cadastro Rápido de Cliente -->
+{% if perms.core.add_cliente %}
+<div class="modal fade" id="clienteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus text-primary me-2"></i>
+                    Cadastro Rápido de Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="clienteRapidoForm">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cpf_cnpj" class="form-label">CPF/CNPJ *</label>
+                        <input type="text" class="form-control" id="cpf_cnpj" name="cpf_cnpj" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">Telefone *</label>
+                        <input type="text" class="form-control" id="telefone" name="telefone" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="salvarClienteRapido">
+                    <i class="fas fa-save me-1"></i>
+                    Salvar Cliente
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Acesso Negado
+    </h4>
+    <p>Você não tem permissão para {% if bem.pk %}editar{% else %}criar{% endif %} bens.</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{% url 'core:bem_list' %}" class="btn btn-outline-danger">
+            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+        </a>
+    </p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Validação do formulário
+    (function() {
+        'use strict';
+        window.addEventListener('load', function() {
+            var forms = document.getElementsByClassName('needs-validation');
+            var validation = Array.prototype.filter.call(forms, function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }, false);
+    })();
+
+    // Controle de campos específicos por tipo
+    document.addEventListener('DOMContentLoaded', function() {
+        var tipoField = document.getElementById('{{ form.tipo.id_for_label }}');
+        var camposVeiculo = document.getElementById('campos-veiculo');
+        var camposImovel = document.getElementById('campos-imovel');
+
+        function toggleCampos() {
+            var tipo = tipoField.value;
+            
+            // Esconder todos os campos específicos
+            camposVeiculo.style.display = 'none';
+            camposImovel.style.display = 'none';
+            
+            // Mostrar campos específicos baseado no tipo
+            if (['motocicleta', 'automovel', 'caminhao'].includes(tipo)) {
+                camposVeiculo.style.display = 'block';
+            } else if (['casa', 'apartamento'].includes(tipo)) {
+                camposImovel.style.display = 'block';
+            }
+        }
+
+        if (tipoField) {
+            tipoField.addEventListener('change', toggleCampos);
+            toggleCampos(); // Executar na carga inicial
+        }
+
+        // Máscaras
+        var cpfCnpjField = document.getElementById('cpf_cnpj');
+        if (cpfCnpjField) {
+            cpfCnpjField.addEventListener('input', function(e) {
+                var value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 11) {
+                    // CPF
+                    value = value.replace(/^(\d{3})(\d)/, '$1.$2');
+                    value = value.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+                    value = value.replace(/\.(\d{3})(\d)/, '.$1-$2');
+                } else {
+                    // CNPJ
+                    value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                    value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                    value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                    value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                }
+                e.target.value = value;
+            });
+        }
+
+        var telefoneField = document.getElementById('telefone');
+        if (telefoneField) {
+            telefoneField.addEventListener('input', function(e) {
+                var value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 11) {
+                    if (value.length <= 10) {
+                        value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                        value = value.replace(/(\d{4})(\d)/, '$1-$2');
+                    } else {
+                        value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+                        value = value.replace(/(\d{5})(\d)/, '$1-$2');
+                    }
+                    e.target.value = value;
+                }
+            });
+        }
+
+        // Cadastro rápido de cliente
+        document.getElementById('salvarClienteRapido').addEventListener('click', function() {
+            var formData = new FormData(document.getElementById('clienteRapidoForm'));
+            
+            fetch('{% url "core:cliente_create" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Adicionar novo cliente ao select
+                    var select = document.getElementById('{{ form.proprietario.id_for_label }}');
+                    var option = new Option(data.cliente.nome + ' - ' + data.cliente.cpf_cnpj, data.cliente.id);
+                    select.add(option);
+                    select.value = data.cliente.id;
+                    
+                    // Fechar modal
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('clienteModal'));
+                    modal.hide();
+                    
+                    // Limpar formulário
+                    document.getElementById('clienteRapidoForm').reset();
+                    
+                    alert('Cliente cadastrado com sucesso!');
+                } else {
+                    alert('Erro ao cadastrar cliente: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao cadastrar cliente');
+            });
+        });
+    });
+</script>
+{% endblock %} 

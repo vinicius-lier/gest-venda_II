@@ -1,327 +1,183 @@
-﻿from django.db import models
+from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from decimal import Decimal
+from django.core.exceptions import ValidationError
+import uuid
 
-# Create your models here.
+# ============================================================================
+# 1. CONTROLE DE USUÁRIOS (RBAC - Role Based Access Control)
+# ============================================================================
+
+class Loja(models.Model):
+    """Modelo para lojas parceiras"""
+    nome = models.CharField(max_length=100)
+    cnpj = models.CharField(max_length=18, unique=True)
+    cidade = models.CharField(max_length=100)
+    endereco = models.CharField(max_length=200)
+    telefone = models.CharField(max_length=15)
+    email = models.EmailField(blank=True, null=True)
+    ativo = models.BooleanField(default=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Loja'
+        verbose_name_plural = 'Lojas'
+    
+    def __str__(self):
+        return f"{self.nome} - {self.cidade}"
 
 class Perfil(models.Model):
-    TIPO_CHOICES = [
-        ('master', 'Master'),
+    """Perfis de usuário do sistema"""
+    PERFIL_CHOICES = [
+        ('admin', 'Administrador'),
         ('gerente', 'Gerente'),
         ('vendedor', 'Vendedor'),
+        ('consultor', 'Consultor'),
+        ('financeiro', 'Financeiro'),
+        ('ti', 'TI'),
     ]
     
-    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
-    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    nome = models.CharField(max_length=50, choices=PERFIL_CHOICES, unique=True)
+    descricao = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = 'Perfil'
+        verbose_name_plural = 'Perfis'
     
     def __str__(self):
-        return f"{self.usuario.username} - {self.tipo}"
+        return self.get_nome_display()
 
-class Venda(models.Model):
-    ORIGEM_CHOICES = [
-        ('LOJA', 'LOJA'),
-        ('VENDEDOR', 'VENDEDOR'),
-        ('CHATBOT', 'CHATBOT'),
-        ('COCKPIT', 'COCKPIT'),
-        ('INSTAGRAM', 'INSTAGRAM'),
-        ('MONTEIRO', 'MONTEIRO'),
+class Permissao(models.Model):
+    """Permissões por módulo e ação"""
+    MODULO_CHOICES = [
+        ('usuarios', 'Usuários'),
+        ('clientes', 'Clientes'),
+        ('motos', 'Motocicletas'),
+        ('vendas', 'Vendas'),
+        ('consignacoes', 'Consignações'),
+        ('seguros', 'Seguros'),
+        ('lojas', 'Lojas Parceiras'),
+        ('relatorios', 'Relatórios'),
+        ('financeiro', 'Financeiro'),
     ]
-    FORMA_PAGAMENTO_CHOICES = [
-        ('A VISTA', 'A VISTA'),
-        ('A VISTA COM TROCA', 'A VISTA COM TROCA'),
-        ('FINANCIAMENTO', 'FINANCIAMENTO'),
-        ('FINANCIAMENTO COM TROCA', 'FINANCIAMENTO COM TROCA'),
-        ('SEM INFORMAÇÃO', 'SEM INFORMAÇÃO'),
+    
+    ACAO_CHOICES = [
+        ('criar', 'Criar'),
+        ('visualizar', 'Visualizar'),
+        ('editar', 'Editar'),
+        ('excluir', 'Excluir'),
+        ('listar', 'Listar'),
     ]
+    
+    modulo = models.CharField(max_length=20, choices=MODULO_CHOICES)
+    acao = models.CharField(max_length=20, choices=ACAO_CHOICES)
+    perfil = models.ForeignKey(Perfil, on_delete=models.CASCADE, related_name='permissoes')
+    
+    class Meta:
+        verbose_name = 'Permissão'
+        verbose_name_plural = 'Permissões'
+        unique_together = ['modulo', 'acao', 'perfil']
+    
+    def __str__(self):
+        return f"{self.get_modulo_display()} - {self.get_acao_display()}"
+
+class Usuario(models.Model):
+    """Usuários do sistema com controle de acesso"""
     STATUS_CHOICES = [
-        ('VENDIDO', 'VENDIDO'),
-        ('EM NEGOCIAÇÃO', 'EM NEGOCIAÇÃO'),
-        ('RECUSA DE CRÉDITO', 'RECUSA DE CRÉDITO'),
-        ('NEGOCIAÇÃO ENCERRADA', 'NEGOCIAÇÃO ENCERRADA'),
-    ]
-
-    # Relacionamento com Cliente
-    cliente = models.ForeignKey('Cliente', on_delete=models.CASCADE, related_name='vendas', blank=True, null=True)
-    # Mantendo o campo nome_cliente para compatibilidade
-    nome_cliente = models.CharField(max_length=100, blank=True, null=True)
-    contato = models.CharField(max_length=100, blank=True, null=True)
-    origem = models.CharField(max_length=20, choices=ORIGEM_CHOICES, blank=True, null=True)
-    
-    # Campos de Proprietário e Fornecedor
-    proprietario = models.ForeignKey('Cliente', on_delete=models.CASCADE, related_name='vendas_como_proprietario', null=True, blank=True)
-    fornecedor = models.ForeignKey('Cliente', on_delete=models.CASCADE, related_name='vendas_como_fornecedor', blank=True, null=True)
-    
-    # Relacionamento com moto
-    moto = models.ForeignKey('EstoqueMoto', on_delete=models.SET_NULL, related_name='vendas', blank=True, null=True)
-    # Mantendo o campo modelo_interesse para compatibilidade
-    modelo_interesse = models.CharField(max_length=100, blank=True, null=True)
-    
-    forma_pagamento = models.CharField(max_length=30, choices=FORMA_PAGAMENTO_CHOICES, blank=True, null=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, blank=True, null=True)
-    observacoes = models.TextField(blank=True, null=True)
-    data_atendimento = models.DateField(blank=True, null=True)
-    data_venda = models.DateField(blank=True, null=True)
-    valor_venda = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    vendedor = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, related_name='vendas_realizadas')
-    is_consignacao = False  # Campo virtual, não armazenado no banco
-
-    def __str__(self):
-        cliente_nome = self.cliente.nome if self.cliente else self.nome_cliente
-        moto_info = self.moto.modelo if self.moto else self.modelo_interesse
-        return f"{cliente_nome} - {moto_info} ({self.data_atendimento})"
-    
-    def save(self, *args, **kwargs):
-        # Se a venda foi concluída, atualiza o status da moto
-        if self.status == 'VENDIDO' and self.moto:
-            self.moto.status = 'VENDIDO'
-            self.moto.save()
-        
-        # Se o cliente está associado, sincroniza com nome_cliente
-        if self.cliente and not self.nome_cliente:
-            self.nome_cliente = self.cliente.nome
-            
-        # Salva primeiro para garantir que o objeto tenha um ID
-        super().save(*args, **kwargs)
-        
-        # Se a venda é realizada, adiciona o proprietário ao histórico da moto
-        if self.status == 'VENDIDO' and self.moto and self.proprietario:
-            # Verifica se já existe um registro para esta moto/proprietário
-            if not HistoricoProprietario.objects.filter(
-                moto=self.moto, 
-                proprietario=self.proprietario,
-                motivo='COMPRA'
-            ).exists():
-                # Fecha registros anteriores
-                registros_anteriores = HistoricoProprietario.objects.filter(
-                    moto=self.moto, 
-                    data_fim__isnull=True
-                )
-                for registro in registros_anteriores:
-                    registro.data_fim = self.data_venda or timezone.now().date()
-                    registro.save()
-                
-                # Cria novo registro
-                HistoricoProprietario.objects.create(
-                    moto=self.moto,
-                    proprietario=self.proprietario,
-                    motivo='COMPRA',
-                    data_inicio=self.data_venda or timezone.now().date()
-                )
-                
-                # Atualiza o proprietário na moto
-                self.moto.proprietario = self.proprietario
-                self.moto.save(update_fields=['proprietario'])
-
-class Consignacao(models.Model):
-    STATUS_CHOICES = [
-        ('DISPONÍVEL', 'DISPONÍVEL'),
-        ('VENDIDO', 'VENDIDO'),
-        ('DEVOLVIDO', 'DEVOLVIDO'),
-        ('CANCELADO', 'CANCELADO'),
+        ('ativo', 'Ativo'),
+        ('inativo', 'Inativo'),
+        ('bloqueado', 'Bloqueado'),
     ]
     
-    # Relacionamento com cliente (proprietário)
-    proprietario = models.ForeignKey('Cliente', on_delete=models.CASCADE, related_name='consignacoes', null=True)
-    
-    # Dados do proprietário - mantidos para compatibilidade
-    nome_proprietario = models.CharField(max_length=100)
-    cpf_proprietario = models.CharField(max_length=14, blank=True, null=True)
-    rg_proprietario = models.CharField(max_length=20, blank=True, null=True)
-    endereco_proprietario = models.CharField(max_length=200, blank=True, null=True)
-    contato_proprietario = models.CharField(max_length=100)
-    
-    # Relacionamento com moto
-    moto = models.OneToOneField('EstoqueMoto', on_delete=models.CASCADE, null=True, blank=True, related_name='consignacao')
-    
-    # Dados do veículo (mantidos para compatibilidade)
-    marca = models.CharField(max_length=50)
-    modelo = models.CharField(max_length=100)
-    ano = models.CharField(max_length=4)
-    cor = models.CharField(max_length=50)
-    placa = models.CharField(max_length=8)
-    renavam = models.CharField(max_length=11, blank=True, null=True)
-    chassi = models.CharField(max_length=17, blank=True, null=True)
-    
-    # Dados da consignação
-    valor_consignacao = models.DecimalField(max_digits=10, decimal_places=2)
-    valor_minimo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    comissao_percentual = models.DecimalField(max_digits=5, decimal_places=2, default=5.00)
-    data_entrada = models.DateField(default=timezone.now)
-    data_limite = models.DateField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DISPONÍVEL')
-    observacoes = models.TextField(blank=True, null=True)
-    
-    # Relacionamentos
-    vendedor_responsavel = models.ForeignKey(User, on_delete=models.CASCADE, related_name='consignacoes_responsavel')
-    
-    # Relacionamento com comprador (quando for vendido)
-    comprador = models.ForeignKey('Cliente', on_delete=models.SET_NULL, related_name='compras_consignacao', null=True, blank=True)
-    
-    # Campos para quando for vendido
-    data_venda = models.DateField(blank=True, null=True)
-    valor_venda = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    nome_comprador = models.CharField(max_length=100, blank=True, null=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='usuario_sistema')
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='usuarios')
+    perfil = models.ForeignKey(Perfil, on_delete=models.CASCADE, related_name='usuarios')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ativo')
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    ultimo_acesso = models.DateTimeField(blank=True, null=True)
     
     class Meta:
-        verbose_name = 'Consignação'
-        verbose_name_plural = 'Consignações'
+        verbose_name = 'Usuário'
+        verbose_name_plural = 'Usuários'
     
     def __str__(self):
-        return f"{self.modelo} - {self.placa} ({self.nome_proprietario})"
+        return f"{self.user.get_full_name()} - {self.loja.nome}"
     
-    def save(self, *args, **kwargs):
-        # Sincroniza dados do proprietário se estiver associado
-        if self.proprietario:
-            self.nome_proprietario = self.proprietario.nome
-            self.cpf_proprietario = self.proprietario.cpf
-            self.rg_proprietario = self.proprietario.rg
-            self.endereco_proprietario = self.proprietario.endereco
-            self.contato_proprietario = self.proprietario.telefone
-            
-        # Sincroniza dados do comprador se estiver associado
-        if self.comprador and not self.nome_comprador:
-            self.nome_comprador = self.comprador.nome
-            
-        # Sincroniza dados da moto se estiver associada
-        if self.moto:
-            self.marca = self.moto.marca
-            self.modelo = self.moto.modelo
-            self.ano = self.moto.ano
-            self.cor = self.moto.cor
-            self.placa = self.moto.placa or ""
-            self.renavam = self.moto.renavam
-            self.chassi = self.moto.chassi
-            
-        super().save(*args, **kwargs)
-        
-    @property
-    def valor_comissao(self):
-        if self.valor_venda:
-            return (self.valor_venda * self.comissao_percentual) / 100
-        return 0
-        
-    @property
-    def valor_proprietario(self):
-        if self.valor_venda:
-            return self.valor_venda - self.valor_comissao
-        return 0
-
-class AssinaturaDigital(models.Model):
-    venda = models.ForeignKey(Venda, on_delete=models.CASCADE, related_name='assinaturas', null=True, blank=True)
-    consignacao = models.ForeignKey(Consignacao, on_delete=models.CASCADE, null=True, blank=True, related_name='assinaturas')
-    data_criacao = models.DateTimeField(auto_now_add=True)
-    imagem_assinatura = models.TextField()  # Armazena a assinatura em formato base64
-    tipo = models.CharField(max_length=20, choices=[
-        ('cliente', 'Assinatura do Cliente'),
-        ('vendedor', 'Assinatura do Vendedor'),
-    ])
+    def get_status_color(self):
+        """Retorna a cor CSS para o status do usuário"""
+        colors = {
+            'ativo': 'success',
+            'inativo': 'secondary',
+            'bloqueado': 'danger',
+        }
+        return colors.get(self.status, 'secondary')
     
-    class Meta:
-        verbose_name = 'Assinatura Digital'
-        verbose_name_plural = 'Assinaturas Digitais'
-        
-    def __str__(self):
-        if self.venda:
-            return f"Assinatura {self.tipo} - Venda {self.venda.id}"
-        return f"Assinatura {self.tipo} - Consignação {self.consignacao.id}"
+    def tem_permissao(self, modulo, acao):
+        """Verifica se o usuário tem permissão para uma ação específica"""
+        return self.perfil.permissoes.filter(modulo=modulo, acao=acao).exists()
 
-
-class EstoqueMoto(models.Model):
-    CATEGORIA_CHOICES = [
-        ('SEMI NOVA', 'SEMI NOVA'),
-        ('0 KM', '0 KM'),
-        ('CONSIGNACAO', 'CONSIGNACAO'),
+class LogAcesso(models.Model):
+    """Logs de acesso para rastreamento de ações críticas"""
+    TIPO_CHOICES = [
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('criar', 'Criar'),
+        ('editar', 'Editar'),
+        ('excluir', 'Excluir'),
+        ('visualizar', 'Visualizar'),
+        ('relatorio', 'Relatório'),
     ]
     
-    matricula = models.CharField(max_length=10, blank=True, null=True, verbose_name="Matrícula", help_text="Código para identificação no chaveiro", unique=True)
-    marca = models.CharField(max_length=50)
-    modelo = models.CharField(max_length=100)
-    ano = models.CharField(max_length=4)
-    cor = models.CharField(max_length=50)
-    placa = models.CharField(max_length=8, blank=True, null=True)
-    chassi = models.CharField(max_length=17, blank=True, null=True, unique=True)
-    renavam = models.CharField(max_length=11, blank=True, null=True)
-    valor = models.DecimalField(max_digits=10, decimal_places=2)
-    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default='SEMI NOVA')
-    status = models.CharField(max_length=20, default='DISPONIVEL', 
-                             choices=[
-                                 ('DISPONIVEL', 'DISPONIVEL'),
-                                 ('VENDIDO', 'VENDIDO'),
-                                 ('RESERVADO', 'RESERVADO'),
-                                 ('MANUTENCAO', 'MANUTENCAO')
-                             ])
-    data_entrada = models.DateField(default=timezone.now)
-    observacoes = models.TextField(blank=True, null=True)
-    
-    # Campo para fotos da moto
-    foto_principal = models.ImageField(upload_to='motos/', blank=True, null=True, verbose_name="Foto Principal")
-    foto_frontal = models.ImageField(upload_to='motos/', blank=True, null=True, verbose_name="Foto Frontal")
-    foto_traseira = models.ImageField(upload_to='motos/', blank=True, null=True, verbose_name="Foto Traseira")
-    foto_lado_esquerdo = models.ImageField(upload_to='motos/', blank=True, null=True, verbose_name="Foto Lado Esquerdo")
-    foto_lado_direito = models.ImageField(upload_to='motos/', blank=True, null=True, verbose_name="Foto Lado Direito")
-    
-    # Adiciona relação com proprietário atual para motos em consignação
-    proprietario = models.ForeignKey('Cliente', on_delete=models.SET_NULL, blank=True, null=True, related_name='motos_propriedade')
-    
-    # Histórico de proprietários
-    historico_proprietarios = models.ManyToManyField('Cliente', through='HistoricoProprietario', related_name='historico_motos')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='logs')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    modulo = models.CharField(max_length=50)
+    descricao = models.TextField()
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    data_hora = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        verbose_name = 'Estoque de Moto'
-        verbose_name_plural = 'Estoque de Motos'
+        verbose_name = 'Log de Acesso'
+        verbose_name_plural = 'Logs de Acesso'
+        ordering = ['-data_hora']
     
     def __str__(self):
-        return f"{self.modelo} - {self.placa or self.chassi}"
-    
-    def get_ultimo_proprietario(self):
-        """Retorna o último proprietário da moto"""
-        ultimo = self.historico.order_by('-data_inicio').first()
-        return ultimo.proprietario if ultimo else None
-    
-    def save(self, *args, **kwargs):
-        # Se não tem matrícula, gera uma nova
-        if not self.matricula:
-            # Verifica se a moto já esteve no estoque antes (pelo chassi)
-            if self.chassi:
-                moto_anterior = EstoqueMoto.objects.filter(chassi=self.chassi, status='VENDIDO').order_by('-id').first()
-                if moto_anterior and moto_anterior.matricula:
-                    # Reutiliza a matrícula anterior
-                    self.matricula = moto_anterior.matricula
-                    return super().save(*args, **kwargs)
-            
-            # Gera uma nova matrícula no formato "M0001", "M0002", etc.
-            ultimas_matriculas = EstoqueMoto.objects.all().order_by('-matricula')
-            if ultimas_matriculas.exists() and ultimas_matriculas[0].matricula:
-                try:
-                    ultimo_numero = int(ultimas_matriculas[0].matricula[1:])
-                    nova_matricula = f"M{ultimo_numero+1:04d}"
-                except (ValueError, IndexError):
-                    # Se não conseguir extrair o número, começa do 1
-                    nova_matricula = "M0001"
-            else:
-                nova_matricula = "M0001"
-            
-            self.matricula = nova_matricula
-        
-        super().save(*args, **kwargs)
+        return f"{self.usuario} - {self.tipo} - {self.data_hora}"
+
+# ============================================================================
+# 2. CLIENTES
+# ============================================================================
 
 class Cliente(models.Model):
+    """Modelo unificado para clientes com diferentes tipos"""
     TIPO_CHOICES = [
-        ('CLIENTE', 'Cliente'),
-        ('PROPRIETARIO', 'Proprietário'), 
-        ('FORNECEDOR', 'Fornecedor'),
-        ('AMBOS', 'Cliente e Fornecedor'),
+        ('comprador', 'Comprador'),
+        ('fornecedor', 'Fornecedor'),
+        ('consignado', 'Consignado'),
+        ('proprietario', 'Proprietário'),
+        ('ambos', 'Comprador e Fornecedor'),
     ]
     
+    # Identificação
     nome = models.CharField(max_length=100)
-    cpf = models.CharField(max_length=14, blank=True, null=True)
+    cpf_cnpj = models.CharField(max_length=18, unique=True)
     rg = models.CharField(max_length=20, blank=True, null=True)
-    endereco = models.CharField(max_length=200, blank=True, null=True)
-    telefone = models.CharField(max_length=15, blank=True, null=True)
+    
+    # Contatos
+    telefone = models.CharField(max_length=15)
     email = models.EmailField(blank=True, null=True)
-    data_cadastro = models.DateField(default=timezone.now)
+    endereco = models.CharField(max_length=200, blank=True, null=True)
+    cidade = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(max_length=2, blank=True, null=True)
+    cep = models.CharField(max_length=9, blank=True, null=True)
+    
+    # Classificação
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='comprador')
+    
+    # Metadados
+    data_cadastro = models.DateTimeField(auto_now_add=True)
     observacoes = models.TextField(blank=True, null=True)
-    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='CLIENTE')
+    ativo = models.BooleanField(default=True)
     
     class Meta:
         verbose_name = 'Cliente'
@@ -329,35 +185,711 @@ class Cliente(models.Model):
     
     def __str__(self):
         return f"{self.nome} ({self.get_tipo_display()})"
-
-    def get_compras(self):
-        """Retorna todas as compras feitas pelo cliente"""
-        return self.vendas.all()
-
-    def get_motos(self):
-        """Retorna todas as motos compradas pelo cliente"""
-        return EstoqueMoto.objects.filter(venda__cliente=self)
     
-    def get_motos_como_proprietario(self):
-        """Retorna todas as motos em que o cliente é proprietário"""
-        return self.motos_propriedade.all()
+    def clean(self):
+        """Validação personalizada"""
+        if self.cpf_cnpj:
+            # Remove caracteres especiais
+            cpf_cnpj_limpo = ''.join(filter(str.isdigit, self.cpf_cnpj))
+            if len(cpf_cnpj_limpo) not in [11, 14]:
+                raise ValidationError('CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos')
+
+    def get_tipo_color(self):
+        """Retorna a cor CSS para o tipo do cliente"""
+        colors = {
+            'comprador': 'primary',
+            'fornecedor': 'success',
+            'consignado': 'warning',
+            'proprietario': 'info',
+            'ambos': 'secondary',
+        }
+        return colors.get(self.tipo, 'secondary')
+
+# ============================================================================
+# 3. MOTOCICLETAS
+# ============================================================================
+
+class Motocicleta(models.Model):
+    """Modelo para motocicletas"""
+    TIPO_ENTRADA_CHOICES = [
+        ('0km', '0km'),
+        ('usada', 'Usada (Entrada)'),
+        ('consignada', 'Consignada'),
+    ]
     
-    def get_vendas_como_fornecedor(self):
-        """Retorna todas as vendas em que o cliente é fornecedor"""
-        return self.vendas_como_fornecedor.all()
+    ORIGEM_CHOICES = [
+        ('cliente', 'Cliente'),
+        ('loja_parceira', 'Loja Parceira'),
+        ('fornecedor_externo', 'Fornecedor Externo'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('estoque', 'Em Estoque'),
+        ('vendida', 'Vendida'),
+        ('repasse', 'Repasse'),
+        ('reservada', 'Reservada'),
+        ('manutencao', 'Em Manutenção'),
+    ]
+    
+    # Identificação
+    chassi = models.CharField(max_length=17, unique=True)
+    placa = models.CharField(max_length=8, blank=True, null=True)
+    renavam = models.CharField(max_length=11, blank=True, null=True)
+    
+    # Características
+    marca = models.CharField(max_length=50)
+    modelo = models.CharField(max_length=100)
+    ano = models.CharField(max_length=4)
+    cor = models.CharField(max_length=50)
+    cilindrada = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Classificação
+    tipo_entrada = models.CharField(max_length=20, choices=TIPO_ENTRADA_CHOICES)
+    origem = models.CharField(max_length=20, choices=ORIGEM_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='estoque')
+    
+    # Relacionamentos
+    proprietario = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='motos_propriedade', blank=True, null=True)
+    fornecedor = models.ForeignKey(Cliente, on_delete=models.SET_NULL, related_name='motos_fornecidas', blank=True, null=True)
+    loja_origem = models.ForeignKey(Loja, on_delete=models.SET_NULL, related_name='motos_origem', blank=True, null=True)
+    
+    # Valores
+    valor_entrada = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_atual = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Datas
+    data_entrada = models.DateField(default=timezone.now)
+    data_venda = models.DateField(blank=True, null=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    matricula = models.CharField(max_length=10, blank=True, null=True, help_text="Código para identificação no chaveiro")
+    ativo = models.BooleanField(default=True)
+    
+    # Fotos
+    foto_principal = models.ImageField(upload_to='motos/', blank=True, null=True)
+    foto_frontal = models.ImageField(upload_to='motos/', blank=True, null=True)
+    foto_traseira = models.ImageField(upload_to='motos/', blank=True, null=True)
+    foto_lado_esquerdo = models.ImageField(upload_to='motos/', blank=True, null=True)
+    foto_lado_direito = models.ImageField(upload_to='motos/', blank=True, null=True)
+    
+    # Novo campo opcional de relacionamento direto entre Motocicleta e Seguro
+    seguro = models.OneToOneField('Seguro', on_delete=models.SET_NULL, null=True, blank=True, related_name='motocicleta')
+    
+    class Meta:
+        verbose_name = 'Motocicleta'
+        verbose_name_plural = 'Motocicletas'
+    
+    def __str__(self):
+        return f"{self.marca} {self.modelo} {self.ano} - {self.placa or self.chassi}"
+    
+    def get_status_color(self):
+        """Retorna a cor CSS para o status da motocicleta"""
+        colors = {
+            'estoque': 'success',
+            'vendida': 'danger',
+            'repasse': 'warning',
+            'reservada': 'info',
+            'manutencao': 'secondary',
+        }
+        return colors.get(self.status, 'secondary')
+    
+    def save(self, *args, **kwargs):
+        # Gera matrícula se não existir
+        if not self.matricula:
+            self.matricula = f"M{str(uuid.uuid4())[:8].upper()}"
+        super().save(*args, **kwargs)
 
 class HistoricoProprietario(models.Model):
-    """Modelo para manter histórico de proprietários de uma moto"""
-    moto = models.ForeignKey(EstoqueMoto, on_delete=models.CASCADE, related_name='historico')
+    """Histórico de proprietários de uma moto"""
+    MOTIVO_CHOICES = [
+        ('compra', 'Compra'),
+        ('venda', 'Venda'),
+        ('consignacao', 'Consignação'),
+        ('repasse', 'Repasse'),
+    ]
+    
+    moto = models.ForeignKey(Motocicleta, on_delete=models.CASCADE, related_name='historico_proprietarios')
     proprietario = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     data_inicio = models.DateField(default=timezone.now)
     data_fim = models.DateField(blank=True, null=True)
-    motivo = models.CharField(max_length=20, choices=[
-        ('COMPRA', 'Compra'),
-        ('VENDA', 'Venda'),
-        ('CONSIGNACAO', 'Consignação'),
-        ('TROCA', 'Troca'),
-    ])
+    motivo = models.CharField(max_length=20, choices=MOTIVO_CHOICES)
+    valor_transacao = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Histórico de Proprietário'
+        verbose_name_plural = 'Históricos de Proprietários'
+        ordering = ['-data_inicio']
     
     def __str__(self):
-        return f"{self.moto.modelo} - {self.proprietario.nome} ({self.data_inicio})"
+        return f"{self.moto} - {self.proprietario} ({self.data_inicio})"
+
+# ============================================================================
+# 4. VENDAS
+# ============================================================================
+
+class Venda(models.Model):
+    """Modelo para vendas de motocicletas"""
+    ORIGEM_CHOICES = [
+        ('presencial', 'Presencial'),
+        ('telefone', 'Telefone'),
+        ('whatsapp', 'WhatsApp'),
+        ('instagram', 'Instagram'),
+        ('facebook', 'Facebook'),
+        ('indicacao', 'Indicação'),
+        ('site', 'Site'),
+        ('outros', 'Outros'),
+    ]
+    
+    FORMA_PAGAMENTO_CHOICES = [
+        ('a_vista', 'À Vista'),
+        ('financiamento', 'Financiamento'),
+        ('consorcio', 'Consórcio'),
+        ('cartao_credito', 'Cartão de Crédito'),
+        ('outros', 'Outros'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('em_negociacao', 'Em Negociação'),
+        ('vendido', 'Vendido'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    # Relacionamentos
+    moto = models.ForeignKey(Motocicleta, on_delete=models.CASCADE, related_name='vendas')
+    comprador = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='compras')
+    vendedor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='vendas_realizadas')
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='vendas')
+    
+    # Dados da venda
+    origem = models.CharField(max_length=20, choices=ORIGEM_CHOICES)
+    forma_pagamento = models.CharField(max_length=20, choices=FORMA_PAGAMENTO_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    
+    # Valores
+    valor_venda = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_entrada = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    comissao_vendedor = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    
+    # Datas
+    data_atendimento = models.DateField(default=timezone.now)
+    data_venda = models.DateField(blank=True, null=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Venda'
+        verbose_name_plural = 'Vendas'
+    
+    def __str__(self):
+        return f"Venda #{self.id} - {self.moto} - {self.comprador.nome}"
+    
+    def get_status_color(self):
+        """Retorna a cor CSS para o status da venda"""
+        colors = {
+            'pendente': 'info',
+            'em_negociacao': 'warning',
+            'vendido': 'success',
+            'cancelado': 'danger',
+        }
+        return colors.get(self.status, 'secondary')
+    
+    def save(self, *args, **kwargs):
+        # Se a venda foi concluída, atualiza o status da moto
+        if self.status == 'vendido' and self.moto:
+            self.moto.status = 'vendida'
+            self.moto.data_venda = self.data_venda or timezone.now().date()
+            self.moto.save()
+            
+            # Atualiza o proprietário
+            self.moto.proprietario = self.comprador
+            self.moto.save()
+            
+            # Cria histórico de proprietário
+            HistoricoProprietario.objects.create(
+                moto=self.moto,
+                proprietario=self.comprador,
+                motivo='compra',
+                valor_transacao=self.valor_venda
+            )
+        
+        super().save(*args, **kwargs)
+
+# ============================================================================
+# 5. CONSIGNAÇÕES
+# ============================================================================
+
+class Consignacao(models.Model):
+    """Modelo para consignações"""
+    STATUS_CHOICES = [
+        ('disponivel', 'Disponível'),
+        ('vendido', 'Vendido'),
+        ('devolvido', 'Devolvido'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    # Relacionamentos
+    moto = models.OneToOneField(Motocicleta, on_delete=models.CASCADE, related_name='consignacao')
+    consignante = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='consignacoes')
+    vendedor_responsavel = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='consignacoes_responsavel')
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='consignacoes')
+    
+    # Dados da consignação
+    valor_pretendido = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_minimo = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    comissao_percentual = models.DecimalField(max_digits=5, decimal_places=2, default=5.00)
+    
+    # Datas
+    data_entrada = models.DateField(default=timezone.now)
+    data_limite = models.DateField()
+    data_venda = models.DateField(blank=True, null=True)
+    
+    # Status e valores
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='disponivel')
+    valor_venda = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Consignação'
+        verbose_name_plural = 'Consignações'
+    
+    def __str__(self):
+        return f"Consignação #{self.id} - {self.moto} - {self.consignante.nome}"
+    
+    def get_status_color(self):
+        """Retorna a cor CSS para o status da consignação"""
+        colors = {
+            'disponivel': 'primary',
+            'vendido': 'success',
+            'devolvido': 'warning',
+            'cancelado': 'danger',
+        }
+        return colors.get(self.status, 'secondary')
+    
+    @property
+    def valor_comissao(self):
+        """Calcula o valor da comissão"""
+        if self.valor_venda and self.comissao_percentual:
+            return (self.valor_venda * self.comissao_percentual) / Decimal('100')
+        return Decimal('0.00')
+    
+    @property
+    def valor_proprietario(self):
+        """Calcula o valor para o proprietário"""
+        if self.valor_venda:
+            return self.valor_venda - self.valor_comissao
+        return Decimal('0.00')
+    
+    def save(self, *args, **kwargs):
+        # Se foi vendida, atualiza o status da moto
+        if self.status == 'vendido' and self.moto:
+            self.moto.status = 'vendida'
+            self.moto.save()
+        
+        super().save(*args, **kwargs)
+
+# ============================================================================
+# 6. SEGUROS
+# ============================================================================
+
+class Seguradora(models.Model):
+    """Seguradoras parceiras"""
+    nome = models.CharField(max_length=100)
+    cnpj = models.CharField(max_length=18, unique=True)
+    telefone = models.CharField(max_length=15)
+    email = models.EmailField(blank=True, null=True)
+    site = models.URLField(blank=True, null=True)
+    ativo = models.BooleanField(default=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Seguradora'
+        verbose_name_plural = 'Seguradoras'
+    
+    def __str__(self):
+        return self.nome
+
+class PlanoSeguro(models.Model):
+    """Planos de seguro disponíveis"""
+    TIPO_BEM_CHOICES = [
+        ('motocicleta', 'Motocicleta'),
+        ('automovel', 'Automóvel'),
+        ('caminhao', 'Caminhão'),
+        ('casa', 'Casa'),
+        ('apartamento', 'Apartamento'),
+        ('empresa', 'Empresa'),
+        ('vida', 'Vida'),
+        ('saude', 'Saúde'),
+        ('outros', 'Outros'),
+    ]
+    
+    seguradora = models.ForeignKey(Seguradora, on_delete=models.CASCADE, related_name='planos')
+    nome = models.CharField(max_length=100)
+    tipo_bem = models.CharField(max_length=20, choices=TIPO_BEM_CHOICES)
+    descricao = models.TextField(blank=True, null=True)
+    comissao_padrao = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    ativo = models.BooleanField(default=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Plano de Seguro'
+        verbose_name_plural = 'Planos de Seguro'
+    
+    def __str__(self):
+        return f"{self.seguradora} - {self.nome} ({self.get_tipo_bem_display()})"
+
+class Bem(models.Model):
+    """Bens que podem ser segurados"""
+    TIPO_CHOICES = [
+        ('motocicleta', 'Motocicleta'),
+        ('automovel', 'Automóvel'),
+        ('caminhao', 'Caminhão'),
+        ('casa', 'Casa'),
+        ('apartamento', 'Apartamento'),
+        ('empresa', 'Empresa'),
+        ('vida', 'Vida'),
+        ('saude', 'Saúde'),
+        ('outros', 'Outros'),
+    ]
+    
+    # Identificação
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    descricao = models.CharField(max_length=200)
+    proprietario = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='bens')
+    
+    # Para veículos
+    marca = models.CharField(max_length=50, blank=True, null=True)
+    modelo = models.CharField(max_length=100, blank=True, null=True)
+    ano = models.CharField(max_length=4, blank=True, null=True)
+    placa = models.CharField(max_length=8, blank=True, null=True)
+    chassi = models.CharField(max_length=17, blank=True, null=True)
+    renavam = models.CharField(max_length=11, blank=True, null=True)
+    
+    # Para imóveis
+    endereco = models.CharField(max_length=200, blank=True, null=True)
+    area = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    
+    # Valores
+    valor_atual = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Bem'
+        verbose_name_plural = 'Bens'
+    
+    def __str__(self):
+        if self.tipo in ['motocicleta', 'automovel', 'caminhao']:
+            return f"{self.marca} {self.modelo} - {self.ano} ({self.placa})"
+        elif self.tipo in ['casa', 'apartamento']:
+            return f"{self.get_tipo_display()} - {self.endereco}"
+        else:
+            return f"{self.get_tipo_display()} - {self.descricao}"
+
+class CotacaoSeguro(models.Model):
+    """Cotações de seguro"""
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('aprovada', 'Aprovada'),
+        ('rejeitada', 'Rejeitada'),
+        ('cancelada', 'Cancelada'),
+    ]
+    
+    # Relacionamentos
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='cotacoes_seguro')
+    bem = models.ForeignKey(Bem, on_delete=models.CASCADE, null=True, blank=True)
+    plano = models.CharField(max_length=100, null=True, blank=True)
+    consultor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='cotacoes_realizadas')
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='cotacoes_seguro')
+    
+    # Dados da cotação
+    valor_cotacao = models.DecimalField(max_digits=10, decimal_places=2)
+    comissao_percentual = models.FloatField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    
+    # Datas
+    data_cotacao = models.DateTimeField(auto_now_add=True)
+    data_aprovacao = models.DateTimeField(blank=True, null=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Cotação de Seguro'
+        verbose_name_plural = 'Cotações de Seguro'
+    
+    def __str__(self):
+        return f"{self.cliente} - {self.bem} ({self.valor_cotacao})"
+    
+    @property
+    def valor_comissao(self):
+        """Calcula o valor da comissão"""
+        if self.valor_cotacao and self.comissao_percentual:
+            return (self.valor_cotacao * Decimal(str(self.comissao_percentual))) / Decimal('100')
+        return Decimal('0')
+
+class Seguro(models.Model):
+    """Seguros vendidos"""
+    STATUS_CHOICES = [
+        ('ativo', 'Ativo'),
+        ('cancelado', 'Cancelado'),
+        ('suspenso', 'Suspenso'),
+        ('vencido', 'Vencido'),
+    ]
+    
+    # Relacionamentos
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='seguros')
+    bem = models.ForeignKey(Bem, on_delete=models.CASCADE, related_name='seguros')
+    plano = models.ForeignKey(PlanoSeguro, on_delete=models.CASCADE, related_name='seguros', null=True, blank=True)
+    cotacao = models.ForeignKey(CotacaoSeguro, on_delete=models.SET_NULL, related_name='seguros', blank=True, null=True)
+    vendedor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='seguros_vendidos')
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='seguros')
+    
+    # Dados do seguro
+    apolice = models.CharField(max_length=50, unique=True)
+    valor_seguro = models.DecimalField(max_digits=10, decimal_places=2)
+    comissao_percentual = models.FloatField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ativo')
+    
+    # Datas
+    data_inicio = models.DateField()
+    data_fim = models.DateField()
+    data_venda = models.DateTimeField(auto_now_add=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Seguro'
+        verbose_name_plural = 'Seguros'
+    
+    def __str__(self):
+        return f"Seguro {self.apolice} - {self.cliente.nome}"
+    
+    def get_status_color(self):
+        """Retorna a cor CSS para o status do seguro"""
+        colors = {
+            'ativo': 'success',
+            'cancelado': 'danger',
+            'suspenso': 'warning',
+            'vencido': 'secondary',
+        }
+        return colors.get(self.status, 'secondary')
+    
+    @property
+    def valor_comissao(self):
+        if self.valor_seguro and self.comissao_percentual:
+            return (self.valor_seguro * Decimal(str(self.comissao_percentual))) / Decimal('100')
+        return Decimal('0')
+    
+    @property
+    def dias_vencimento(self):
+        """Calcula quantos dias faltam para vencer"""
+        from datetime import date
+        hoje = date.today()
+        return (self.data_fim - hoje).days
+
+# ============================================================================
+# 7. REPASSES
+# ============================================================================
+
+class Repasse(models.Model):
+    """Repasses de motos para outras lojas"""
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('aprovado', 'Aprovado'),
+        ('realizado', 'Realizado'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    # Relacionamentos
+    moto = models.ForeignKey(Motocicleta, on_delete=models.CASCADE, related_name='repasses')
+    loja_origem = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='repasses_origem')
+    loja_destino = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='repasses_destino')
+    responsavel = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='repasses_responsavel')
+    
+    # Dados do repasse
+    valor_repasse = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    
+    # Datas
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_aprovacao = models.DateTimeField(blank=True, null=True)
+    data_realizacao = models.DateTimeField(blank=True, null=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Repasse'
+        verbose_name_plural = 'Repasses'
+    
+    def __str__(self):
+        return f"{self.moto} - {self.loja_origem} → {self.loja_destino}"
+    
+    def save(self, *args, **kwargs):
+        # Se foi realizado, atualiza o status da moto
+        if self.status == 'realizado' and self.moto:
+            self.moto.status = 'repasse'
+            self.moto.loja_origem = self.loja_destino
+            self.moto.save()
+        
+        super().save(*args, **kwargs)
+
+# ============================================================================
+# 8. ASSINATURAS DIGITAIS
+# ============================================================================
+
+class AssinaturaDigital(models.Model):
+    """Assinaturas digitais para documentos"""
+    TIPO_CHOICES = [
+        ('venda', 'Venda'),
+        ('consignacao', 'Consignação'),
+        ('seguro', 'Seguro'),
+        ('repasse', 'Repasse'),
+    ]
+    
+    # Relacionamentos
+    venda = models.ForeignKey(Venda, on_delete=models.CASCADE, related_name='assinaturas', blank=True, null=True)
+    consignacao = models.ForeignKey(Consignacao, on_delete=models.CASCADE, related_name='assinaturas', blank=True, null=True)
+    seguro = models.ForeignKey(Seguro, on_delete=models.CASCADE, related_name='assinaturas', blank=True, null=True)
+    repasse = models.ForeignKey(Repasse, on_delete=models.CASCADE, related_name='assinaturas', blank=True, null=True)
+    
+    # Dados da assinatura
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    imagem_assinatura = models.TextField()  # Base64
+    nome_assinante = models.CharField(max_length=100)
+    cpf_assinante = models.CharField(max_length=14)
+    
+    # Metadados
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Assinatura Digital'
+        verbose_name_plural = 'Assinaturas Digitais'
+    
+    def __str__(self):
+        return f"{self.nome_assinante} - {self.get_tipo_display()} ({self.data_criacao})"
+
+# ============================================================================
+# 9. OCORRÊNCIAS
+# ============================================================================
+
+class Ocorrencia(models.Model):
+    """Ocorrências e incidentes nas lojas"""
+    TIPO_CHOICES = [
+        ('incidente', 'Incidente'),
+        ('problema_tecnico', 'Problema Técnico'),
+        ('solicitacao', 'Solicitação'),
+        ('reclamacao', 'Reclamação'),
+        ('sugestao', 'Sugestão'),
+        ('manutencao', 'Manutenção'),
+        ('seguranca', 'Segurança'),
+        ('outros', 'Outros'),
+    ]
+    
+    PRIORIDADE_CHOICES = [
+        ('baixa', 'Baixa'),
+        ('media', 'Média'),
+        ('alta', 'Alta'),
+        ('critica', 'Crítica'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('aberta', 'Aberta'),
+        ('em_analise', 'Em Análise'),
+        ('em_andamento', 'Em Andamento'),
+        ('resolvida', 'Resolvida'),
+        ('fechada', 'Fechada'),
+        ('cancelada', 'Cancelada'),
+    ]
+    
+    # Identificação
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    prioridade = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default='media')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='aberta')
+    
+    # Relacionamentos
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='ocorrencias')
+    solicitante = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='ocorrencias_solicitadas')
+    responsavel = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='ocorrencias_responsavel', blank=True, null=True)
+    
+    # Datas
+    data_abertura = models.DateTimeField(auto_now_add=True)
+    data_limite = models.DateTimeField(blank=True, null=True)
+    data_resolucao = models.DateTimeField(blank=True, null=True)
+    data_fechamento = models.DateTimeField(blank=True, null=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    solucao = models.TextField(blank=True, null=True)
+    arquivos_anexos = models.FileField(upload_to='ocorrencias/', blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Ocorrência'
+        verbose_name_plural = 'Ocorrências'
+        ordering = ['-data_abertura']
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.loja.nome} ({self.get_status_display()})"
+    
+    @property
+    def dias_aberta(self):
+        """Calcula quantos dias a ocorrência está aberta"""
+        from datetime import datetime
+        if self.data_fechamento:
+            return (self.data_fechamento - self.data_abertura).days
+        return (datetime.now() - self.data_abertura.replace(tzinfo=None)).days
+    
+    @property
+    def atrasada(self):
+        """Verifica se a ocorrência está atrasada"""
+        if self.data_limite and self.status not in ['resolvida', 'fechada']:
+            from datetime import datetime
+            return datetime.now() > self.data_limite.replace(tzinfo=None)
+        return False
+    
+    def save(self, *args, **kwargs):
+        # Atualizar data de resolução quando status mudar para resolvida
+        if self.status == 'resolvida' and not self.data_resolucao:
+            from django.utils import timezone
+            self.data_resolucao = timezone.now()
+        
+        # Atualizar data de fechamento quando status mudar para fechada
+        if self.status == 'fechada' and not self.data_fechamento:
+            from django.utils import timezone
+            self.data_fechamento = timezone.now()
+        
+        super().save(*args, **kwargs)
+
+class ComentarioOcorrencia(models.Model):
+    """Comentários nas ocorrências"""
+    ocorrencia = models.ForeignKey(Ocorrencia, on_delete=models.CASCADE, related_name='comentarios')
+    autor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='comentarios_ocorrencias')
+    conteudo = models.TextField()
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    privado = models.BooleanField(default=False, help_text="Comentário visível apenas para administradores")
+    
+    class Meta:
+        verbose_name = 'Comentário de Ocorrência'
+        verbose_name_plural = 'Comentários de Ocorrências'
+        ordering = ['data_criacao']
+    
+    def __str__(self):
+        return f"Comentário de {self.autor.user.get_full_name()} em {self.ocorrencia.titulo}"
+
+# ============================================================================
+# 10. MODELO DUMMY (para testes)
+# ============================================================================
+
+class DummyModel(models.Model):
+    name = models.CharField(max_length=100)

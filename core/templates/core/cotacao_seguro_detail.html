@@ -1,0 +1,126 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Cotações de Seguro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-file-invoice-dollar"></i> Detalhes da Cotação de Seguro
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:cotacao_seguro_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                        <a href="{% url 'core:cotacao_seguro_update' cotacao.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                        <a href="{% url 'core:cotacao_seguro_delete' cotacao.pk %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash"></i> Excluir
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Cliente</label>
+                                <div class="fw-bold fs-5">{{ cotacao.cliente.nome }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Motocicleta</label>
+                                <div class="fw-bold">{{ cotacao.motocicleta.marca }} {{ cotacao.motocicleta.modelo }} - {{ cotacao.motocicleta.placa }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Seguradora</label>
+                                <div class="fw-bold">{{ cotacao.seguradora.nome }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Plano</label>
+                                <div class="fw-bold">{{ cotacao.plano.nome }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Valor da Cotação</label>
+                                <div class="fw-bold text-success fs-5">R$ {{ cotacao.valor_cotacao|floatformat:2 }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Comissão</label>
+                                <div class="fw-bold text-info fs-5">
+                                    {{ cotacao.comissao_percentual|floatformat:1 }}%
+                                    <small class="text-muted">(R$ {{ cotacao.valor_comissao|floatformat:2 }})</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Data da Cotação</label>
+                                <div class="fw-bold">{{ cotacao.data_cotacao|date:"d/m/Y" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Status</label>
+                                <div class="fw-bold">
+                                    {% if cotacao.status == 'pendente' %}
+                                        <span class="badge bg-warning">Pendente</span>
+                                    {% elif cotacao.status == 'aprovada' %}
+                                        <span class="badge bg-success">Aprovada</span>
+                                    {% elif cotacao.status == 'rejeitada' %}
+                                        <span class="badge bg-danger">Rejeitada</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ cotacao.status|title }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if cotacao.observacoes %}
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Observações</label>
+                                <div class="border rounded p-3 bg-light">{{ cotacao.observacoes|linebreaks }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Data de Cadastro</label>
+                                <div class="fw-bold">{{ cotacao.created_at|date:"d/m/Y H:i" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Última Atualização</label>
+                                <div class="fw-bold">{{ cotacao.updated_at|date:"d/m/Y H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

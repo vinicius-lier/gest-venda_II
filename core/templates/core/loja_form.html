@@ -1,0 +1,298 @@
+{% extends 'core/base.html' %}
+{% load core_extras %}
+
+{% block title %}
+    {% if loja %}Editar Loja{% else %}Nova Loja{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-store"></i> 
+            {% if loja %}Editar Loja{% else %}Nova Loja{% endif %}
+        </h1>
+        <a href="{% url 'core:loja_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        {% if loja %}Editar Dados da Loja{% else %}Cadastrar Nova Loja{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Dados Básicos -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle"></i> Dados Básicos
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.nome.id_for_label }}" class="form-label">
+                                    {{ form.nome.label }} *
+                                </label>
+                                {{ form.nome }}
+                                {% if form.nome.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.nome.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cnpj.id_for_label }}" class="form-label">
+                                    {{ form.cnpj.label }} *
+                                </label>
+                                {{ form.cnpj }}
+                                {% if form.cnpj.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.cnpj.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Localização -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-map-marker-alt"></i> Localização
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cidade.id_for_label }}" class="form-label">
+                                    {{ form.cidade.label }} *
+                                </label>
+                                {{ form.cidade }}
+                                {% if form.cidade.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.cidade.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.endereco.id_for_label }}" class="form-label">
+                                    {{ form.endereco.label }} *
+                                </label>
+                                {{ form.endereco }}
+                                {% if form.endereco.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.endereco.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Contato -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-phone"></i> Contato
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.telefone.id_for_label }}" class="form-label">
+                                    {{ form.telefone.label }} *
+                                </label>
+                                {{ form.telefone }}
+                                {% if form.telefone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.telefone.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">
+                                    {{ form.email.label }}
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.email.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-toggle-on"></i> Status
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.ativo }}
+                                    <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
+                                        {{ form.ativo.label }}
+                                    </label>
+                                </div>
+                                {% if form.ativo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.ativo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    Lojas inativas não podem realizar operações no sistema.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr class="my-4">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{% url 'core:loja_list' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> 
+                                        {% if loja %}Atualizar{% else %}Cadastrar{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar com Informações -->
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i> Informações
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-primary">Dados Obrigatórios:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> Nome da loja</li>
+                            <li><i class="fas fa-check text-success"></i> CNPJ válido</li>
+                            <li><i class="fas fa-check text-success"></i> Cidade</li>
+                            <li><i class="fas fa-check text-success"></i> Endereço</li>
+                            <li><i class="fas fa-check text-success"></i> Telefone</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-primary">Dados Opcionais:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-info text-info"></i> Email</li>
+                        </ul>
+                    </div>
+                    
+                    {% if loja %}
+                    <div class="mb-3">
+                        <h6 class="text-primary">Dados da Loja:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Cadastrada em:</strong> {{ loja.data_cadastro|date:"d/m/Y H:i" }}</li>
+                            <li><strong>Usuários ativos:</strong> {{ usuarios_ativos }}</li>
+                            <li><strong>Total de usuários:</strong> {{ loja.usuarios.count }}</li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-lightbulb"></i>
+                        <strong>Dica:</strong> Após cadastrar a loja, você poderá criar usuários vinculados a ela.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+$(document).ready(function() {
+    // Máscara para CNPJ
+    $('#{{ form.cnpj.id_for_label }}').mask('00.000.000/0000-00');
+    
+    // Máscara para telefone
+    $('#{{ form.telefone.id_for_label }}').mask('(00) 00000-0000');
+    
+    // Validação de CNPJ
+    $('#{{ form.cnpj.id_for_label }}').on('blur', function() {
+        var cnpj = $(this).val().replace(/[^\d]/g, '');
+        if (cnpj.length === 14) {
+            // Validação básica de CNPJ
+            if (!validarCNPJ(cnpj)) {
+                $(this).addClass('is-invalid');
+                if (!$(this).next('.invalid-feedback').length) {
+                    $(this).after('<div class="invalid-feedback">CNPJ inválido.</div>');
+                }
+            } else {
+                $(this).removeClass('is-invalid');
+                $(this).next('.invalid-feedback').remove();
+            }
+        }
+    });
+    
+    // Validação de email
+    $('#{{ form.email.id_for_label }}').on('blur', function() {
+        var email = $(this).val();
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email && !emailRegex.test(email)) {
+            $(this).addClass('is-invalid');
+            if (!$(this).next('.invalid-feedback').length) {
+                $(this).after('<div class="invalid-feedback">Email inválido.</div>');
+            }
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+});
+
+// Função para validar CNPJ
+function validarCNPJ(cnpj) {
+    if (cnpj.length !== 14) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1+$/.test(cnpj)) return false;
+    
+    // Validação dos dígitos verificadores
+    var soma = 0;
+    var peso = 2;
+    
+    for (var i = 11; i >= 0; i--) {
+        soma += parseInt(cnpj.charAt(i)) * peso;
+        peso = peso === 9 ? 2 : peso + 1;
+    }
+    
+    var digito1 = ((soma % 11) < 2) ? 0 : 11 - (soma % 11);
+    
+    soma = 0;
+    peso = 2;
+    
+    for (var i = 12; i >= 0; i--) {
+        soma += parseInt(cnpj.charAt(i)) * peso;
+        peso = peso === 9 ? 2 : peso + 1;
+    }
+    
+    var digito2 = ((soma % 11) < 2) ? 0 : 11 - (soma % 11);
+    
+    return (parseInt(cnpj.charAt(12)) === digito1 && parseInt(cnpj.charAt(13)) === digito2);
+}
+</script>
+{% endblock %} 

@@ -519,6 +519,3 @@ class ComentarioOcorrenciaForm(forms.ModelForm):
             'conteudo': 'Comentário',
             'privado': 'Comentário privado (apenas para administradores)'
         }
-
-class DummyForm(forms.Form):
-    pass

@@ -886,10 +886,3 @@ class ComentarioOcorrencia(models.Model):
     
     def __str__(self):
         return f"Comentário de {self.autor.user.get_full_name()} em {self.ocorrencia.titulo}"
-
-# ============================================================================
-# 10. MODELO DUMMY (para testes)
-# ============================================================================
-
-class DummyModel(models.Model):
-    name = models.CharField(max_length=100)

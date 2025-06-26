@@ -272,9 +272,6 @@ def motocicleta_create(request):
         form = MotocicletaForm(request.POST, request.FILES)
         if form.is_valid():
             motocicleta = form.save(commit=False)
-            # Definir o proprietário como o usuário logado se não foi especificado
-            if not motocicleta.proprietario:
-                motocicleta.proprietario = request.user
             motocicleta.save()
             messages.success(request, 'Motocicleta registrada com sucesso!')
             return redirect('core:motocicleta_list')
@@ -282,8 +279,6 @@ def motocicleta_create(request):
             messages.error(request, 'Erro ao registrar motocicleta. Verifique os dados.')
     else:
         form = MotocicletaForm()
-        # Definir proprietário padrão como usuário logado
-        form.fields['proprietario'].initial = request.user
     
     return render(request, 'core/motocicleta_form.html', {
         'form': form, 

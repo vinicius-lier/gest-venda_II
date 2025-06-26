@@ -1285,19 +1285,20 @@ def ocorrencia_list(request):
 @login_required
 def ocorrencia_create(request):
     """Criação de nova ocorrência"""
+    # Proteção: garantir que o usuário tem usuario_sistema
+    if not hasattr(request.user, 'usuario_sistema') or request.user.usuario_sistema is None:
+        messages.error(request, 'Seu usuário não está vinculado a um perfil do sistema. Contate o administrador.')
+        return redirect('core:dashboard')
     if request.method == 'POST':
         form = OcorrenciaForm(request.POST, request.FILES)
         if form.is_valid():
             ocorrencia = form.save(commit=False)
-            # Definir o solicitante como o usuário logado do sistema
             ocorrencia.solicitante = request.user.usuario_sistema
             ocorrencia.save()
             messages.success(request, 'Ocorrência registrada com sucesso!')
             return redirect('core:ocorrencia_list')
     else:
-        loja_inicial = None
-        if hasattr(request.user, 'usuario_sistema') and request.user.usuario_sistema:
-            loja_inicial = request.user.usuario_sistema.loja
+        loja_inicial = request.user.usuario_sistema.loja
         form = OcorrenciaForm(initial={'loja': loja_inicial} if loja_inicial else {})
     
     return render(request, 'core/ocorrencia_form.html', {

@@ -1,0 +1,30 @@
+{
+  "name": "Gestão Operacional de Vendas",
+  "description": "Sistema de gestão operacional de vendas desenvolvido em Django",
+  "repository": "https://github.com/seu-usuario/gestao_operacional_vendas",
+  "logo": "https://node-js-sample.herokuapp.com/node.png",
+  "keywords": ["django", "python", "gestao", "vendas"],
+  "env": {
+    "SECRET_KEY": {
+      "description": "A secret key for Django",
+      "generator": "secret"
+    },
+    "DEBUG": {
+      "description": "Debug mode (True/False)",
+      "value": "False"
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:mini"
+    }
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "scripts": {
+    "postdeploy": "python manage.py migrate"
+  }
+} 

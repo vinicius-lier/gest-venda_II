@@ -360,11 +360,53 @@ def motocicleta_delete(request, pk):
 
 @login_required
 def venda_list(request):
-    """Lista de vendas"""
+    """Lista de vendas com filtros"""
     if not (request.user.is_superuser or request.user.has_perm('core.view_venda')):
         return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar vendas.'})
+    
+    # Obter parâmetros de filtro
+    status = request.GET.get('status', '')
+    vendedor = request.GET.get('vendedor', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    
+    # Query base
     vendas = Venda.objects.all().order_by('-data_venda', '-data_atendimento')
-    return render(request, 'core/venda_list.html', {'vendas': vendas})
+    
+    # Aplicar filtros
+    if status:
+        vendas = vendas.filter(status=status)
+    
+    if vendedor:
+        vendas = vendas.filter(
+            Q(vendedor__user__first_name__icontains=vendedor) |
+            Q(vendedor__user__last_name__icontains=vendedor) |
+            Q(vendedor__user__username__icontains=vendedor)
+        )
+    
+    if data_inicio:
+        try:
+            data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            vendas = vendas.filter(data_venda__gte=data_inicio)
+        except ValueError:
+            pass
+    
+    if data_fim:
+        try:
+            data_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            vendas = vendas.filter(data_venda__lte=data_fim)
+        except ValueError:
+            pass
+    
+    context = {
+        'vendas': vendas,
+        'status': status,
+        'vendedor': vendedor,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/venda_list.html', context)
 
 @login_required
 def venda_create(request):
@@ -442,11 +484,53 @@ def venda_delete(request, pk):
 
 @login_required
 def consignacao_list(request):
-    """Lista de consignações"""
+    """Lista de consignações com filtros"""
     if not (request.user.is_superuser or request.user.has_perm('core.view_consignacao')):
         return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar consignações.'})
+    
+    # Obter parâmetros de filtro
+    status = request.GET.get('status', '')
+    vendedor = request.GET.get('vendedor', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    
+    # Query base
     consignacoes = Consignacao.objects.all().order_by('-data_entrada')
-    return render(request, 'core/consignacao_list.html', {'consignacoes': consignacoes})
+    
+    # Aplicar filtros
+    if status:
+        consignacoes = consignacoes.filter(status=status)
+    
+    if vendedor:
+        consignacoes = consignacoes.filter(
+            Q(vendedor_responsavel__user__first_name__icontains=vendedor) |
+            Q(vendedor_responsavel__user__last_name__icontains=vendedor) |
+            Q(vendedor_responsavel__user__username__icontains=vendedor)
+        )
+    
+    if data_inicio:
+        try:
+            data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            consignacoes = consignacoes.filter(data_entrada__gte=data_inicio)
+        except ValueError:
+            pass
+    
+    if data_fim:
+        try:
+            data_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            consignacoes = consignacoes.filter(data_entrada__lte=data_fim)
+        except ValueError:
+            pass
+    
+    context = {
+        'consignacoes': consignacoes,
+        'status': status,
+        'vendedor': vendedor,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/consignacao_list.html', context)
 
 @login_required
 def consignacao_create(request):
@@ -524,11 +608,51 @@ def consignacao_delete(request, pk):
 
 @login_required
 def seguro_list(request):
-    """Lista de seguros"""
+    """Lista de seguros com filtros"""
     if not (request.user.is_superuser or request.user.has_perm('core.view_seguro')):
         return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar seguros.'})
+    
+    # Obter parâmetros de filtro
+    status = request.GET.get('status', '')
+    vendedor = request.GET.get('vendedor', '')
+    seguradora = request.GET.get('seguradora', '')
+    data_vencimento = request.GET.get('data_vencimento', '')
+    
+    # Query base
     seguros = Seguro.objects.all().order_by('-data_venda')
-    return render(request, 'core/seguro_list.html', {'seguros': seguros})
+    
+    # Aplicar filtros
+    if status:
+        seguros = seguros.filter(status=status)
+    
+    if vendedor:
+        seguros = seguros.filter(
+            Q(vendedor__user__first_name__icontains=vendedor) |
+            Q(vendedor__user__last_name__icontains=vendedor) |
+            Q(vendedor__user__username__icontains=vendedor)
+        )
+    
+    if seguradora:
+        seguros = seguros.filter(
+            Q(plano__seguradora__nome__icontains=seguradora)
+        )
+    
+    if data_vencimento:
+        try:
+            data_vencimento = datetime.strptime(data_vencimento, '%Y-%m-%d').date()
+            seguros = seguros.filter(data_fim=data_vencimento)
+        except ValueError:
+            pass
+    
+    context = {
+        'seguros': seguros,
+        'status': status,
+        'vendedor': vendedor,
+        'seguradora': seguradora,
+        'data_vencimento': data_vencimento,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/seguro_list.html', context)
 
 @login_required
 def seguro_create(request):
@@ -873,25 +997,54 @@ def bem_delete(request, pk):
 # Views administrativas
 @login_required
 def usuario_list(request):
-    """Lista de usuários do sistema"""
-    status = request.GET.get('status', 'ativo')  # Filtro de status
+    """Lista de usuários do sistema com filtros"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_usuario')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar usuários.'})
     
-    # Filtrar apenas usuários ativos por padrão
+    # Obter parâmetros de filtro
+    search = request.GET.get('search', '')
+    perfil = request.GET.get('perfil', '')
+    status = request.GET.get('status', 'todos')  # Agora o padrão é 'todos'
+    loja = request.GET.get('loja', '')
+    
+    # Query base
+    usuarios = Usuario.objects.all().order_by('user__first_name', 'user__last_name')
+    
+    # Aplicar filtros
+    if search:
+        usuarios = usuarios.filter(
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(user__username__icontains=search) |
+            Q(user__email__icontains=search)
+        )
+    
+    if perfil:
+        usuarios = usuarios.filter(perfil__nome=perfil)
+    
     if status == 'ativo':
-        usuarios = Usuario.objects.filter(status='ativo').order_by('user__first_name', 'user__last_name')
+        usuarios = usuarios.filter(status='ativo')
     elif status == 'inativo':
-        usuarios = Usuario.objects.filter(status='inativo').order_by('user__first_name', 'user__last_name')
+        usuarios = usuarios.filter(status='inativo')
     elif status == 'bloqueado':
-        usuarios = Usuario.objects.filter(status='bloqueado').order_by('user__first_name', 'user__last_name')
-    else:
-        usuarios = Usuario.objects.all().order_by('user__first_name', 'user__last_name')
+        usuarios = usuarios.filter(status='bloqueado')
+    # Se status == 'todos', não aplica filtro
+    
+    if loja:
+        usuarios = usuarios.filter(loja_id=loja)
     
     lojas = Loja.objects.filter(ativo=True).order_by('nome')
-    return render(request, 'core/usuario_list.html', {
+    
+    context = {
         'usuarios': usuarios,
         'lojas': lojas,
-        'status': status
-    })
+        'status': status,
+        'search': search,
+        'perfil': perfil,
+        'loja': loja,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/usuario_list.html', context)
 
 @login_required
 def usuario_create(request):
@@ -972,21 +1125,43 @@ def usuario_delete(request, pk):
 
 @login_required
 def loja_list(request):
-    """Lista de lojas"""
-    status = request.GET.get('status', 'ativo')  # Filtro de status
+    """Lista de lojas com filtros"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_loja')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar lojas.'})
     
-    # Filtrar apenas lojas ativas por padrão
+    # Obter parâmetros de filtro
+    search = request.GET.get('search', '')
+    cidade = request.GET.get('cidade', '')
+    status = request.GET.get('status', 'ativo')
+    
+    # Query base
+    lojas = Loja.objects.all().order_by('nome')
+    
+    # Aplicar filtros
+    if search:
+        lojas = lojas.filter(
+            Q(nome__icontains=search) |
+            Q(cnpj__icontains=search) |
+            Q(cidade__icontains=search)
+        )
+    
+    if cidade:
+        lojas = lojas.filter(cidade__icontains=cidade)
+    
     if status == 'ativo':
-        lojas = Loja.objects.filter(ativo=True).order_by('nome')
+        lojas = lojas.filter(ativo=True)
     elif status == 'inativo':
-        lojas = Loja.objects.filter(ativo=False).order_by('nome')
-    else:
-        lojas = Loja.objects.all().order_by('nome')
+        lojas = lojas.filter(ativo=False)
+    # Se status == 'todos', não aplica filtro
     
-    return render(request, 'core/loja_list.html', {
+    context = {
         'lojas': lojas,
-        'status': status
-    })
+        'status': status,
+        'search': search,
+        'cidade': cidade,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/loja_list.html', context)
 
 @login_required
 def loja_create(request):
@@ -1068,11 +1243,44 @@ def loja_delete(request, pk):
 # Views de ocorrências
 @login_required
 def ocorrencia_list(request):
-    """Lista de ocorrências"""
+    """Lista de ocorrências com filtros"""
     if not (request.user.is_superuser or request.user.has_perm('core.view_ocorrencia')):
         return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar ocorrências.'})
+    
+    # Obter parâmetros de filtro
+    search = request.GET.get('search', '')
+    tipo = request.GET.get('tipo', '')
+    prioridade = request.GET.get('prioridade', '')
+    status = request.GET.get('status', '')
+    
+    # Query base
     ocorrencias = Ocorrencia.objects.all().order_by('-data_abertura')
-    return render(request, 'core/ocorrencia_list.html', {'ocorrencias': ocorrencias})
+    
+    # Aplicar filtros
+    if search:
+        ocorrencias = ocorrencias.filter(
+            Q(titulo__icontains=search) |
+            Q(descricao__icontains=search)
+        )
+    
+    if tipo:
+        ocorrencias = ocorrencias.filter(tipo=tipo)
+    
+    if prioridade:
+        ocorrencias = ocorrencias.filter(prioridade=prioridade)
+    
+    if status:
+        ocorrencias = ocorrencias.filter(status=status)
+    
+    context = {
+        'ocorrencias': ocorrencias,
+        'search': search,
+        'tipo': tipo,
+        'prioridade': prioridade,
+        'status': status,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/ocorrencia_list.html', context)
 
 @login_required
 def ocorrencia_create(request):

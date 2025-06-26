@@ -11,7 +11,8 @@ class MotocicletaForm(forms.ModelForm):
             'marca', 'modelo', 'ano', 'cor', 'cilindrada', 'chassi', 'placa', 'renavam',
             'tipo_entrada', 'origem', 'status', 'proprietario', 'fornecedor', 'loja_origem',
             'valor_entrada', 'valor_atual', 'data_entrada', 'observacoes',
-            'foto_principal', 'foto_frontal', 'foto_traseira', 'foto_lado_esquerdo', 'foto_lado_direito'
+            'foto_principal', 'foto_frontal', 'foto_traseira', 'foto_lado_esquerdo', 'foto_lado_direito',
+            'seguro', 'data_venda'
         ]
         widgets = {
             'data_entrada': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -67,6 +68,7 @@ class MotocicletaForm(forms.ModelForm):
         cleaned_data = super().clean()
         chassi = cleaned_data.get('chassi')
         placa = cleaned_data.get('placa')
+        proprietario = cleaned_data.get('proprietario')
         
         # Verificar se chassi já existe
         if chassi:
@@ -83,6 +85,10 @@ class MotocicletaForm(forms.ModelForm):
                 existing = existing.exclude(pk=self.instance.pk)
             if existing.exists():
                 raise forms.ValidationError('Esta placa já está cadastrada no sistema.')
+        
+        # Garantir que o proprietário foi selecionado
+        if not proprietario:
+            raise forms.ValidationError('Selecione um proprietário para a motocicleta.')
         
         return cleaned_data
 

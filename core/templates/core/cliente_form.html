@@ -21,185 +21,25 @@
             <div class="card-body">
                 <form method="post" class="needs-validation" novalidate>
                     {% csrf_token %}
-                    
+                    {{ form.non_field_errors }}
                     <div class="row">
-                        <!-- Nome -->
-                        <div class="col-md-8 mb-3">
-                            <label for="nome" class="form-label">
-                                <i class="fas fa-user me-1"></i>Nome Completo *
-                            </label>
-                            <input type="text" class="form-control" id="nome" name="nome" 
-                                   value="{{ cliente.nome|default:'' }}" required>
-                            <div class="invalid-feedback">
-                                Por favor, informe o nome completo.
+                        {% for field in form %}
+                            <div class="mb-3 col-md-6">
+                                <label for="{{ field.id_for_label }}" class="form-label">
+                                    {{ field.label }}{% if field.field.required %} *{% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="text-danger small">
+                                        {{ field.errors|striptags }}
+                                    </div>
+                                {% endif %}
                             </div>
-                        </div>
-                        
-                        <!-- Tipo -->
-                        <div class="col-md-4 mb-3">
-                            <label for="tipo" class="form-label">
-                                <i class="fas fa-tag me-1"></i>Tipo *
-                            </label>
-                            <select class="form-select" id="tipo" name="tipo" required>
-                                <option value="">Selecione...</option>
-                                <option value="pf" {% if cliente.tipo == 'pf' %}selected{% endif %}>Pessoa Física</option>
-                                <option value="pj" {% if cliente.tipo == 'pj' %}selected{% endif %}>Pessoa Jurídica</option>
-                            </select>
-                            <div class="invalid-feedback">
-                                Por favor, selecione o tipo.
-                            </div>
-                        </div>
+                        {% endfor %}
                     </div>
-                    
-                    <div class="row">
-                        <!-- CPF/CNPJ -->
-                        <div class="col-md-6 mb-3">
-                            <label for="cpf_cnpj" class="form-label">
-                                <i class="fas fa-id-card me-1"></i>CPF/CNPJ *
-                            </label>
-                            <input type="text" class="form-control" id="cpf_cnpj" name="cpf_cnpj" 
-                                   value="{{ cliente.cpf_cnpj|default:'' }}" required>
-                            <div class="invalid-feedback">
-                                Por favor, informe o CPF ou CNPJ.
-                            </div>
-                        </div>
-                        
-                        <!-- RG/IE -->
-                        <div class="col-md-6 mb-3">
-                            <label for="rg_ie" class="form-label">
-                                <i class="fas fa-id-badge me-1"></i>RG/IE
-                            </label>
-                            <input type="text" class="form-control" id="rg_ie" name="rg_ie" 
-                                   value="{{ cliente.rg_ie|default:'' }}">
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <!-- Telefone -->
-                        <div class="col-md-6 mb-3">
-                            <label for="telefone" class="form-label">
-                                <i class="fas fa-phone me-1"></i>Telefone *
-                            </label>
-                            <input type="tel" class="form-control" id="telefone" name="telefone" 
-                                   value="{{ cliente.telefone|default:'' }}" required>
-                            <div class="invalid-feedback">
-                                Por favor, informe o telefone.
-                            </div>
-                        </div>
-                        
-                        <!-- Email -->
-                        <div class="col-md-6 mb-3">
-                            <label for="email" class="form-label">
-                                <i class="fas fa-envelope me-1"></i>Email
-                            </label>
-                            <input type="email" class="form-control" id="email" name="email" 
-                                   value="{{ cliente.email|default:'' }}">
-                            <div class="invalid-feedback">
-                                Por favor, informe um email válido.
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <!-- Data de Nascimento -->
-                        <div class="col-md-6 mb-3">
-                            <label for="data_nascimento" class="form-label">
-                                <i class="fas fa-calendar me-1"></i>Data de Nascimento
-                            </label>
-                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" 
-                                   value="{{ cliente.data_nascimento|date:'Y-m-d'|default:'' }}">
-                        </div>
-                        
-                        <!-- Sexo -->
-                        <div class="col-md-6 mb-3">
-                            <label for="sexo" class="form-label">
-                                <i class="fas fa-venus-mars me-1"></i>Sexo
-                            </label>
-                            <select class="form-select" id="sexo" name="sexo">
-                                <option value="">Selecione...</option>
-                                <option value="M" {% if cliente.sexo == 'M' %}selected{% endif %}>Masculino</option>
-                                <option value="F" {% if cliente.sexo == 'F' %}selected{% endif %}>Feminino</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <!-- Endereço -->
-                    <div class="mb-3">
-                        <label for="endereco" class="form-label">
-                            <i class="fas fa-map-marker-alt me-1"></i>Endereço
-                        </label>
-                        <textarea class="form-control" id="endereco" name="endereco" rows="2">{{ cliente.endereco|default:'' }}</textarea>
-                    </div>
-                    
-                    <div class="row">
-                        <!-- Cidade -->
-                        <div class="col-md-6 mb-3">
-                            <label for="cidade" class="form-label">
-                                <i class="fas fa-city me-1"></i>Cidade
-                            </label>
-                            <input type="text" class="form-control" id="cidade" name="cidade" 
-                                   value="{{ cliente.cidade|default:'' }}">
-                        </div>
-                        
-                        <!-- Estado -->
-                        <div class="col-md-3 mb-3">
-                            <label for="estado" class="form-label">
-                                <i class="fas fa-map me-1"></i>Estado
-                            </label>
-                            <select class="form-select" id="estado" name="estado">
-                                <option value="">Selecione...</option>
-                                <option value="AC" {% if cliente.estado == 'AC' %}selected{% endif %}>Acre</option>
-                                <option value="AL" {% if cliente.estado == 'AL' %}selected{% endif %}>Alagoas</option>
-                                <option value="AP" {% if cliente.estado == 'AP' %}selected{% endif %}>Amapá</option>
-                                <option value="AM" {% if cliente.estado == 'AM' %}selected{% endif %}>Amazonas</option>
-                                <option value="BA" {% if cliente.estado == 'BA' %}selected{% endif %}>Bahia</option>
-                                <option value="CE" {% if cliente.estado == 'CE' %}selected{% endif %}>Ceará</option>
-                                <option value="DF" {% if cliente.estado == 'DF' %}selected{% endif %}>Distrito Federal</option>
-                                <option value="ES" {% if cliente.estado == 'ES' %}selected{% endif %}>Espírito Santo</option>
-                                <option value="GO" {% if cliente.estado == 'GO' %}selected{% endif %}>Goiás</option>
-                                <option value="MA" {% if cliente.estado == 'MA' %}selected{% endif %}>Maranhão</option>
-                                <option value="MT" {% if cliente.estado == 'MT' %}selected{% endif %}>Mato Grosso</option>
-                                <option value="MS" {% if cliente.estado == 'MS' %}selected{% endif %}>Mato Grosso do Sul</option>
-                                <option value="MG" {% if cliente.estado == 'MG' %}selected{% endif %}>Minas Gerais</option>
-                                <option value="PA" {% if cliente.estado == 'PA' %}selected{% endif %}>Pará</option>
-                                <option value="PB" {% if cliente.estado == 'PB' %}selected{% endif %}>Paraíba</option>
-                                <option value="PR" {% if cliente.estado == 'PR' %}selected{% endif %}>Paraná</option>
-                                <option value="PE" {% if cliente.estado == 'PE' %}selected{% endif %}>Pernambuco</option>
-                                <option value="PI" {% if cliente.estado == 'PI' %}selected{% endif %}>Piauí</option>
-                                <option value="RJ" {% if cliente.estado == 'RJ' %}selected{% endif %}>Rio de Janeiro</option>
-                                <option value="RN" {% if cliente.estado == 'RN' %}selected{% endif %}>Rio Grande do Norte</option>
-                                <option value="RS" {% if cliente.estado == 'RS' %}selected{% endif %}>Rio Grande do Sul</option>
-                                <option value="RO" {% if cliente.estado == 'RO' %}selected{% endif %}>Rondônia</option>
-                                <option value="RR" {% if cliente.estado == 'RR' %}selected{% endif %}>Roraima</option>
-                                <option value="SC" {% if cliente.estado == 'SC' %}selected{% endif %}>Santa Catarina</option>
-                                <option value="SP" {% if cliente.estado == 'SP' %}selected{% endif %}>São Paulo</option>
-                                <option value="SE" {% if cliente.estado == 'SE' %}selected{% endif %}>Sergipe</option>
-                                <option value="TO" {% if cliente.estado == 'TO' %}selected{% endif %}>Tocantins</option>
-                            </select>
-                        </div>
-                        
-                        <!-- CEP -->
-                        <div class="col-md-3 mb-3">
-                            <label for="cep" class="form-label">
-                                <i class="fas fa-mail-bulk me-1"></i>CEP
-                            </label>
-                            <input type="text" class="form-control" id="cep" name="cep" 
-                                   value="{{ cliente.cep|default:'' }}">
-                        </div>
-                    </div>
-                    
-                    <!-- Observações -->
-                    <div class="mb-4">
-                        <label for="observacoes" class="form-label">
-                            <i class="fas fa-sticky-note me-1"></i>Observações
-                        </label>
-                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3">{{ cliente.observacoes|default:'' }}</textarea>
-                    </div>
-                    
-                    <!-- Botões -->
                     <div class="d-flex justify-content-between">
                         <a href="{% url 'core:cliente_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Voltar
+                            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
                         </a>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-1"></i>
@@ -207,6 +47,12 @@
                         </button>
                     </div>
                 </form>
+
+                {% if form.errors %}
+                  <div class="alert alert-danger">
+                    {{ form.errors }}
+                  </div>
+                {% endif %}
             </div>
         </div>
     </div>

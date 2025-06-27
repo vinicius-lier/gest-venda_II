@@ -1,0 +1,6 @@
+nome,cpf,rg,data_nascimento,telefone,email,endereco,cidade,estado,cep,ativo
+João Silva Santos,123.456.789-00,12.345.678-9,1990-01-15,11999999999,joao@email.com,Rua das Flores 123,São Paulo,SP,01234-567,True
+Maria Oliveira Costa,987.654.321-00,98.765.432-1,1985-05-20,21988888888,maria@email.com,Av. Brasil 456,Rio de Janeiro,RJ,20000-000,True
+Pedro Almeida Lima,111.222.333-44,11.222.333-4,1992-08-10,51977777777,pedro@email.com,Rua dos Andradas 789,Porto Alegre,RS,90000-000,True
+Ana Paula Ferreira,555.666.777-88,55.666.777-8,1988-12-03,31966666666,ana@email.com,Av. Amazonas 321,Belo Horizonte,MG,30000-000,True
+Carlos Eduardo Souza,999.888.777-66,99.888.777-6,1995-03-25,71955555555,carlos@email.com,Rua Chile 654,Salvador,BA,40000-000,True 

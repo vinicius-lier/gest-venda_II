@@ -1,0 +1,6 @@
+nome,cnpj,cidade,endereco,telefone,email,ativo
+Loja Centro,12.345.678/0001-90,São Paulo,Rua das Flores 123 Centro,11999999999,centro@loja.com,True
+Loja Norte,98.765.432/0001-10,Rio de Janeiro,Av. Brasil 456 Norte,21988888888,norte@loja.com,True
+Loja Sul,11.222.333/0001-44,Porto Alegre,Rua dos Andradas 789 Sul,51977777777,sul@loja.com,True
+Loja Leste,55.666.777/0001-88,Belo Horizonte,Av. Amazonas 321 Leste,31966666666,leste@loja.com,True
+Loja Oeste,99.888.777/0001-66,Salvador,Rua Chile 654 Oeste,71955555555,oeste@loja.com,True 

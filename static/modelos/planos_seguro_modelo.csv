@@ -1,0 +1,6 @@
+seguradora_nome,nome,descricao,valor_base,comissao_percentual,ativo
+Porto Seguro,Plano Básico,Cobertura básica para motos até 150cc,500.00,10.0,True
+Porto Seguro,Plano Premium,Cobertura completa para motos até 300cc,800.00,12.0,True
+SulAmérica,Plano Standard,Cobertura padrão para motos até 250cc,600.00,10.0,True
+SulAmérica,Plano Completo,Cobertura total para motos até 600cc,1000.00,15.0,True
+Bradesco Seguros,Plano Essencial,Cobertura essencial para motos até 200cc,450.00,8.0,True 

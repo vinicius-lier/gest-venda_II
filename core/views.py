@@ -19,6 +19,7 @@ from django.db import IntegrityError
 import csv
 import io
 from decimal import Decimal
+import logging
 
 def login_view(request):
     """View de login do sistema"""
@@ -1285,21 +1286,48 @@ def ocorrencia_list(request):
 @login_required
 def ocorrencia_create(request):
     """Criação de nova ocorrência"""
-    # Proteção: garantir que o usuário tem usuario_sistema
+    logger = logging.getLogger('core')
+    
+    logger.info(f"ocorrencia_create: Usuário {request.user.username} tentando criar ocorrência")
+    
+    # Verificar se o usuário tem usuario_sistema
     if not hasattr(request.user, 'usuario_sistema') or request.user.usuario_sistema is None:
+        logger.error(f"ocorrencia_create: Usuário {request.user.username} não tem usuario_sistema")
         messages.error(request, 'Seu usuário não está vinculado a um perfil do sistema. Contate o administrador.')
         return redirect('core:dashboard')
+    
+    # Verificar se o usuario_sistema tem loja
+    if not hasattr(request.user.usuario_sistema, 'loja') or request.user.usuario_sistema.loja is None:
+        logger.error(f"ocorrencia_create: Usuário {request.user.username} não tem loja associada")
+        messages.error(request, 'Seu usuário não está vinculado a uma loja. Contate o administrador.')
+        return redirect('core:dashboard')
+    
+    logger.info(f"ocorrencia_create: Usuário {request.user.username} tem usuario_sistema e loja válidos")
+    
     if request.method == 'POST':
         form = OcorrenciaForm(request.POST, request.FILES)
         if form.is_valid():
-            ocorrencia = form.save(commit=False)
-            ocorrencia.solicitante = request.user.usuario_sistema
-            ocorrencia.save()
-            messages.success(request, 'Ocorrência registrada com sucesso!')
-            return redirect('core:ocorrencia_list')
+            try:
+                ocorrencia = form.save(commit=False)
+                ocorrencia.solicitante = request.user.usuario_sistema
+                ocorrencia.save()
+                logger.info(f"ocorrencia_create: Ocorrência criada com sucesso por {request.user.username}")
+                messages.success(request, 'Ocorrência registrada com sucesso!')
+                return redirect('core:ocorrencia_list')
+            except Exception as e:
+                logger.error(f"ocorrencia_create: Erro ao salvar ocorrência: {str(e)}")
+                messages.error(request, f'Erro ao registrar ocorrência: {str(e)}')
+        else:
+            logger.warning(f"ocorrencia_create: Formulário inválido para {request.user.username}: {form.errors}")
     else:
-        loja_inicial = request.user.usuario_sistema.loja
-        form = OcorrenciaForm(initial={'loja': loja_inicial} if loja_inicial else {})
+        try:
+            loja_inicial = request.user.usuario_sistema.loja
+            form = OcorrenciaForm(initial={'loja': loja_inicial} if loja_inicial else {})
+            logger.info(f"ocorrencia_create: Formulário criado para {request.user.username} com loja {loja_inicial}")
+        except Exception as e:
+            logger.error(f"ocorrencia_create: Erro ao criar formulário: {str(e)}")
+            messages.error(request, f'Erro ao carregar formulário: {str(e)}')
+            return redirect('core:dashboard')
     
     return render(request, 'core/ocorrencia_form.html', {
         'form': form,

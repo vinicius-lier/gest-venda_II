@@ -18,7 +18,7 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Forçar DEBUG=True para ambiente de desenvolvimento local
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -31,6 +31,27 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-g6e%-z9*hk0qu*c%wg^51
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', '.herokuapp.com']
 
+# Detectar se está em produção (Heroku)
+IS_PRODUCTION = os.environ.get('IS_PRODUCTION', 'False').lower() == 'true' or '.herokuapp.com' in os.environ.get('ALLOWED_HOSTS', '')
+
+if IS_PRODUCTION:
+    DEBUG = False
+    # Configurações específicas para produção
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+else:
+    DEBUG = True
+    # Configurações para desenvolvimento
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
 
 # Application definition
 
@@ -149,22 +170,6 @@ LOGIN_URL = 'core:login'
 # Media files (Uploaded files)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-# Configurações de segurança para produção
-if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    X_FRAME_OPTIONS = 'DENY'
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-else:
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
 
 # Configurações de sessão
 SESSION_COOKIE_AGE = 3600  # 1 hora

@@ -28,23 +28,26 @@
                     <label for="status" class="form-label">Status</label>
                     <select name="status" id="status" class="form-select">
                         <option value="">Todos</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="em_negociacao">Em Negociação</option>
-                        <option value="vendido">Vendido</option>
-                        <option value="cancelado">Cancelado</option>
+                        <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendente</option>
+                        <option value="em_negociacao" {% if status == 'em_negociacao' %}selected{% endif %}>Em Negociação</option>
+                        <option value="vendido" {% if status == 'vendido' %}selected{% endif %}>Vendido</option>
+                        <option value="cancelado" {% if status == 'cancelado' %}selected{% endif %}>Cancelado</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="vendedor" class="form-label">Vendedor</label>
-                    <input type="text" name="vendedor" id="vendedor" class="form-control" placeholder="Nome do vendedor">
+                    <input type="text" name="vendedor" id="vendedor" class="form-control" 
+                           value="{{ vendedor|default:'' }}" placeholder="Nome do vendedor">
                 </div>
                 <div class="col-md-3">
                     <label for="data_inicio" class="form-label">Data Início</label>
-                    <input type="date" name="data_inicio" id="data_inicio" class="form-control">
+                    <input type="date" name="data_inicio" id="data_inicio" class="form-control" 
+                           value="{{ data_inicio|default:'' }}">
                 </div>
                 <div class="col-md-3">
                     <label for="data_fim" class="form-label">Data Fim</label>
-                    <input type="date" name="data_fim" id="data_fim" class="form-control">
+                    <input type="date" name="data_fim" id="data_fim" class="form-control" 
+                           value="{{ data_fim|default:'' }}">
                 </div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-outline-primary">

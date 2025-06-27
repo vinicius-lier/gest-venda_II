@@ -21,18 +21,39 @@ class RBACMiddleware:
             logger.debug(f"DEBUG: is_staff: {request.user.is_staff}")
             logger.debug(f"DEBUG: is_active: {request.user.is_active}")
             
-            # Define o perfil baseado no status de superusuário
-            perfil_nome = 'admin' if request.user.is_superuser else 'usuario'
-            
-            # Por enquanto, apenas define um usuário_sistema básico
-            request.usuario_sistema = {
-                'nome': request.user.username,
-                'email': getattr(request.user, 'email', ''),
-                'perfil': {'nome': perfil_nome},
-                'is_admin': request.user.is_superuser,
-                'is_superuser': request.user.is_superuser  # Adicionar também o atributo original
-            }
-            logger.debug(f"DEBUG: usuario_sistema criado - Perfil: {perfil_nome}, is_admin: {request.user.is_superuser}")
+            # Verificar se o usuário tem usuario_sistema real no banco
+            try:
+                from .models import Usuario
+                usuario_sistema = Usuario.objects.filter(user=request.user).first()
+                
+                if usuario_sistema:
+                    logger.debug(f"DEBUG: Usuario_sistema encontrado no banco: {usuario_sistema}")
+                    request.usuario_sistema = usuario_sistema
+                else:
+                    logger.warning(f"DEBUG: Usuário {request.user.username} não tem Usuario no banco, criando temporário")
+                    # Define o perfil baseado no status de superusuário
+                    perfil_nome = 'admin' if request.user.is_superuser else 'usuario'
+                    
+                    # Por enquanto, apenas define um usuário_sistema básico
+                    request.usuario_sistema = {
+                        'nome': request.user.username,
+                        'email': getattr(request.user, 'email', ''),
+                        'perfil': {'nome': perfil_nome},
+                        'is_admin': request.user.is_superuser,
+                        'is_superuser': request.user.is_superuser  # Adicionar também o atributo original
+                    }
+                    logger.debug(f"DEBUG: usuario_sistema temporário criado - Perfil: {perfil_nome}, is_admin: {request.user.is_superuser}")
+                    
+            except Exception as e:
+                logger.error(f"DEBUG: Erro ao verificar usuario_sistema: {str(e)}")
+                # Em caso de erro, criar um temporário
+                request.usuario_sistema = {
+                    'nome': request.user.username,
+                    'email': getattr(request.user, 'email', ''),
+                    'perfil': {'nome': 'usuario'},
+                    'is_admin': request.user.is_superuser,
+                    'is_superuser': request.user.is_superuser
+                }
         else:
             logger.debug("DEBUG: Usuário não autenticado")
             

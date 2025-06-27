@@ -26,18 +26,18 @@
                 <div class="col-md-3">
                     <label for="search" class="form-label">Buscar</label>
                     <input type="text" class="form-control" id="search" name="search" 
-                           value="{{ request.GET.search }}" placeholder="Nome, usuário ou email">
+                           value="{{ search|default:'' }}" placeholder="Nome, usuário ou email">
                 </div>
                 <div class="col-md-2">
                     <label for="perfil" class="form-label">Perfil</label>
                     <select class="form-select" id="perfil" name="perfil">
                         <option value="">Todos</option>
-                        <option value="admin" {% if request.GET.perfil == 'admin' %}selected{% endif %}>Administrador</option>
-                        <option value="gerente" {% if request.GET.perfil == 'gerente' %}selected{% endif %}>Gerente</option>
-                        <option value="vendedor" {% if request.GET.perfil == 'vendedor' %}selected{% endif %}>Vendedor</option>
-                        <option value="consultor" {% if request.GET.perfil == 'consultor' %}selected{% endif %}>Consultor</option>
-                        <option value="financeiro" {% if request.GET.perfil == 'financeiro' %}selected{% endif %}>Financeiro</option>
-                        <option value="ti" {% if request.GET.perfil == 'ti' %}selected{% endif %}>TI</option>
+                        <option value="admin" {% if perfil == 'admin' %}selected{% endif %}>Administrador</option>
+                        <option value="gerente" {% if perfil == 'gerente' %}selected{% endif %}>Gerente</option>
+                        <option value="vendedor" {% if perfil == 'vendedor' %}selected{% endif %}>Vendedor</option>
+                        <option value="consultor" {% if perfil == 'consultor' %}selected{% endif %}>Consultor</option>
+                        <option value="financeiro" {% if perfil == 'financeiro' %}selected{% endif %}>Financeiro</option>
+                        <option value="ti" {% if perfil == 'ti' %}selected{% endif %}>TI</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -54,7 +54,7 @@
                     <select class="form-select" id="loja" name="loja">
                         <option value="">Todas</option>
                         {% for loja in lojas %}
-                        <option value="{{ loja.id }}" {% if request.GET.loja == loja.id|stringformat:"s" %}selected{% endif %}>
+                        <option value="{{ loja.id }}" {% if loja == loja.id|stringformat:"s" %}selected{% endif %}>
                             {{ loja.nome }}
                         </option>
                         {% endfor %}

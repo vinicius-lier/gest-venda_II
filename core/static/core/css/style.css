@@ -304,5 +304,6 @@ body {
 
 /* Todos os cabeçalhos de tabela em preto */
 th {
-    color: #000 !important;
+    color: #212529 !important;
+    font-weight: bold;
 } 

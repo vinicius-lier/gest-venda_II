@@ -14,6 +14,269 @@
         </a>
     </div>
 
+    <!-- Dashboard de Estatísticas -->
+    <div class="row mb-4">
+        <!-- Cards de Resumo -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total de Ocorrências
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_ocorrencias }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Últimos 30 Dias
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ocorrencias_ultimos_30_dias }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Atrasadas
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ocorrencias_atrasadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-dark shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                Críticas
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ocorrencias_criticas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-fire fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos e Estatísticas -->
+    <div class="row mb-4">
+        <!-- Top Solicitantes -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user-plus"></i> Top Solicitantes (Pessoas que mais abrem ocorrências)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if top_solicitantes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Nome</th>
+                                        <th>Loja</th>
+                                        <th>Ocorrências</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for solicitante in top_solicitantes %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <strong>
+                                                {% if solicitante.solicitante__user__first_name %}
+                                                    {{ solicitante.solicitante__user__first_name }} {{ solicitante.solicitante__user__last_name }}
+                                                {% else %}
+                                                    {{ solicitante.solicitante__user__last_name }}
+                                                {% endif %}
+                                            </strong>
+                                        </td>
+                                        <td>{{ solicitante.solicitante__loja__nome }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ solicitante.count }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Responsáveis -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-user-check"></i> Top Responsáveis (Pessoas que mais resolvem)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if top_responsaveis %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Nome</th>
+                                        <th>Loja</th>
+                                        <th>Resolvidas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for responsavel in top_responsaveis %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <strong>
+                                                {% if responsavel.responsavel__user__first_name %}
+                                                    {{ responsavel.responsavel__user__first_name }} {{ responsavel.responsavel__user__last_name }}
+                                                {% else %}
+                                                    {{ responsavel.responsavel__user__last_name }}
+                                                {% endif %}
+                                            </strong>
+                                        </td>
+                                        <td>{{ responsavel.responsavel__loja__nome }}</td>
+                                        <td>
+                                            <span class="badge bg-success">{{ responsavel.count }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Nenhuma ocorrência com responsável atribuído.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas por Categoria -->
+    <div class="row mb-4">
+        <!-- Ocorrências por Status -->
+        <div class="col-xl-4 col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-pie"></i> Por Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if ocorrencias_por_status %}
+                        {% for item in ocorrencias_por_status %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">
+                                {% if item.status == 'aberta' %}
+                                    <span class="badge bg-primary">Aberta</span>
+                                {% elif item.status == 'em_analise' %}
+                                    <span class="badge bg-info">Em Análise</span>
+                                {% elif item.status == 'em_andamento' %}
+                                    <span class="badge bg-warning">Em Andamento</span>
+                                {% elif item.status == 'resolvida' %}
+                                    <span class="badge bg-success">Resolvida</span>
+                                {% elif item.status == 'fechada' %}
+                                    <span class="badge bg-secondary">Fechada</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Cancelada</span>
+                                {% endif %}
+                            </span>
+                            <span class="font-weight-bold">{{ item.count }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Ocorrências por Tipo -->
+        <div class="col-xl-4 col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-tags"></i> Por Tipo
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if ocorrencias_por_tipo %}
+                        {% for item in ocorrencias_por_tipo %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">{{ item.get_tipo_display|default:item.tipo }}</span>
+                            <span class="font-weight-bold">{{ item.count }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Ocorrências por Loja -->
+        <div class="col-xl-4 col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-store"></i> Por Loja
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if ocorrencias_por_loja %}
+                        {% for item in ocorrencias_por_loja %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">{{ item.loja__nome }}</span>
+                            <span class="font-weight-bold">{{ item.count }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Filtros -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">

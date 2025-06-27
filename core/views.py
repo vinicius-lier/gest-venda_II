@@ -12,7 +12,7 @@ from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, Cota
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 from .importers import DataImporter
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -1304,6 +1304,67 @@ def ocorrencia_list(request):
     if status:
         ocorrencias = ocorrencias.filter(status=status)
     
+    # Estatísticas para o dashboard
+    total_ocorrencias = Ocorrencia.objects.count()
+    
+    # Ocorrências por status
+    ocorrencias_por_status = Ocorrencia.objects.values('status').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Ocorrências por tipo
+    ocorrencias_por_tipo = Ocorrencia.objects.values('tipo').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Ocorrências por prioridade
+    ocorrencias_por_prioridade = Ocorrencia.objects.values('prioridade').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Top solicitantes (pessoas que mais abrem ocorrências)
+    top_solicitantes = Ocorrencia.objects.values(
+        'solicitante__user__first_name', 
+        'solicitante__user__last_name',
+        'solicitante__loja__nome'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    # Top responsáveis (pessoas que mais resolvem ocorrências)
+    top_responsaveis = Ocorrencia.objects.exclude(
+        responsavel__isnull=True
+    ).values(
+        'responsavel__user__first_name', 
+        'responsavel__user__last_name',
+        'responsavel__loja__nome'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    # Ocorrências por loja
+    ocorrencias_por_loja = Ocorrencia.objects.values('loja__nome').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Ocorrências dos últimos 30 dias
+    data_30_dias_atras = datetime.now() - timedelta(days=30)
+    ocorrencias_ultimos_30_dias = Ocorrencia.objects.filter(
+        data_abertura__gte=data_30_dias_atras
+    ).count()
+    
+    # Ocorrências atrasadas
+    ocorrencias_atrasadas = Ocorrencia.objects.filter(
+        Q(data_limite__lt=datetime.now()) & 
+        ~Q(status__in=['resolvida', 'fechada'])
+    ).count()
+    
+    # Ocorrências críticas
+    ocorrencias_criticas = Ocorrencia.objects.filter(
+        prioridade='critica',
+        status__in=['aberta', 'em_analise', 'em_andamento']
+    ).count()
+    
     context = {
         'ocorrencias': ocorrencias,
         'search': search,
@@ -1311,6 +1372,17 @@ def ocorrencia_list(request):
         'prioridade': prioridade,
         'status': status,
         'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+        # Estatísticas
+        'total_ocorrencias': total_ocorrencias,
+        'ocorrencias_por_status': ocorrencias_por_status,
+        'ocorrencias_por_tipo': ocorrencias_por_tipo,
+        'ocorrencias_por_prioridade': ocorrencias_por_prioridade,
+        'top_solicitantes': top_solicitantes,
+        'top_responsaveis': top_responsaveis,
+        'ocorrencias_por_loja': ocorrencias_por_loja,
+        'ocorrencias_ultimos_30_dias': ocorrencias_ultimos_30_dias,
+        'ocorrencias_atrasadas': ocorrencias_atrasadas,
+        'ocorrencias_criticas': ocorrencias_criticas,
     }
     return render(request, 'core/ocorrencia_list.html', context)
 

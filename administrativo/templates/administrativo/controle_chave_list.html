@@ -23,7 +23,7 @@
                     <td>{% if chave.data_retorno %}{{ chave.data_retorno|date:'d/m/Y H:i' }}{% else %}-{% endif %}</td>
                     <td>{{ chave.get_status_display }}
                         {% if chave.status == 'aberto' %}
-                        <a href="{% url 'core:controle_chave_devolver' chave.pk %}" class="btn btn-sm btn-success ms-2">Devolver</a>
+                        <a href="{% url 'controle_chave_devolver' chave.pk %}" class="btn btn-sm btn-success ms-2">Devolver</a>
                         {% endif %}
                     </td>
                 </tr>

@@ -25,6 +25,7 @@ class DataImporter:
         self.errors = []
         self.success_count = 0
         self.total_count = 0
+        self.duplicates_count = 0
     
     def log_error(self, message, row=None):
         """Registra um erro de importação"""
@@ -38,6 +39,15 @@ class DataImporter:
         """Registra um sucesso de importação"""
         self.success_count += 1
         logger.info(f"Sucesso: {message}")
+    
+    def log_duplicate(self, message, row=None):
+        """Registra uma duplicata encontrada"""
+        duplicate_msg = f"Duplicata ignorada: {message}"
+        if row is not None:
+            duplicate_msg += f" (Linha {row})"
+        self.errors.append(duplicate_msg)
+        self.duplicates_count += 1
+        logger.warning(duplicate_msg)
     
     def read_file(self, file):
         """Lê arquivo CSV ou Excel"""
@@ -76,31 +86,82 @@ class DataImporter:
             self.log_error(f"Erro ao ler arquivo: {str(e)}")
             return None
     
+    def _parse_boolean(self, value):
+        """Converte valor para boolean"""
+        if pd.isna(value) or value == '':
+            return True
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() in ['true', '1', 'sim', 's', 'yes', 'y']
+        return bool(value)
+    
+    def _parse_date(self, value):
+        """Converte valor para data"""
+        if pd.isna(value) or value == '':
+            return None
+        try:
+            if isinstance(value, str):
+                # Tentar diferentes formatos de data
+                for fmt in ['%d/%m/%Y', '%Y-%m-%d', '%d/%m/%y', '%Y/%m/%d']:
+                    try:
+                        return datetime.strptime(value, fmt).date()
+                    except ValueError:
+                        continue
+            return pd.to_datetime(value).date()
+        except:
+            return None
+    
+    def _parse_decimal(self, value, default=0):
+        """Converte valor para decimal"""
+        if pd.isna(value) or value == '':
+            return default
+        try:
+            # Remover caracteres não numéricos exceto ponto e vírgula
+            if isinstance(value, str):
+                value = value.replace('R$', '').replace(' ', '').replace(',', '.')
+            return float(value)
+        except:
+            return default
+    
+    def _clean_string(self, value):
+        """Limpa string removendo espaços e caracteres especiais"""
+        if pd.isna(value):
+            return ''
+        return str(value).strip()
+    
     @transaction.atomic
     def import_lojas(self, file: UploadedFile):
         """Importa lojas de um arquivo CSV/Excel"""
         try:
             df = self.read_file(file)
+            if df is None:
+                return False
+                
             success_count = 0
             error_count = 0
             
             for index, row in df.iterrows():
                 try:
                     # Verificar se a loja já existe
-                    cnpj = str(row.get('cnpj', '')).strip()
-                    if Loja.objects.filter(cnpj=cnpj).exists():
-                        self.log_error(f"Loja com CNPJ {cnpj} já existe (Linha {index + 2})")
+                    cnpj = self._clean_string(row.get('cnpj', ''))
+                    if not cnpj:
+                        self.log_error(f"CNPJ vazio (Linha {index + 2})")
                         error_count += 1
+                        continue
+                        
+                    if Loja.objects.filter(cnpj=cnpj).exists():
+                        self.log_duplicate(f"Loja com CNPJ {cnpj} já existe", index + 2)
                         continue
                     
                     # Criar loja
                     loja = Loja.objects.create(
-                        nome=str(row.get('nome', '')).strip(),
+                        nome=self._clean_string(row.get('nome', '')),
                         cnpj=cnpj,
-                        cidade=str(row.get('cidade', '')).strip(),
-                        endereco=str(row.get('endereco', '')).strip(),
-                        telefone=str(row.get('telefone', '')).strip(),
-                        email=str(row.get('email', '')).strip(),
+                        cidade=self._clean_string(row.get('cidade', '')),
+                        endereco=self._clean_string(row.get('endereco', '')),
+                        telefone=self._clean_string(row.get('telefone', '')),
+                        email=self._clean_string(row.get('email', '')),
                         ativo=self._parse_boolean(row.get('ativo', True))
                     )
                     
@@ -114,7 +175,6 @@ class DataImporter:
             self.total_count = len(df)
             self.success_count = success_count
             self.error_count = error_count
-            self.errors = self.errors
             
             return error_count == 0
             
@@ -127,30 +187,37 @@ class DataImporter:
         """Importa clientes de um arquivo CSV/Excel"""
         try:
             df = self.read_file(file)
+            if df is None:
+                return False
+                
             success_count = 0
             error_count = 0
             
             for index, row in df.iterrows():
                 try:
                     # Verificar se o cliente já existe
-                    cpf = str(row.get('cpf', '')).strip()
-                    if Cliente.objects.filter(cpf=cpf).exists():
-                        self.log_error(f"Cliente com CPF {cpf} já existe (Linha {index + 2})")
+                    cpf = self._clean_string(row.get('cpf', ''))
+                    if not cpf:
+                        self.log_error(f"CPF vazio (Linha {index + 2})")
                         error_count += 1
+                        continue
+                        
+                    if Cliente.objects.filter(cpf_cnpj=cpf).exists():
+                        self.log_duplicate(f"Cliente com CPF {cpf} já existe", index + 2)
                         continue
                     
                     # Criar cliente
                     cliente = Cliente.objects.create(
-                        nome=str(row.get('nome', '')).strip(),
-                        cpf=cpf,
-                        rg=str(row.get('rg', '')).strip(),
+                        nome=self._clean_string(row.get('nome', '')),
+                        cpf_cnpj=cpf,
+                        rg=self._clean_string(row.get('rg', '')),
                         data_nascimento=self._parse_date(row.get('data_nascimento')),
-                        telefone=str(row.get('telefone', '')).strip(),
-                        email=str(row.get('email', '')).strip(),
-                        endereco=str(row.get('endereco', '')).strip(),
-                        cidade=str(row.get('cidade', '')).strip(),
-                        estado=str(row.get('estado', '')).strip(),
-                        cep=str(row.get('cep', '')).strip(),
+                        telefone=self._clean_string(row.get('telefone', '')),
+                        email=self._clean_string(row.get('email', '')),
+                        endereco=self._clean_string(row.get('endereco', '')),
+                        cidade=self._clean_string(row.get('cidade', '')),
+                        estado=self._clean_string(row.get('estado', '')),
+                        cep=self._clean_string(row.get('cep', '')),
                         ativo=self._parse_boolean(row.get('ativo', True))
                     )
                     
@@ -164,7 +231,6 @@ class DataImporter:
             self.total_count = len(df)
             self.success_count = success_count
             self.error_count = error_count
-            self.errors = self.errors
             
             return error_count == 0
             
@@ -180,59 +246,129 @@ class DataImporter:
             return False
         
         self.total_count = len(df)
+        success_count = 0
+        error_count = 0
         
         for index, row in df.iterrows():
             try:
-                # Verificar se a moto já existe
-                if Motocicleta.objects.filter(chassi=row['chassi']).exists():
-                    self.log_error(f"Motocicleta com chassi {row['chassi']} já existe", index + 2)
+                # Verificar se a moto já existe pelo chassi
+                chassi = self._clean_string(row.get('Chassi', ''))
+                if not chassi or chassi == '0' or chassi == '*':
+                    self.log_error(f"Chassi inválido: {chassi} (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                
+                if Motocicleta.objects.filter(chassi=chassi).exists():
+                    self.log_duplicate(f"Motocicleta com chassi {chassi} já existe", index + 2)
                     continue
                 
                 # Buscar proprietário se especificado
                 proprietario = None
-                if 'proprietario_cpf' in row and pd.notna(row['proprietario_cpf']):
+                proprietario_cpf = self._clean_string(row.get('CPF Proprietário', ''))
+                if proprietario_cpf and proprietario_cpf != '0':
                     try:
-                        proprietario = Cliente.objects.get(cpf_cnpj=row['proprietario_cpf'])
+                        proprietario = Cliente.objects.get(cpf_cnpj=proprietario_cpf)
                     except Cliente.DoesNotExist:
-                        self.log_error(f"Proprietário com CPF {row['proprietario_cpf']} não encontrado", index + 2)
-                        continue
+                        # Criar cliente proprietário se não existir
+                        proprietario_nome = self._clean_string(row.get('Proprietário', ''))
+                        if proprietario_nome:
+                            proprietario = Cliente.objects.create(
+                                nome=proprietario_nome,
+                                cpf_cnpj=proprietario_cpf,
+                                telefone=self._clean_string(row.get('Tel Proprietário', '')),
+                                tipo='proprietario'
+                            )
                 
                 # Buscar fornecedor se especificado
                 fornecedor = None
-                if 'fornecedor_cpf' in row and pd.notna(row['fornecedor_cpf']):
+                fornecedor_cpf = self._clean_string(row.get('CPF fornecedor ', ''))
+                if fornecedor_cpf and fornecedor_cpf != '0':
                     try:
-                        fornecedor = Cliente.objects.get(cpf_cnpj=row['fornecedor_cpf'])
+                        fornecedor = Cliente.objects.get(cpf_cnpj=fornecedor_cpf)
                     except Cliente.DoesNotExist:
-                        self.log_error(f"Fornecedor com CPF {row['fornecedor_cpf']} não encontrado", index + 2)
-                        continue
+                        # Criar cliente fornecedor se não existir
+                        fornecedor_nome = self._clean_string(row.get('Fornecedor ', ''))
+                        if fornecedor_nome:
+                            fornecedor = Cliente.objects.create(
+                                nome=fornecedor_nome,
+                                cpf_cnpj=fornecedor_cpf,
+                                telefone=self._clean_string(row.get('Tel Fornecedor', '')),
+                                tipo='fornecedor'
+                            )
+                
+                # Mapear campos do arquivo para o modelo
+                marca = self._clean_string(row.get('Marca', ''))
+                modelo = self._clean_string(row.get('Modelo', ''))
+                placa = self._clean_string(row.get('Placa', ''))
+                renavam = self._clean_string(row.get('Renavam', ''))
+                cor = self._clean_string(row.get('Cor', ''))
+                
+                # Extrair ano do campo FAB/MOD
+                fab_mod = self._clean_string(row.get('FAB/MOD', ''))
+                ano = ''
+                if fab_mod:
+                    # Tentar extrair ano do formato "2025/2025" ou "2025"
+                    if '/' in fab_mod:
+                        ano = fab_mod.split('/')[0]
+                    else:
+                        ano = fab_mod
+                
+                # Determinar status baseado na situação
+                situacao = self._clean_string(row.get('Situação', '')).lower()
+                if 'vendida' in situacao:
+                    status = 'vendida'
+                elif 'salão' in situacao:
+                    status = 'estoque'
+                elif 'oficina' in situacao:
+                    status = 'manutencao'
+                else:
+                    status = 'estoque'
+                
+                # Determinar tipo de entrada
+                if '0km' in fab_mod.lower() or '0' in str(row.get('KM', '0')):
+                    tipo_entrada = '0km'
+                else:
+                    tipo_entrada = 'usada'
+                
+                # Valores (usar valores padrão se não disponíveis)
+                valor_entrada = self._parse_decimal(row.get('valor_entrada', 0))
+                valor_atual = self._parse_decimal(row.get('valor_atual', valor_entrada))
+                
+                # Data de entrada
+                data_chegada = self._clean_string(row.get('Data de Chegada', ''))
+                data_entrada = self._parse_date(data_chegada) if data_chegada else timezone.now().date()
                 
                 moto = Motocicleta.objects.create(
-                    chassi=row['chassi'],
-                    placa=row.get('placa', ''),
-                    renavam=row.get('renavam', ''),
-                    marca=row['marca'],
-                    modelo=row['modelo'],
-                    ano=row['ano'],
-                    cor=row['cor'],
-                    cilindrada=row.get('cilindrada', ''),
-                    tipo_entrada=row.get('tipo_entrada', 'usada'),
-                    origem=row.get('origem', 'cliente'),
-                    status=row.get('status', 'estoque'),
+                    chassi=chassi,
+                    placa=placa if placa else None,
+                    renavam=renavam if renavam and renavam != '0' else None,
+                    marca=marca,
+                    modelo=modelo,
+                    ano=ano,
+                    cor=cor,
+                    cilindrada='',  # Não disponível no arquivo
+                    tipo_entrada=tipo_entrada,
+                    origem='cliente',
+                    status=status,
                     proprietario=proprietario,
                     fornecedor=fornecedor,
-                    valor_entrada=row['valor_entrada'],
-                    valor_atual=row.get('valor_atual', row['valor_entrada']),
-                    data_entrada=pd.to_datetime(row.get('data_entrada', timezone.now().date())).date(),
-                    observacoes=row.get('observacoes', ''),
+                    valor_entrada=valor_entrada,
+                    valor_atual=valor_atual,
+                    data_entrada=data_entrada,
+                    observacoes=self._clean_string(row.get('OBSERVAÇÃO', '')),
                     ativo=True
                 )
                 
                 self.log_success(f"Motocicleta {moto.marca} {moto.modelo} importada com sucesso")
+                success_count += 1
                 
             except Exception as e:
                 self.log_error(f"Erro ao importar motocicleta: {str(e)}", index + 2)
+                error_count += 1
         
-        return len(self.errors) == 0
+        self.success_count = success_count
+        self.error_count = error_count
+        return error_count == 0
     
     @transaction.atomic
     def import_vendas(self, file: UploadedFile):
@@ -242,35 +378,70 @@ class DataImporter:
             return False
         
         self.total_count = len(df)
+        success_count = 0
+        error_count = 0
         
         for index, row in df.iterrows():
             try:
                 # Buscar moto
+                moto_chassi = self._clean_string(row.get('moto_chassi', ''))
+                if not moto_chassi:
+                    self.log_error(f"Chassi da moto vazio (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                    
                 try:
-                    moto = Motocicleta.objects.get(chassi=row['moto_chassi'])
+                    moto = Motocicleta.objects.get(chassi=moto_chassi)
                 except Motocicleta.DoesNotExist:
-                    self.log_error(f"Motocicleta com chassi {row['moto_chassi']} não encontrada", index + 2)
+                    self.log_error(f"Motocicleta com chassi {moto_chassi} não encontrada", index + 2)
+                    error_count += 1
                     continue
                 
                 # Buscar comprador
+                comprador_cpf = self._clean_string(row.get('comprador_cpf', ''))
+                if not comprador_cpf:
+                    self.log_error(f"CPF do comprador vazio (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                    
                 try:
-                    comprador = Cliente.objects.get(cpf_cnpj=row['comprador_cpf'])
+                    comprador = Cliente.objects.get(cpf_cnpj=comprador_cpf)
                 except Cliente.DoesNotExist:
-                    self.log_error(f"Comprador com CPF {row['comprador_cpf']} não encontrado", index + 2)
+                    self.log_error(f"Comprador com CPF {comprador_cpf} não encontrado", index + 2)
+                    error_count += 1
                     continue
                 
                 # Buscar vendedor
+                vendedor_username = self._clean_string(row.get('vendedor_username', ''))
+                if not vendedor_username:
+                    self.log_error(f"Username do vendedor vazio (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                    
                 try:
-                    vendedor = Usuario.objects.get(user__username=row['vendedor_username'])
+                    vendedor = Usuario.objects.get(user__username=vendedor_username)
                 except Usuario.DoesNotExist:
-                    self.log_error(f"Vendedor com username {row['vendedor_username']} não encontrado", index + 2)
+                    self.log_error(f"Vendedor com username {vendedor_username} não encontrado", index + 2)
+                    error_count += 1
                     continue
                 
                 # Buscar loja
+                loja_nome = self._clean_string(row.get('loja_nome', ''))
+                if not loja_nome:
+                    self.log_error(f"Nome da loja vazio (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                    
                 try:
-                    loja = Loja.objects.get(nome=row['loja_nome'])
+                    loja = Loja.objects.get(nome=loja_nome)
                 except Loja.DoesNotExist:
-                    self.log_error(f"Loja {row['loja_nome']} não encontrada", index + 2)
+                    self.log_error(f"Loja {loja_nome} não encontrada", index + 2)
+                    error_count += 1
+                    continue
+                
+                # Verificar se já existe uma venda para esta moto
+                if Venda.objects.filter(moto=moto).exists():
+                    self.log_duplicate(f"Venda para moto com chassi {moto_chassi} já existe", index + 2)
                     continue
                 
                 venda = Venda.objects.create(
@@ -278,23 +449,27 @@ class DataImporter:
                     comprador=comprador,
                     vendedor=vendedor,
                     loja=loja,
-                    origem=row.get('origem', 'presencial'),
-                    forma_pagamento=row.get('forma_pagamento', 'a_vista'),
-                    status=row.get('status', 'vendido'),
-                    valor_venda=row['valor_venda'],
-                    valor_entrada=row.get('valor_entrada', 0),
-                    comissao_vendedor=row.get('comissao_vendedor', 0),
-                    data_atendimento=pd.to_datetime(row.get('data_atendimento', timezone.now().date())).date(),
-                    data_venda=pd.to_datetime(row.get('data_venda', timezone.now().date())).date(),
-                    observacoes=row.get('observacoes', '')
+                    origem=self._clean_string(row.get('origem', 'presencial')),
+                    forma_pagamento=self._clean_string(row.get('forma_pagamento', 'a_vista')),
+                    status=self._clean_string(row.get('status', 'vendido')),
+                    valor_venda=self._parse_decimal(row.get('valor_venda', 0)),
+                    valor_entrada=self._parse_decimal(row.get('valor_entrada', 0)),
+                    comissao_vendedor=self._parse_decimal(row.get('comissao_vendedor', 0)),
+                    data_atendimento=self._parse_date(row.get('data_atendimento')) or timezone.now().date(),
+                    data_venda=self._parse_date(row.get('data_venda')) or timezone.now().date(),
+                    observacoes=self._clean_string(row.get('observacoes', ''))
                 )
                 
                 self.log_success(f"Venda {venda.id} importada com sucesso")
+                success_count += 1
                 
             except Exception as e:
                 self.log_error(f"Erro ao importar venda: {str(e)}", index + 2)
+                error_count += 1
         
-        return len(self.errors) == 0
+        self.success_count = success_count
+        self.error_count = error_count
+        return error_count == 0
     
     @transaction.atomic
     def import_seguradoras(self, file: UploadedFile):
@@ -304,29 +479,41 @@ class DataImporter:
             return False
         
         self.total_count = len(df)
+        success_count = 0
+        error_count = 0
         
         for index, row in df.iterrows():
             try:
                 # Verificar se a seguradora já existe
-                if Seguradora.objects.filter(cnpj=row['cnpj']).exists():
-                    self.log_error(f"Seguradora com CNPJ {row['cnpj']} já existe", index + 2)
+                cnpj = self._clean_string(row.get('cnpj', ''))
+                if not cnpj:
+                    self.log_error(f"CNPJ da seguradora vazio (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                    
+                if Seguradora.objects.filter(cnpj=cnpj).exists():
+                    self.log_duplicate(f"Seguradora com CNPJ {cnpj} já existe", index + 2)
                     continue
                 
                 seguradora = Seguradora.objects.create(
-                    nome=row['nome'],
-                    cnpj=row['cnpj'],
-                    telefone=row.get('telefone', ''),
-                    email=row.get('email', ''),
-                    site=row.get('site', ''),
-                    ativo=row.get('ativo', True)
+                    nome=self._clean_string(row.get('nome', '')),
+                    cnpj=cnpj,
+                    telefone=self._clean_string(row.get('telefone', '')),
+                    email=self._clean_string(row.get('email', '')),
+                    site=self._clean_string(row.get('site', '')),
+                    ativo=self._parse_boolean(row.get('ativo', True))
                 )
                 
                 self.log_success(f"Seguradora {seguradora.nome} importada com sucesso")
+                success_count += 1
                 
             except Exception as e:
                 self.log_error(f"Erro ao importar seguradora: {str(e)}", index + 2)
+                error_count += 1
         
-        return len(self.errors) == 0
+        self.success_count = success_count
+        self.error_count = error_count
+        return error_count == 0
     
     @transaction.atomic
     def import_planos_seguro(self, file: UploadedFile):
@@ -336,31 +523,55 @@ class DataImporter:
             return False
         
         self.total_count = len(df)
+        success_count = 0
+        error_count = 0
         
         for index, row in df.iterrows():
             try:
                 # Buscar seguradora
+                seguradora_nome = self._clean_string(row.get('seguradora_nome', ''))
+                if not seguradora_nome:
+                    self.log_error(f"Nome da seguradora vazio (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                    
                 try:
-                    seguradora = Seguradora.objects.get(nome=row['seguradora_nome'])
+                    seguradora = Seguradora.objects.get(nome=seguradora_nome)
                 except Seguradora.DoesNotExist:
-                    self.log_error(f"Seguradora {row['seguradora_nome']} não encontrada", index + 2)
+                    self.log_error(f"Seguradora {seguradora_nome} não encontrada", index + 2)
+                    error_count += 1
+                    continue
+                
+                # Verificar se o plano já existe
+                plano_nome = self._clean_string(row.get('nome', ''))
+                if not plano_nome:
+                    self.log_error(f"Nome do plano vazio (Linha {index + 2})")
+                    error_count += 1
+                    continue
+                    
+                if PlanoSeguro.objects.filter(seguradora=seguradora, nome=plano_nome).exists():
+                    self.log_duplicate(f"Plano {plano_nome} da seguradora {seguradora_nome} já existe", index + 2)
                     continue
                 
                 plano = PlanoSeguro.objects.create(
                     seguradora=seguradora,
-                    nome=row['nome'],
-                    tipo_bem=row.get('tipo_bem', 'motocicleta'),
-                    descricao=row.get('descricao', ''),
-                    comissao_padrao=row.get('comissao_padrao', 10.00),
-                    ativo=row.get('ativo', True)
+                    nome=plano_nome,
+                    tipo_bem=self._clean_string(row.get('tipo_bem', 'motocicleta')),
+                    descricao=self._clean_string(row.get('descricao', '')),
+                    comissao_padrao=self._parse_decimal(row.get('comissao_padrao', 10.00)),
+                    ativo=self._parse_boolean(row.get('ativo', True))
                 )
                 
                 self.log_success(f"Plano de seguro {plano.nome} importado com sucesso")
+                success_count += 1
                 
             except Exception as e:
                 self.log_error(f"Erro ao importar plano de seguro: {str(e)}", index + 2)
+                error_count += 1
         
-        return len(self.errors) == 0
+        self.success_count = success_count
+        self.error_count = error_count
+        return error_count == 0
     
     def get_import_summary(self):
         """Retorna resumo da importação"""
@@ -368,6 +579,7 @@ class DataImporter:
             'total_count': self.total_count,
             'success_count': self.success_count,
             'error_count': self.error_count,
+            'duplicates_count': self.duplicates_count,
             'errors': self.errors
         }
     
@@ -375,4 +587,5 @@ class DataImporter:
         """Limpa os logs de importação"""
         self.errors = []
         self.success_count = 0
-        self.total_count = 0 
+        self.total_count = 0
+        self.duplicates_count = 0 

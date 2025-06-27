@@ -12,50 +12,39 @@ class RBACMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        logger.debug(f"RBACMiddleware: request.user={request.user} (id={getattr(request.user, 'id', None)}) autenticado={request.user.is_authenticated}")
-        
+        # Só processar se o usuário estiver autenticado
         if request.user.is_authenticated:
-            # Log detalhado para debug
-            logger.debug(f"DEBUG: Usuário autenticado: {request.user.username}")
-            logger.debug(f"DEBUG: is_superuser: {request.user.is_superuser}")
-            logger.debug(f"DEBUG: is_staff: {request.user.is_staff}")
-            logger.debug(f"DEBUG: is_active: {request.user.is_active}")
-            
-            # Verificar se o usuário tem usuario_sistema real no banco
             try:
+                # Verificar se o usuário tem usuario_sistema real no banco
                 from .models import Usuario
                 usuario_sistema = Usuario.objects.filter(user=request.user).first()
                 
                 if usuario_sistema:
-                    logger.debug(f"DEBUG: Usuario_sistema encontrado no banco: {usuario_sistema}")
                     request.usuario_sistema = usuario_sistema
                 else:
-                    logger.warning(f"DEBUG: Usuário {request.user.username} não tem Usuario no banco, criando temporário")
-                    # Define o perfil baseado no status de superusuário
-                    perfil_nome = 'admin' if request.user.is_superuser else 'usuario'
-                    
-                    # Por enquanto, apenas define um usuário_sistema básico
+                    # Criar um usuario_sistema temporário simples
                     request.usuario_sistema = {
                         'nome': request.user.username,
                         'email': getattr(request.user, 'email', ''),
-                        'perfil': {'nome': perfil_nome},
+                        'perfil': {'nome': 'admin' if request.user.is_superuser else 'usuario'},
                         'is_admin': request.user.is_superuser,
-                        'is_superuser': request.user.is_superuser  # Adicionar também o atributo original
+                        'is_superuser': request.user.is_superuser,
+                        'loja': None  # Será definido quando necessário
                     }
-                    logger.debug(f"DEBUG: usuario_sistema temporário criado - Perfil: {perfil_nome}, is_admin: {request.user.is_superuser}")
                     
             except Exception as e:
-                logger.error(f"DEBUG: Erro ao verificar usuario_sistema: {str(e)}")
-                # Em caso de erro, criar um temporário
+                logger.error(f"Erro no RBACMiddleware: {str(e)}")
+                # Em caso de erro, criar um temporário básico
                 request.usuario_sistema = {
                     'nome': request.user.username,
                     'email': getattr(request.user, 'email', ''),
                     'perfil': {'nome': 'usuario'},
                     'is_admin': request.user.is_superuser,
-                    'is_superuser': request.user.is_superuser
+                    'is_superuser': request.user.is_superuser,
+                    'loja': None
                 }
         else:
-            logger.debug("DEBUG: Usuário não autenticado")
+            request.usuario_sistema = None
             
         return self.get_response(request)
 
@@ -70,7 +59,6 @@ class LoggingMiddleware:
             'user_agent': request.META.get('HTTP_USER_AGENT', ''),
         }
         response = self.get_response(request)
-        # Por enquanto, não faz log para evitar erros
         return response
 
     def get_client_ip(self, request):

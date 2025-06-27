@@ -104,18 +104,18 @@
                         <table class="table table-sm table-hover">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>Usuário</th>
-                                    <th>Perfil</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
+                                    <th class="text-dark">Nome</th>
+                                    <th class="text-dark">Email</th>
+                                    <th class="text-dark">Perfil</th>
+                                    <th class="text-dark">Status</th>
+                                    <th class="text-dark">Último Acesso</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for usuario in loja.usuarios.all %}
                                 <tr>
                                     <td>{{ usuario.user.get_full_name }}</td>
-                                    <td>{{ usuario.user.username }}</td>
+                                    <td>{{ usuario.user.email }}</td>
                                     <td>
                                         <span class="badge bg-info">{{ usuario.perfil.get_nome_display }}</span>
                                     </td>
@@ -129,20 +129,7 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="btn-group" role="group">
-                                            {% if perms.core.view_usuario %}
-                                            <a href="{% url 'core:usuario_detail' usuario.pk %}" 
-                                               class="btn btn-sm btn-info" title="Visualizar">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            {% endif %}
-                                            {% if perms.core.change_usuario %}
-                                            <a href="{% url 'core:usuario_update' usuario.pk %}" 
-                                               class="btn btn-sm btn-warning" title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            {% endif %}
-                                        </div>
+                                        {{ usuario.last_login|date:"d/m/Y H:i" }}
                                     </td>
                                 </tr>
                                 {% endfor %}

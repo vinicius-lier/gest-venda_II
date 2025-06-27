@@ -71,15 +71,15 @@
                 {% if page_obj %}
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
-                                <th>Nome</th>
-                                <th>CPF/CNPJ</th>
-                                <th>Tipo</th>
-                                <th>Telefone</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th>Ações</th>
+                                <th class="text-dark">Nome</th>
+                                <th class="text-dark">CPF/CNPJ</th>
+                                <th class="text-dark">Telefone</th>
+                                <th class="text-dark">Tipo</th>
+                                <th class="text-dark">Status</th>
+                                <th class="text-dark">Data Cadastro</th>
+                                <th class="text-dark">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -92,13 +92,12 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ cliente.cpf_cnpj }}</td>
+                                <td>{{ cliente.telefone|default:"-" }}</td>
                                 <td>
                                     <span class="badge bg-{{ cliente.get_tipo_color }}">
                                         {{ cliente.get_tipo_display }}
                                     </span>
                                 </td>
-                                <td>{{ cliente.telefone|default:"-" }}</td>
-                                <td>{{ cliente.email|default:"-" }}</td>
                                 <td>
                                     {% if cliente.ativo %}
                                     <span class="badge bg-success">Ativo</span>
@@ -106,6 +105,7 @@
                                     <span class="badge bg-danger">Inativo</span>
                                     {% endif %}
                                 </td>
+                                <td>{{ cliente.data_cadastro|date:"d/m/Y" }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
                                         {% if perms.core.view_cliente %}

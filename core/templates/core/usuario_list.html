@@ -81,16 +81,15 @@
             {% if usuarios %}
             <div class="table-responsive">
                 <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
-                    <thead class="table-dark">
+                    <thead class="table-light">
                         <tr>
-                            <th>Nome</th>
-                            <th>Usuário</th>
-                            <th>Email</th>
-                            <th>Perfil</th>
-                            <th>Loja</th>
-                            <th>Status</th>
-                            <th>Último Acesso</th>
-                            <th>Ações</th>
+                            <th class="text-dark">Nome</th>
+                            <th class="text-dark">Email</th>
+                            <th class="text-dark">Loja</th>
+                            <th class="text-dark">Perfil</th>
+                            <th class="text-dark">Status</th>
+                            <th class="text-dark">Último Acesso</th>
+                            <th class="text-dark">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -99,12 +98,11 @@
                             <td>
                                 <strong>{{ usuario.user.get_full_name }}</strong>
                             </td>
-                            <td>{{ usuario.user.username }}</td>
                             <td>{{ usuario.user.email }}</td>
+                            <td>{{ usuario.loja.nome }}</td>
                             <td>
                                 <span class="badge bg-info">{{ usuario.perfil.get_nome_display }}</span>
                             </td>
-                            <td>{{ usuario.loja.nome }}</td>
                             <td>
                                 {% if usuario.status == 'ativo' %}
                                     <span class="badge bg-success">Ativo</span>

@@ -75,22 +75,17 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Moto</th>
-                            <th>Consignante</th>
-                            <th>Vendedor Responsável</th>
-                            <th>Valores</th>
-                            <th>Status</th>
-                            <th>Data Limite</th>
-                            <th>Ações</th>
+                            <th class="text-dark">Moto</th>
+                            <th class="text-dark">Consignante</th>
+                            <th class="text-dark">Valor Pretendido</th>
+                            <th class="text-dark">Status</th>
+                            <th class="text-dark">Data Entrada</th>
+                            <th class="text-dark">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for consignacao in consignacoes %}
                         <tr>
-                            <td>
-                                <span class="badge bg-secondary">#{{ consignacao.id }}</span>
-                            </td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     {% if consignacao.moto.foto_principal %}
@@ -118,12 +113,6 @@
                             </td>
                             <td>
                                 <div>
-                                    <strong>{{ consignacao.vendedor_responsavel.get_full_name }}</strong><br>
-                                    <small class="text-muted">{{ consignacao.vendedor_responsavel.usuario_sistema.loja.nome }}</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
                                     <strong class="text-primary">R$ {{ consignacao.valor_pretendido|floatformat:2 }}</strong>
                                     {% if consignacao.valor_minimo %}
                                     <br><small class="text-muted">Mín: R$ {{ consignacao.valor_minimo|floatformat:2 }}</small>
@@ -146,7 +135,7 @@
                             </td>
                             <td>
                                 <div>
-                                    <strong>{{ consignacao.data_limite|date:"d/m/Y" }}</strong><br>
+                                    <strong>{{ consignacao.data_entrada|date:"d/m/Y" }}</strong><br>
                                     <small class="text-muted">Entrada: {{ consignacao.data_entrada|date:"d/m/Y" }}</small>
                                 </div>
                             </td>

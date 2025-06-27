@@ -79,26 +79,22 @@
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th>Marca/Modelo</th>
-                                <th>Ano</th>
-                                <th>Placa</th>
-                                <th>Chassi</th>
-                                <th>Status</th>
-                                <th>Ativo</th>
-                                <th>Valor Atual</th>
-                                <th>Proprietário</th>
-                                <th>Ações</th>
+                                <th class="text-dark">Chassi</th>
+                                <th class="text-dark">Placa</th>
+                                <th class="text-dark">Marca/Modelo</th>
+                                <th class="text-dark">Ano</th>
+                                <th class="text-dark">Status</th>
+                                <th class="text-dark">Valor Atual</th>
+                                <th class="text-dark">Proprietário</th>
+                                <th class="text-dark">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for moto in motocicletas %}
                             <tr>
                                 <td>
-                                    <strong>{{ moto.marca }} {{ moto.modelo }}</strong>
-                                    <br>
-                                    <small class="text-muted">{{ moto.cor }}</small>
+                                    <small class="text-muted">{{ moto.chassi|truncatechars:15 }}</small>
                                 </td>
-                                <td>{{ moto.ano }}</td>
                                 <td>
                                     {% if moto.placa %}
                                     <span class="badge bg-secondary">{{ moto.placa }}</span>
@@ -107,8 +103,11 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ moto.chassi|truncatechars:15 }}</small>
+                                    <strong>{{ moto.marca }} {{ moto.modelo }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ moto.cor }}</small>
                                 </td>
+                                <td>{{ moto.ano }}</td>
                                 <td>
                                     {% if moto.status == 'estoque' %}
                                     <span class="badge bg-success">Em Estoque</span>
@@ -122,13 +121,6 @@
                                     <span class="badge bg-secondary">Em Manutenção</span>
                                     {% else %}
                                     <span class="badge bg-secondary">{{ moto.get_status_display }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if moto.ativo %}
-                                    <span class="badge bg-success">Ativa</span>
-                                    {% else %}
-                                    <span class="badge bg-danger">Inativa</span>
                                     {% endif %}
                                 </td>
                                 <td>

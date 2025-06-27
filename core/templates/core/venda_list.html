@@ -75,22 +75,18 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Moto</th>
-                            <th>Comprador</th>
-                            <th>Vendedor</th>
-                            <th>Valor</th>
-                            <th>Status</th>
-                            <th>Data Venda</th>
-                            <th>Ações</th>
+                            <th class="text-dark">Moto</th>
+                            <th class="text-dark">Comprador</th>
+                            <th class="text-dark">Vendedor</th>
+                            <th class="text-dark">Valor</th>
+                            <th class="text-dark">Status</th>
+                            <th class="text-dark">Data</th>
+                            <th class="text-dark">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for venda in vendas %}
                         <tr>
-                            <td>
-                                <span class="badge bg-secondary">#{{ venda.id }}</span>
-                            </td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     {% if venda.moto.foto_principal %}

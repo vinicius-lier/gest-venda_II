@@ -40,12 +40,12 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
-                                <th>Vendedor</th>
-                                <th>Atendimentos</th>
-                                <th>Total de Vendas</th>
-                                <th>Taxa de Conversão</th>
+                                <th class="text-dark">Moto</th>
+                                <th class="text-dark">Vendas</th>
+                                <th class="text-dark">Valor Médio</th>
+                                <th class="text-dark">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -56,7 +56,6 @@
                                         {{ v.vendedor__username }}
                                     </a>
                                 </td>
-                                <td>{{ v.total_atendimentos }}</td>
                                 <td>{{ v.fechamentos }}</td>
                                 <td>
                                     {% if v.total_atendimentos > 0 %}
@@ -65,6 +64,7 @@
                                         0%
                                     {% endif %}
                                 </td>
+                                <td>{{ v.total_atendimentos }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

@@ -223,7 +223,8 @@ class DataImporter:
                     valor_entrada=row['valor_entrada'],
                     valor_atual=row.get('valor_atual', row['valor_entrada']),
                     data_entrada=pd.to_datetime(row.get('data_entrada', timezone.now().date())).date(),
-                    observacoes=row.get('observacoes', '')
+                    observacoes=row.get('observacoes', ''),
+                    ativo=True
                 )
                 
                 self.log_success(f"Motocicleta {moto.marca} {moto.modelo} importada com sucesso")

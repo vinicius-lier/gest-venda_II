@@ -55,7 +55,7 @@
                                         <li><strong>observacoes</strong> - Observações</li>
                                     </ul>
                                     <hr>
-                                    <a href="/static/modelos/vendas_modelo.csv" class="btn btn-outline-primary btn-sm mb-2" download>
+                                    <a href="{% url 'core:download_modelo_csv' 'vendas' %}" class="btn btn-outline-primary btn-sm mb-2">
                                         <i class="fas fa-download"></i> Baixar modelo CSV
                                     </a>
                                     <h6>Exemplo de CSV:</h6>

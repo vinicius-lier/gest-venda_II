@@ -10,7 +10,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia
 from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, ClienteForm
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from datetime import datetime, timedelta
 from .importers import DataImporter
@@ -20,8 +20,11 @@ import csv
 import io
 from decimal import Decimal
 import logging
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_GET
+from django.urls import reverse
+import os
+from django.conf import settings
 
 def login_view(request):
     """View de login do sistema"""
@@ -1689,4 +1692,39 @@ def buscar_motocicleta(request):
             'chassi': moto.chassi,
             'descricao': f"ID: {moto.id} | Placa: {moto.placa or '-'} | Chassi: {moto.chassi} | {moto.marca} {moto.modelo} {moto.ano}"
         })
-    return JsonResponse({}, status=404) 
+    return JsonResponse({}, status=404)
+
+@login_required
+def download_modelo_csv(request, tipo):
+    """Download de modelo CSV para importação"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem baixar modelos.')
+        return redirect('core:dashboard')
+    
+    modelos = {
+        'clientes': 'clientes_modelo.csv',
+        'lojas': 'lojas_modelo.csv',
+        'motocicletas': 'motocicletas_modelo.csv',
+        'vendas': 'vendas_modelo.csv',
+        'seguradoras': 'seguradoras_modelo.csv',
+        'planos_seguro': 'planos_seguro_modelo.csv',
+    }
+    
+    if tipo not in modelos:
+        messages.error(request, 'Tipo de modelo inválido.')
+        return redirect('core:import_data')
+    
+    arquivo_path = os.path.join(settings.STATIC_ROOT, 'modelos', modelos[tipo])
+    
+    if not os.path.exists(arquivo_path):
+        # Se não existir no STATIC_ROOT, tenta no diretório static do projeto
+        arquivo_path = os.path.join(settings.BASE_DIR, 'static', 'modelos', modelos[tipo])
+    
+    if not os.path.exists(arquivo_path):
+        messages.error(request, 'Arquivo de modelo não encontrado.')
+        return redirect('core:import_data')
+    
+    with open(arquivo_path, 'rb') as f:
+        response = HttpResponse(f.read(), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{modelos[tipo]}"'
+        return response 

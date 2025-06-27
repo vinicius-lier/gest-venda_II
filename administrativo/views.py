@@ -18,7 +18,7 @@ def controle_chave_create(request):
         form = ControleChaveForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('administrativo:controle_chave_list')
+            return redirect('controle_chave_list')
     else:
         form = ControleChaveForm()
     return render(request, 'administrativo/controle_chave_form.html', {'form': form})
@@ -30,4 +30,4 @@ def controle_chave_devolver(request, pk):
         chave.data_retorno = timezone.now()
         chave.status = 'devolvida'
         chave.save()
-    return redirect('administrativo:controle_chave_list')
+    return redirect('controle_chave_list')

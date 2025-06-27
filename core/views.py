@@ -7,8 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia
-from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, ClienteForm
+from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia, ControleChave
+from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, ClienteForm, ControleChaveForm
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -1666,4 +1666,29 @@ def import_planos_seguro(request):
     
     return render(request, 'core/import_planos_seguro.html', {
         'usuario_sistema': request.user
-    }) 
+    })
+
+@login_required
+def controle_chave_list(request):
+    chaves = ControleChave.objects.select_related('funcionario', 'motocicleta').order_by('-data_saida')
+    return render(request, 'core/controle_chave_list.html', {'chaves': chaves})
+
+@login_required
+def controle_chave_create(request):
+    if request.method == 'POST':
+        form = ControleChaveForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('core:controle_chave_list')
+    else:
+        form = ControleChaveForm()
+    return render(request, 'core/controle_chave_form.html', {'form': form})
+
+@login_required
+def controle_chave_devolver(request, pk):
+    chave = ControleChave.objects.get(pk=pk)
+    if chave.status == 'aberto':
+        chave.data_retorno = timezone.now()
+        chave.status = 'devolvida'
+        chave.save()
+    return redirect('core:controle_chave_list') 

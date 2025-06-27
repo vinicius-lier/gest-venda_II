@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from core.models import ControleChave, Ocorrencia, Usuario
+from administrativo.models import ControleChave, Ocorrencia, Usuario
 from django.contrib.auth.models import User
 
 class Command(BaseCommand):

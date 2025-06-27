@@ -107,8 +107,6 @@ urlpatterns = [
     path('importar/seguradoras/', views.import_seguradoras, name='import_seguradoras'),
     path('importar/planos-seguro/', views.import_planos_seguro, name='import_planos_seguro'),
     
-    # Controle de Chaves
-    path('chaves/', views.controle_chave_list, name='controle_chave_list'),
-    path('chaves/nova/', views.controle_chave_create, name='controle_chave_create'),
-    path('chaves/<int:pk>/devolver/', views.controle_chave_devolver, name='controle_chave_devolver'),
+    # AJAX
+    path('ajax/buscar-motocicleta/', views.buscar_motocicleta, name='buscar_motocicleta'),
 ] 

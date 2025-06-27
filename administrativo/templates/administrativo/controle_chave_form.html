@@ -5,8 +5,24 @@
     <form method="post">
         {% csrf_token %}
         <div class="mb-3">
+            {{ form.busca_moto.label_tag }}
+            {{ form.busca_moto }}
+        </div>
+        <div class="mb-3">
             {{ form.funcionario.label_tag }}
             {{ form.funcionario }}
+        </div>
+        <div class="mb-3">
+            {{ form.id_moto.label_tag }}
+            {{ form.id_moto }}
+        </div>
+        <div class="mb-3">
+            {{ form.placa_moto.label_tag }}
+            {{ form.placa_moto }}
+        </div>
+        <div class="mb-3">
+            {{ form.chassi_moto.label_tag }}
+            {{ form.chassi_moto }}
         </div>
         <div class="mb-3">
             {{ form.motocicleta.label_tag }}
@@ -16,4 +32,8 @@
         <a href="{% url 'core:controle_chave_list' %}" class="btn btn-secondary">Cancelar</a>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'administrativo/js/controle_chave_autocomplete.js' %}"></script>
 {% endblock %} 

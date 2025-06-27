@@ -1,8 +1,9 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia, ControleChave
+from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia
 from django.utils import timezone
+from django.db import models
 
 class MotocicletaForm(forms.ModelForm):
     class Meta:
@@ -526,11 +527,3 @@ class ComentarioOcorrenciaForm(forms.ModelForm):
             'privado': 'Comentário privado (apenas para administradores)'
         }
 
-class ControleChaveForm(forms.ModelForm):
-    class Meta:
-        model = ControleChave
-        fields = ['funcionario', 'motocicleta']
-        widgets = {
-            'funcionario': forms.Select(attrs={'class': 'form-control'}),
-            'motocicleta': forms.Select(attrs={'class': 'form-control'}),
-        }

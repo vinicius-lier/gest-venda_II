@@ -23,20 +23,38 @@ import logging
 
 def login_view(request):
     """View de login do sistema"""
+    logger = logging.getLogger('core')
+    
     if request.method == 'POST':
+        logger.info(f"Tentativa de login para usuário: {request.POST.get('username', 'N/A')}")
+        
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            
+            logger.info(f"Formulário válido para usuário: {username}")
+            
             user = authenticate(
-                username=form.cleaned_data.get('username'),
-                password=form.cleaned_data.get('password')
+                username=username,
+                password=password
             )
+            
             if user:
+                logger.info(f"Usuário autenticado com sucesso: {username}")
                 login(request, user)
+                logger.info(f"Login realizado para: {username}, redirecionando para dashboard")
                 return redirect('core:dashboard')
             else:
+                logger.warning(f"Falha na autenticação para usuário: {username}")
                 messages.error(request, 'Usuário ou senha inválidos.')
+        else:
+            logger.warning(f"Formulário inválido para usuário: {request.POST.get('username', 'N/A')} - Erros: {form.errors}")
+            messages.error(request, 'Dados inválidos. Verifique usuário e senha.')
     else:
         form = AuthenticationForm()
+        logger.debug("Página de login carregada (GET)")
+    
     return render(request, 'core/login.html', {'form': form})
 
 def logout_view(request):
@@ -48,40 +66,53 @@ def logout_view(request):
 @login_required
 def dashboard(request):
     """Dashboard principal do sistema"""
-    hoje = timezone.now().date()
-    primeiro_dia_mes = hoje.replace(day=1)
+    logger = logging.getLogger('core')
+    logger.info(f"Dashboard acessado por: {request.user.username}")
+    
+    try:
+        hoje = timezone.now().date()
+        primeiro_dia_mes = hoje.replace(day=1)
 
-    total_clientes = Cliente.objects.count()
-    total_motos = Motocicleta.objects.count()
-    motos_estoque = Motocicleta.objects.filter(status='estoque').count()
-    vendas_mes = Venda.objects.filter(data_venda__gte=primeiro_dia_mes).count()
-    consignacoes = Consignacao.objects.filter(status='disponivel').count()
+        total_clientes = Cliente.objects.count()
+        total_motos = Motocicleta.objects.count()
+        motos_estoque = Motocicleta.objects.filter(status='estoque').count()
+        vendas_mes = Venda.objects.filter(data_venda__gte=primeiro_dia_mes).count()
+        consignacoes = Consignacao.objects.filter(status='disponivel').count()
 
-    # Dados para gráfico de ranking de vendedores
-    ranking_vendedores = Usuario.objects.filter(
-        vendas_realizadas__status='vendido'
-    ).annotate(
-        total_vendas=Count('vendas_realizadas', filter=Q(vendas_realizadas__status='vendido'))
-    ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
+        # Dados para gráfico de ranking de vendedores
+        ranking_vendedores = Usuario.objects.filter(
+            vendas_realizadas__status='vendido'
+        ).annotate(
+            total_vendas=Count('vendas_realizadas', filter=Q(vendas_realizadas__status='vendido'))
+        ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
 
-    # Dados para gráfico de motos mais vendidas
-    ranking_motos = Motocicleta.objects.filter(
-        vendas__status='vendido'
-    ).annotate(
-        total_vendas=Count('vendas', filter=Q(vendas__status='vendido'))
-    ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
+        # Dados para gráfico de motos mais vendidas
+        ranking_motos = Motocicleta.objects.filter(
+            vendas__status='vendido'
+        ).annotate(
+            total_vendas=Count('vendas', filter=Q(vendas__status='vendido'))
+        ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
 
-    context = {
-        'total_clientes': total_clientes,
-        'total_motos': total_motos,
-        'motos_estoque': motos_estoque,
-        'vendas_mes': vendas_mes,
-        'consignacoes': consignacoes,
-        'ranking_vendedores': ranking_vendedores,
-        'ranking_motos': ranking_motos,
-        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
-    }
-    return render(request, 'core/dashboard.html', context)
+        context = {
+            'total_clientes': total_clientes,
+            'total_motos': total_motos,
+            'motos_estoque': motos_estoque,
+            'vendas_mes': vendas_mes,
+            'consignacoes': consignacoes,
+            'ranking_vendedores': ranking_vendedores,
+            'ranking_motos': ranking_motos,
+            'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+        }
+        
+        logger.info(f"Dashboard carregado com sucesso para: {request.user.username}")
+        return render(request, 'core/dashboard.html', context)
+        
+    except Exception as e:
+        logger.error(f"Erro no dashboard para {request.user.username}: {str(e)}")
+        messages.error(request, 'Erro ao carregar dashboard. Tente novamente.')
+        return render(request, 'core/dashboard.html', {
+            'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+        })
 
 @login_required
 def cliente_list(request):

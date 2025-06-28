@@ -63,7 +63,7 @@ class DataImporter:
             
             if file_extension in ['.csv']:
                 # Tentar diferentes encodings e configurações
-                encodings = ['utf-8', 'utf-8-sig', 'latin1', 'cp1252', 'iso-8859-1', 'windows-1252']
+                encodings = ['utf-8-sig', 'utf-8', 'latin1', 'cp1252', 'iso-8859-1', 'windows-1252']
                 
                 for encoding in encodings:
                     try:

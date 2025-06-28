@@ -131,10 +131,24 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'seguros' %}
+                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'seguradoras' %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'core:seguro_list' %}">
-                                <i class="fas fa-shield-alt me-2"></i> Seguros
+                            <a class="nav-link" href="{% url 'core:seguradora_list' %}">
+                                <i class="fas fa-building me-2"></i> Seguradoras
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'bens' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:bem_list' %}">
+                                <i class="fas fa-home me-2"></i> Bens
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'cotacoes' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:cotacao_seguro_list' %}">
+                                <i class="fas fa-calculator me-2"></i> Cotações
                             </a>
                         </li>
                         {% endif %}

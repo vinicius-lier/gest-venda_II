@@ -146,24 +146,30 @@ class Usuario(models.Model):
         modulos_por_perfil = {
             'admin': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
-                'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias'
+                'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
+                'seguradoras', 'bens', 'cotacoes'
             ],
             'gerente': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
-                'seguros', 'relatorios', 'ocorrencias'
+                'seguros', 'relatorios', 'ocorrencias',
+                'seguradoras', 'bens', 'cotacoes'
             ],
             'vendedor': [
-                'clientes', 'motocicletas', 'vendas', 'consignacoes'
+                'clientes', 'motocicletas', 'vendas', 'consignacoes',
+                'seguradoras', 'bens', 'cotacoes'
             ],
             'consultor': [
-                'clientes', 'motocicletas', 'vendas', 'consignacoes', 'seguros'
+                'clientes', 'motocicletas', 'vendas', 'consignacoes', 'seguros',
+                'seguradoras', 'bens', 'cotacoes'
             ],
             'financeiro': [
-                'clientes', 'vendas', 'consignacoes', 'seguros', 'relatorios'
+                'clientes', 'vendas', 'consignacoes', 'seguros', 'relatorios',
+                'seguradoras', 'bens', 'cotacoes'
             ],
             'ti': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
-                'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias'
+                'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
+                'seguradoras', 'bens', 'cotacoes'
             ]
         }
         

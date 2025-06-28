@@ -2046,6 +2046,9 @@ def usuario_menu_manage(request, usuario_id):
             ('lojas', 'Lojas'),
             ('relatorios', 'Relatórios'),
             ('ocorrencias', 'Ocorrências'),
+            ('seguradoras', 'Seguradoras'),
+            ('bens', 'Bens'),
+            ('cotacoes', 'Cotações'),
         ]
         
         # Limpar configurações existentes do usuário
@@ -2074,6 +2077,9 @@ def usuario_menu_manage(request, usuario_id):
         ('lojas', 'Lojas'),
         ('relatorios', 'Relatórios'),
         ('ocorrencias', 'Ocorrências'),
+        ('seguradoras', 'Seguradoras'),
+        ('bens', 'Bens'),
+        ('cotacoes', 'Cotações'),
     ]
     
     # Verificar quais módulos estão ativos para o usuário

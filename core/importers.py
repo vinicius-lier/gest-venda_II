@@ -62,15 +62,48 @@ class DataImporter:
                 file_path = file
             
             if file_extension in ['.csv']:
-                # Tentar diferentes encodings
+                # Tentar diferentes encodings e configurações
                 for encoding in ['utf-8', 'latin1', 'cp1252']:
                     try:
                         if isinstance(file, str):
-                            return pd.read_csv(file_path, encoding=encoding)
+                            return pd.read_csv(
+                                file_path, 
+                                encoding=encoding,
+                                quoting=1,  # QUOTE_ALL
+                                escapechar='\\',
+                                on_bad_lines='skip',  # Pular linhas problemáticas
+                                low_memory=False
+                            )
                         else:
-                            return pd.read_csv(file, encoding=encoding)
+                            return pd.read_csv(
+                                file, 
+                                encoding=encoding,
+                                quoting=1,  # QUOTE_ALL
+                                escapechar='\\',
+                                on_bad_lines='skip',  # Pular linhas problemáticas
+                                low_memory=False
+                            )
                     except UnicodeDecodeError:
                         continue
+                    except Exception as e:
+                        # Se falhar com QUOTE_ALL, tentar sem
+                        try:
+                            if isinstance(file, str):
+                                return pd.read_csv(
+                                    file_path, 
+                                    encoding=encoding,
+                                    on_bad_lines='skip',
+                                    low_memory=False
+                                )
+                            else:
+                                return pd.read_csv(
+                                    file, 
+                                    encoding=encoding,
+                                    on_bad_lines='skip',
+                                    low_memory=False
+                                )
+                        except:
+                            continue
                 raise ValueError("Não foi possível decodificar o arquivo CSV")
             
             elif file_extension in ['.xlsx', '.xls']:
@@ -330,9 +363,13 @@ class DataImporter:
                 else:
                     tipo_entrada = 'usada'
                 
-                # Valores (usar valores padrão se não disponíveis)
+                # Valores (usar valores padrão se não disponíveis ou em branco)
                 valor_entrada = self._parse_decimal(row.get('valor_entrada', 0))
+                if not valor_entrada:
+                    valor_entrada = 0
                 valor_atual = self._parse_decimal(row.get('valor_atual', valor_entrada))
+                if not valor_atual:
+                    valor_atual = 0
                 
                 # Data de entrada
                 data_chegada = self._clean_string(row.get('Data de Chegada', ''))

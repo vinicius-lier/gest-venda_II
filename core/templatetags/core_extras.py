@@ -79,12 +79,22 @@ def modulo_ativo(usuario, modulo):
     if usuario is None:
         return False
     
-    # Verifica se o objeto tem o método modulo_ativo (é um Usuario do sistema)
-    if hasattr(usuario, 'modulo_ativo'):
-        return usuario.modulo_ativo(modulo)
+    # Se o objeto já é um Usuario do sistema (tem o método modulo_ativo)
+    if hasattr(usuario, 'modulo_ativo') and callable(getattr(usuario, 'modulo_ativo')):
+        try:
+            return usuario.modulo_ativo(modulo)
+        except Exception:
+            return False
     
-    # Se não tem o método, verifica se é um User do Django e tem usuario_sistema
+    # Se é um User do Django e tem usuario_sistema
     if hasattr(usuario, 'usuario_sistema') and usuario.usuario_sistema:
-        return usuario.usuario_sistema.modulo_ativo(modulo)
+        try:
+            return usuario.usuario_sistema.modulo_ativo(modulo)
+        except Exception:
+            return False
+    
+    # Se é um superusuário, permite acesso a todos os módulos
+    if hasattr(usuario, 'is_superuser') and usuario.is_superuser:
+        return True
     
     return False 

@@ -522,6 +522,28 @@ def venda_delete(request, pk):
     })
 
 @login_required
+def venda_cancel(request, pk):
+    """Cancela uma venda, alterando o status para 'cancelado'"""
+    venda = get_object_or_404(Venda, pk=pk)
+    if not (request.user.is_superuser or request.user.has_perm('core.change_venda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para cancelar vendas.'})
+
+    if venda.status == 'cancelado':
+        messages.info(request, 'Esta venda já está cancelada.')
+        return redirect('core:venda_detail', pk=pk)
+
+    if request.method == 'POST':
+        venda.status = 'cancelado'
+        venda.save()
+        messages.success(request, 'Venda cancelada com sucesso!')
+        return redirect('core:venda_detail', pk=pk)
+
+    return render(request, 'core/venda_confirm_cancel.html', {
+        'venda': venda,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
 def consignacao_list(request):
     """Lista de consignações com filtros"""
     if not (request.user.is_superuser or request.user.has_perm('core.view_consignacao')):

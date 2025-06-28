@@ -35,6 +35,7 @@ urlpatterns = [
     path('vendas/<int:pk>/editar/', views.venda_update, name='venda_update'),
     path('vendas/<int:pk>/', views.venda_detail, name='venda_detail'),
     path('vendas/<int:pk>/excluir/', views.venda_delete, name='venda_delete'),
+    path('vendas/<int:pk>/cancelar/', views.venda_cancel, name='venda_cancel'),
     
     # Consignações
     path('consignacoes/', views.consignacao_list, name='consignacao_list'),

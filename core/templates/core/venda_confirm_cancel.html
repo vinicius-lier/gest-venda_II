@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Cancelar Venda{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-times-circle"></i> Cancelar Venda</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="mb-3">Tem certeza que deseja cancelar esta venda?</h5>
+                    <ul>
+                        <li><strong>Motocicleta:</strong> {{ venda.moto.marca }} {{ venda.moto.modelo }} ({{ venda.moto.ano }})</li>
+                        <li><strong>Comprador:</strong> {{ venda.comprador.nome }}</li>
+                        <li><strong>Valor:</strong> R$ {{ venda.valor_venda|floatformat:2 }}</li>
+                        <li><strong>Status atual:</strong> <span class="badge bg-{{ venda.get_status_color }}">{{ venda.get_status_display }}</span></li>
+                    </ul>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center gap-2 mt-4">
+                            <a href="{% url 'core:venda_detail' venda.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times-circle me-1"></i> Confirmar Cancelamento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -114,15 +114,18 @@ class VendaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
         from .models import Motocicleta, Cliente
         # Filtrar motos disponíveis (em estoque)
         motos_disponiveis = Motocicleta.objects.filter(status='estoque').order_by('marca', 'modelo')
-        self.fields['moto'].queryset = motos_disponiveis
+        if instance and instance.moto:
+            # Garante que a moto da venda está no queryset
+            motos_disponiveis = Motocicleta.objects.filter(pk=instance.moto.pk) | motos_disponiveis
+        self.fields['moto'].queryset = motos_disponiveis.distinct()
         self.fields['moto'].label_from_instance = lambda obj: f"{obj.marca} {obj.modelo} {obj.ano} - {obj.placa or obj.chassi}"
         # Filtrar clientes ativos
         self.fields['comprador'].queryset = Cliente.objects.filter(ativo=True).order_by('nome')
-        
         # Filtrar vendedores ativos - CORRIGIDO: usar objetos Usuario em vez de User
         vendedores_ativos = Usuario.objects.filter(
             status='ativo',
@@ -130,7 +133,6 @@ class VendaForm(forms.ModelForm):
         ).order_by('user__first_name', 'user__last_name')
         self.fields['vendedor'].queryset = vendedores_ativos
         self.fields['vendedor'].label_from_instance = lambda obj: f"{obj.user.get_full_name()} ({obj.loja.nome})"
-        
         # Filtrar lojas ativas
         lojas_ativas = Loja.objects.filter(ativo=True).order_by('nome')
         self.fields['loja'].queryset = lojas_ativas

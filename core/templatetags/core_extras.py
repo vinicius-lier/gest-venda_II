@@ -78,4 +78,13 @@ def modulo_ativo(usuario, modulo):
     """Verifica se um módulo está ativo para o usuário"""
     if usuario is None:
         return False
-    return usuario.modulo_ativo(modulo) 
+    
+    # Verifica se o objeto tem o método modulo_ativo (é um Usuario do sistema)
+    if hasattr(usuario, 'modulo_ativo'):
+        return usuario.modulo_ativo(modulo)
+    
+    # Se não tem o método, verifica se é um User do Django e tem usuario_sistema
+    if hasattr(usuario, 'usuario_sistema') and usuario.usuario_sistema:
+        return usuario.usuario_sistema.modulo_ativo(modulo)
+    
+    return False 

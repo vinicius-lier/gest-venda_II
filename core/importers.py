@@ -63,7 +63,9 @@ class DataImporter:
             
             if file_extension in ['.csv']:
                 # Tentar diferentes encodings e configurações
-                for encoding in ['utf-8', 'latin1', 'cp1252']:
+                encodings = ['utf-8', 'utf-8-sig', 'latin1', 'cp1252', 'iso-8859-1', 'windows-1252']
+                
+                for encoding in encodings:
                     try:
                         if isinstance(file, str):
                             return pd.read_csv(
@@ -103,7 +105,57 @@ class DataImporter:
                                     low_memory=False
                                 )
                         except:
-                            continue
+                            # Se ainda falhar, tentar com engine='python'
+                            try:
+                                if isinstance(file, str):
+                                    return pd.read_csv(
+                                        file_path, 
+                                        encoding=encoding,
+                                        engine='python',
+                                        on_bad_lines='skip',
+                                        low_memory=False
+                                    )
+                                else:
+                                    return pd.read_csv(
+                                        file, 
+                                        encoding=encoding,
+                                        engine='python',
+                                        on_bad_lines='skip',
+                                        low_memory=False
+                                    )
+                            except:
+                                continue
+                
+                # Se nenhum encoding funcionou, tentar detectar automaticamente
+                try:
+                    import chardet
+                    if isinstance(file, str):
+                        with open(file_path, 'rb') as f:
+                            raw_data = f.read()
+                    else:
+                        raw_data = file.read()
+                        file.seek(0)  # Reset file pointer
+                    
+                    detected = chardet.detect(raw_data)
+                    if detected['confidence'] > 0.7:
+                        detected_encoding = detected['encoding']
+                        if isinstance(file, str):
+                            return pd.read_csv(
+                                file_path, 
+                                encoding=detected_encoding,
+                                on_bad_lines='skip',
+                                low_memory=False
+                            )
+                        else:
+                            return pd.read_csv(
+                                file, 
+                                encoding=detected_encoding,
+                                on_bad_lines='skip',
+                                low_memory=False
+                            )
+                except:
+                    pass
+                
                 raise ValueError("Não foi possível decodificar o arquivo CSV")
             
             elif file_extension in ['.xlsx', '.xls']:

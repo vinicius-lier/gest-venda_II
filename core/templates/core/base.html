@@ -103,56 +103,56 @@
                                 <i class="fas fa-tachometer-alt me-2"></i> Dashboard
                             </a>
                         </li>
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'clientes' %}
+                        {% if usuario_sistema.modulo_ativo == 'clientes' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:cliente_list' %}">
                                 <i class="fas fa-users me-2"></i> Clientes
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'motocicletas' %}
+                        {% if usuario_sistema.modulo_ativo == 'motocicletas' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:motocicleta_list' %}">
                                 <i class="fas fa-motorcycle me-2"></i> Motocicletas
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'vendas' %}
+                        {% if usuario_sistema.modulo_ativo == 'vendas' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:venda_list' %}">
                                 <i class="fas fa-shopping-cart me-2"></i> Vendas
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'consignacoes' %}
+                        {% if usuario_sistema.modulo_ativo == 'consignacoes' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:consignacao_list' %}">
                                 <i class="fas fa-handshake me-2"></i> Consignações
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'seguradoras' %}
+                        {% if usuario_sistema.modulo_ativo == 'seguradoras' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:seguradora_list' %}">
                                 <i class="fas fa-building me-2"></i> Seguradoras
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'bens' %}
+                        {% if usuario_sistema.modulo_ativo == 'bens' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:bem_list' %}">
                                 <i class="fas fa-home me-2"></i> Bens
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'cotacoes' %}
+                        {% if usuario_sistema.modulo_ativo == 'cotacoes' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:cotacao_seguro_list' %}">
                                 <i class="fas fa-calculator me-2"></i> Cotações
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.is_superuser or usuario_sistema.modulo_ativo == 'ocorrencias' %}
+                        {% if usuario_sistema.modulo_ativo == 'ocorrencias' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'core:ocorrencia_list' %}">
                                 <i class="fas fa-exclamation-triangle me-2"></i> Ocorrências

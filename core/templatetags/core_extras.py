@@ -71,4 +71,11 @@ def get_item(dictionary, key):
     """Retorna um item de um dicionário usando a chave fornecida"""
     if dictionary is None:
         return None
-    return dictionary.get(key) 
+    return dictionary.get(key)
+
+@register.filter
+def modulo_ativo(usuario, modulo):
+    """Verifica se um módulo está ativo para o usuário"""
+    if usuario is None:
+        return False
+    return usuario.modulo_ativo(modulo) 

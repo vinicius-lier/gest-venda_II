@@ -81,11 +81,11 @@ def dashboard(request):
         hoje = timezone.now().date()
         primeiro_dia_mes = hoje.replace(day=1)
 
-        total_clientes = Cliente.objects.count()
-        total_motos = Motocicleta.objects.count()
-        motos_estoque = Motocicleta.objects.filter(status='estoque').count()
-        vendas_mes = Venda.objects.filter(data_venda__gte=primeiro_dia_mes).count()
-        consignacoes = Consignacao.objects.filter(status='disponivel').count()
+        total_clientes = Cliente.objects.filter(ativo=True).count()
+        total_motos = Motocicleta.objects.filter(ativo=True).count()
+        motos_estoque = Motocicleta.objects.filter(status='estoque', ativo=True).count()
+        vendas_mes = Venda.objects.filter(data_venda__gte=primeiro_dia_mes, status='vendido').count()
+        consignacoes = Consignacao.objects.filter(status='disponivel', moto__ativo=True).count()
 
         # Dados para gráfico de ranking de vendedores
         ranking_vendedores = Usuario.objects.filter(

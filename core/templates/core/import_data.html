@@ -78,13 +78,21 @@
                                 </div>
                                 <div class="card-body">
                                     <p class="card-text">Importe dados das motocicletas.</p>
+                                    <div class="alert alert-success mb-3">
+                                        <small><i class="fas fa-star"></i> <strong>NOVO:</strong> Pré-visualização e mapeamento de colunas disponível!</small>
+                                    </div>
                                     <p class="small text-muted">
                                         <strong>Colunas necessárias:</strong><br>
                                         chassi, placa, renavam, marca, modelo, ano, cor, cilindrada, tipo_entrada, origem, status, valor_entrada, valor_atual, data_entrada, observacoes
                                     </p>
-                                    <a href="{% url 'core:import_motocicletas' %}" class="btn btn-warning">
-                                        <i class="fas fa-upload"></i> Importar Motocicletas
-                                    </a>
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'core:preview_import_motocicletas' %}" class="btn btn-success">
+                                            <i class="fas fa-eye"></i> Pré-visualizar e Mapear
+                                        </a>
+                                        <a href="{% url 'core:import_motocicletas' %}" class="btn btn-warning">
+                                            <i class="fas fa-upload"></i> Importação Direta
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -164,6 +172,15 @@
                                 <li><strong>Motocicletas</strong> - Podem referenciar clientes como proprietários/fornecedores</li>
                                 <li><strong>Vendas</strong> - Dependem de motocicletas, clientes, usuários e lojas</li>
                             </ol>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Importação de Motocicletas</h6>
+                            <p class="mb-2">Para motocicletas, você tem duas opções:</p>
+                            <ul class="mb-0">
+                                <li><strong>Pré-visualizar e Mapear:</strong> Recomendado para arquivos com colunas diferentes do padrão. Permite visualizar os dados e mapear cada coluna manualmente.</li>
+                                <li><strong>Importação Direta:</strong> Para arquivos que seguem exatamente o formato padrão esperado pelo sistema.</li>
+                            </ul>
                         </div>
                     </div>
                 </div>

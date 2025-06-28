@@ -269,12 +269,37 @@ class DataImporter:
             return False
     
     @transaction.atomic
-    def import_clientes(self, file: UploadedFile):
-        """Importa clientes de um arquivo CSV/Excel"""
+    def import_clientes(self, file: UploadedFile, column_mapping=None):
+        """Importa clientes de um arquivo CSV/Excel com mapeamento de colunas opcional"""
         try:
             df = self.read_file(file)
             if df is None:
                 return False
+            
+            # Se não foi fornecido mapeamento, usar o padrão
+            if not column_mapping:
+                column_mapping = {
+                    'nome': ['nome'],
+                    'cpf_cnpj': ['cpf_cnpj', 'cpf'],
+                    'rg': ['rg'],
+                    'data_nascimento': ['data_nascimento', 'nascimento'],
+                    'telefone': ['telefone', 'fone'],
+                    'email': ['email'],
+                    'endereco': ['endereco', 'endereço'],
+                    'cidade': ['cidade'],
+                    'estado': ['estado', 'uf'],
+                    'cep': ['cep'],
+                    'tipo': ['tipo'],
+                    'observacoes': ['observacoes', 'observações']
+                }
+            
+            def get_mapped_value(row, field_name):
+                """Obtém o valor mapeado para um campo"""
+                if field_name in column_mapping:
+                    for col_name in column_mapping[field_name]:
+                        if col_name in row and pd.notna(row[col_name]) and str(row[col_name]).strip():
+                            return row[col_name]
+                return None
                 
             success_count = 0
             error_count = 0
@@ -282,7 +307,7 @@ class DataImporter:
             for index, row in df.iterrows():
                 try:
                     # Verificar se o cliente já existe
-                    cpf = self._clean_string(row.get('cpf', ''))
+                    cpf = self._clean_string(get_mapped_value(row, 'cpf_cnpj'))
                     if not cpf:
                         self.log_error(f"CPF vazio (Linha {index + 2})")
                         error_count += 1
@@ -294,17 +319,17 @@ class DataImporter:
                     
                     # Criar cliente
                     cliente = Cliente.objects.create(
-                        nome=self._clean_string(row.get('nome', '')),
+                        nome=self._clean_string(get_mapped_value(row, 'nome')),
                         cpf_cnpj=cpf,
-                        rg=self._clean_string(row.get('rg', '')),
-                        data_nascimento=self._parse_date(row.get('data_nascimento')),
-                        telefone=self._clean_string(row.get('telefone', '')),
-                        email=self._clean_string(row.get('email', '')),
-                        endereco=self._clean_string(row.get('endereco', '')),
-                        cidade=self._clean_string(row.get('cidade', '')),
-                        estado=self._clean_string(row.get('estado', '')),
-                        cep=self._clean_string(row.get('cep', '')),
-                        ativo=self._parse_boolean(row.get('ativo', True))
+                        rg=self._clean_string(get_mapped_value(row, 'rg')),
+                        data_nascimento=self._parse_date(get_mapped_value(row, 'data_nascimento')),
+                        telefone=self._clean_string(get_mapped_value(row, 'telefone')),
+                        email=self._clean_string(get_mapped_value(row, 'email')),
+                        endereco=self._clean_string(get_mapped_value(row, 'endereco')),
+                        cidade=self._clean_string(get_mapped_value(row, 'cidade')),
+                        estado=self._clean_string(get_mapped_value(row, 'estado')),
+                        cep=self._clean_string(get_mapped_value(row, 'cep')),
+                        ativo=self._parse_boolean(get_mapped_value(row, 'ativo'), True)
                     )
                     
                     self.log_success(f"Cliente {cliente.nome} importado com sucesso")
@@ -325,8 +350,8 @@ class DataImporter:
             return False
     
     @transaction.atomic
-    def import_motocicletas(self, file: UploadedFile):
-        """Importa motocicletas do arquivo"""
+    def import_motocicletas(self, file: UploadedFile, column_mapping=None):
+        """Importa motocicletas do arquivo com mapeamento de colunas opcional"""
         df = self.read_file(file)
         if df is None:
             return False
@@ -335,10 +360,33 @@ class DataImporter:
         success_count = 0
         error_count = 0
         
+        # Se não foi fornecido mapeamento, usar o padrão
+        if not column_mapping:
+            column_mapping = {
+                'marca': ['Marca', 'marca'],
+                'modelo': ['Modelo', 'modelo'],
+                'ano': ['FAB/MOD', 'ano'],
+                'cor': ['Cor', 'cor'],
+                'placa': ['Placa', 'placa'],
+                'chassi': ['Chassi', 'chassi'],
+                'valor_entrada': ['valor_entrada', 'valor_compra'],
+                'valor_atual': ['valor_atual', 'valor_venda'],
+                'status': ['Situação', 'status'],
+                'observacoes': ['OBSERVAÇÃO', 'observacoes']
+            }
+        
+        def get_mapped_value(row, field_name):
+            """Obtém o valor mapeado para um campo"""
+            if field_name in column_mapping:
+                for col_name in column_mapping[field_name]:
+                    if col_name in row and pd.notna(row[col_name]) and str(row[col_name]).strip():
+                        return row[col_name]
+            return None
+        
         for index, row in df.iterrows():
             try:
                 # Verificar se a moto já existe pelo chassi
-                chassi = self._clean_string(row.get('Chassi', row.get('chassi', '')))
+                chassi = self._clean_string(get_mapped_value(row, 'chassi'))
                 if not chassi or chassi == '0' or chassi == '*' or chassi == 'N/LOCALIZADO':
                     self.log_error(f"Chassi inválido: {chassi} (Linha {index + 2})")
                     error_count += 1
@@ -382,34 +430,26 @@ class DataImporter:
                                 tipo='fornecedor'
                             )
                 
-                # Mapear campos do arquivo para o modelo (aceitar ambos os formatos)
-                marca = self._clean_string(row.get('Marca', row.get('marca', '')))
-                modelo = self._clean_string(row.get('Modelo', row.get('modelo', '')))
-                placa = self._clean_string(row.get('Placa', row.get('placa', '')))
+                # Mapear campos usando o mapeamento fornecido
+                marca = self._clean_string(get_mapped_value(row, 'marca'))
+                modelo = self._clean_string(get_mapped_value(row, 'modelo'))
+                placa = self._clean_string(get_mapped_value(row, 'placa'))
                 renavam = self._clean_string(row.get('Renavam', row.get('renavam', '')))
-                cor = self._clean_string(row.get('Cor', row.get('cor', '')))
+                cor = self._clean_string(get_mapped_value(row, 'cor'))
                 
-                # Extrair ano do campo FAB/MOD ou ano
-                fab_mod = self._clean_string(row.get('FAB/MOD', ''))
-                ano_field = self._clean_string(row.get('ano', ''))
+                # Extrair ano do campo mapeado
+                ano_field = self._clean_string(get_mapped_value(row, 'ano'))
                 ano = ''
-                if fab_mod:
+                if ano_field:
                     # Tentar extrair ano do formato "2025/2025" ou "2025"
-                    if '/' in fab_mod:
-                        ano = fab_mod.split('/')[0]
-                    else:
-                        ano = fab_mod
-                elif ano_field:
-                    # Se não tem FAB/MOD, usar o campo ano
                     if '/' in ano_field:
                         ano = ano_field.split('/')[0]
                     else:
                         ano = ano_field
                 
-                # Determinar status baseado na situação ou status
-                situacao = self._clean_string(row.get('Situação', '')).lower()
-                status_field = self._clean_string(row.get('status', '')).lower()
-                status_text = situacao if situacao else status_field
+                # Determinar status baseado no campo mapeado
+                status_field = self._clean_string(get_mapped_value(row, 'status')).lower()
+                status_text = status_field
                 
                 if 'vendida' in status_text:
                     status = 'vendida'
@@ -424,25 +464,21 @@ class DataImporter:
                 
                 # Determinar tipo de entrada
                 km_field = str(row.get('KM', '0'))
-                if '0km' in fab_mod.lower() or '0' in km_field or '0km' in ano_field.lower():
+                if '0km' in ano_field.lower() or '0' in km_field or '0km' in ano_field.lower():
                     tipo_entrada = '0km'
                 else:
                     tipo_entrada = 'usada'
                 
-                # Valores (aceitar ambos os formatos)
-                valor_entrada = self._parse_decimal(row.get('valor_entrada', row.get('valor_compra', 0)))
-                if not valor_entrada:
-                    valor_entrada = 0
-                valor_atual = self._parse_decimal(row.get('valor_atual', row.get('valor_venda', valor_entrada)))
-                if not valor_atual:
-                    valor_atual = 0
+                # Valores usando mapeamento
+                valor_entrada = self._parse_decimal(get_mapped_value(row, 'valor_entrada'), 0)
+                valor_atual = self._parse_decimal(get_mapped_value(row, 'valor_atual'), valor_entrada)
                 
                 # Data de entrada
                 data_chegada = self._clean_string(row.get('Data de Chegada', ''))
                 data_entrada = self._parse_date(data_chegada) if data_chegada else timezone.now().date()
                 
                 # Observações
-                observacoes = self._clean_string(row.get('OBSERVAÇÃO', row.get('observacoes', '')))
+                observacoes = self._clean_string(get_mapped_value(row, 'observacoes'))
                 
                 moto = Motocicleta.objects.create(
                     chassi=chassi,
@@ -477,11 +513,37 @@ class DataImporter:
         return error_count == 0
     
     @transaction.atomic
-    def import_vendas(self, file: UploadedFile):
-        """Importa vendas do arquivo"""
+    def import_vendas(self, file: UploadedFile, column_mapping=None):
+        """Importa vendas do arquivo com mapeamento de colunas opcional"""
         df = self.read_file(file)
         if df is None:
             return False
+        
+        # Se não foi fornecido mapeamento, usar o padrão
+        if not column_mapping:
+            column_mapping = {
+                'moto_chassi': ['moto_chassi', 'chassi'],
+                'comprador_cpf': ['comprador_cpf', 'cpf_comprador'],
+                'vendedor_username': ['vendedor_username', 'vendedor'],
+                'loja_nome': ['loja_nome', 'loja'],
+                'origem': ['origem'],
+                'forma_pagamento': ['forma_pagamento', 'pagamento'],
+                'status': ['status'],
+                'valor_venda': ['valor_venda', 'valor'],
+                'valor_entrada': ['valor_entrada'],
+                'comissao_vendedor': ['comissao_vendedor', 'comissao'],
+                'data_atendimento': ['data_atendimento'],
+                'data_venda': ['data_venda', 'data'],
+                'observacoes': ['observacoes', 'observações']
+            }
+        
+        def get_mapped_value(row, field_name):
+            """Obtém o valor mapeado para um campo"""
+            if field_name in column_mapping:
+                for col_name in column_mapping[field_name]:
+                    if col_name in row and pd.notna(row[col_name]) and str(row[col_name]).strip():
+                        return row[col_name]
+            return None
         
         self.total_count = len(df)
         success_count = 0
@@ -490,7 +552,7 @@ class DataImporter:
         for index, row in df.iterrows():
             try:
                 # Buscar moto
-                moto_chassi = self._clean_string(row.get('moto_chassi', ''))
+                moto_chassi = self._clean_string(get_mapped_value(row, 'moto_chassi'))
                 if not moto_chassi:
                     self.log_error(f"Chassi da moto vazio (Linha {index + 2})")
                     error_count += 1
@@ -504,7 +566,7 @@ class DataImporter:
                     continue
                 
                 # Buscar comprador
-                comprador_cpf = self._clean_string(row.get('comprador_cpf', ''))
+                comprador_cpf = self._clean_string(get_mapped_value(row, 'comprador_cpf'))
                 if not comprador_cpf:
                     self.log_error(f"CPF do comprador vazio (Linha {index + 2})")
                     error_count += 1
@@ -518,55 +580,49 @@ class DataImporter:
                     continue
                 
                 # Buscar vendedor
-                vendedor_username = self._clean_string(row.get('vendedor_username', ''))
+                vendedor_username = self._clean_string(get_mapped_value(row, 'vendedor_username'))
                 if not vendedor_username:
                     self.log_error(f"Username do vendedor vazio (Linha {index + 2})")
                     error_count += 1
                     continue
                     
                 try:
-                    vendedor = Usuario.objects.get(user__username=vendedor_username)
+                    vendedor = Usuario.objects.get(username=vendedor_username)
                 except Usuario.DoesNotExist:
                     self.log_error(f"Vendedor com username {vendedor_username} não encontrado", index + 2)
                     error_count += 1
                     continue
                 
                 # Buscar loja
-                loja_nome = self._clean_string(row.get('loja_nome', ''))
-                if not loja_nome:
-                    self.log_error(f"Nome da loja vazio (Linha {index + 2})")
-                    error_count += 1
-                    continue
-                    
-                try:
-                    loja = Loja.objects.get(nome=loja_nome)
-                except Loja.DoesNotExist:
-                    self.log_error(f"Loja {loja_nome} não encontrada", index + 2)
-                    error_count += 1
-                    continue
+                loja_nome = self._clean_string(get_mapped_value(row, 'loja_nome'))
+                loja = None
+                if loja_nome:
+                    try:
+                        loja = Loja.objects.get(nome=loja_nome)
+                    except Loja.DoesNotExist:
+                        self.log_error(f"Loja {loja_nome} não encontrada", index + 2)
+                        error_count += 1
+                        continue
                 
-                # Verificar se já existe uma venda para esta moto
-                if Venda.objects.filter(moto=moto).exists():
-                    self.log_duplicate(f"Venda para moto com chassi {moto_chassi} já existe", index + 2)
-                    continue
-                
+                # Criar venda
                 venda = Venda.objects.create(
                     moto=moto,
                     comprador=comprador,
                     vendedor=vendedor,
                     loja=loja,
-                    origem=self._clean_string(row.get('origem', 'presencial')),
-                    forma_pagamento=self._clean_string(row.get('forma_pagamento', 'a_vista')),
-                    status=self._clean_string(row.get('status', 'vendido')),
-                    valor_venda=self._parse_decimal(row.get('valor_venda', 0)),
-                    valor_entrada=self._parse_decimal(row.get('valor_entrada', 0)),
-                    comissao_vendedor=self._parse_decimal(row.get('comissao_vendedor', 0)),
-                    data_atendimento=self._parse_date(row.get('data_atendimento')) or timezone.now().date(),
-                    data_venda=self._parse_date(row.get('data_venda')) or timezone.now().date(),
-                    observacoes=self._clean_string(row.get('observacoes', ''))
+                    origem=self._clean_string(get_mapped_value(row, 'origem')),
+                    forma_pagamento=self._clean_string(get_mapped_value(row, 'forma_pagamento')),
+                    status=self._clean_string(get_mapped_value(row, 'status')),
+                    valor_venda=self._parse_decimal(get_mapped_value(row, 'valor_venda')),
+                    valor_entrada=self._parse_decimal(get_mapped_value(row, 'valor_entrada')),
+                    comissao_vendedor=self._parse_decimal(get_mapped_value(row, 'comissao_vendedor')),
+                    data_atendimento=self._parse_date(get_mapped_value(row, 'data_atendimento')),
+                    data_venda=self._parse_date(get_mapped_value(row, 'data_venda')),
+                    observacoes=self._clean_string(get_mapped_value(row, 'observacoes')),
+                    ativo=True
                 )
                 
-                self.log_success(f"Venda {venda.id} importada com sucesso")
+                self.log_success(f"Venda da moto {moto.marca} {moto.modelo} importada com sucesso")
                 success_count += 1
                 
             except Exception as e:

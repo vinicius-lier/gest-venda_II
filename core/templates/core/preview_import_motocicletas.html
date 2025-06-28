@@ -1,0 +1,161 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Importação de Motocicletas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-center">
+            <a href="{% url 'core:preview_import_motocicletas' %}" class="btn btn-lg btn-primary mx-2 active" style="min-width:220px;">
+                <i class="fas fa-motorcycle"></i> Motocicletas
+            </a>
+            <a href="{% url 'core:preview_import_clientes' %}" class="btn btn-lg btn-outline-primary mx-2" style="min-width:220px;">
+                <i class="fas fa-users"></i> Clientes
+            </a>
+            <a href="{% url 'core:preview_import_vendas' %}" class="btn btn-lg btn-outline-primary mx-2" style="min-width:220px;">
+                <i class="fas fa-shopping-cart"></i> Vendas
+            </a>
+        </div>
+    </div>
+    <div class="row mb-2">
+        <div class="col-12 d-flex justify-content-end">
+            <a href="{% url 'core:download_modelo_csv' 'motocicletas' %}" class="btn btn-outline-success btn-sm" download>
+                <i class="fas fa-file-csv"></i> Baixar modelo CSV de Motocicletas
+            </a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-motorcycle"></i> Sistema de Importação de Motocicletas
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Instruções -->
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> Instruções de Importação</h5>
+                        <ul class="mb-0">
+                            <li>Os arquivos devem estar no formato CSV</li>
+                            <li>Use codificação UTF-8 ou Latin1</li>
+                            <li>Faça upload do arquivo e visualize as colunas detectadas</li>
+                            <li>Mapeie cada coluna do CSV para o campo correspondente do sistema</li>
+                            <li>Clique em "Importar Motocicletas" para finalizar</li>
+                        </ul>
+                    </div>
+
+                    <!-- Formulário de upload -->
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="file"><strong>Selecione o arquivo CSV:</strong></label>
+                            <input type="file" class="form-control-file" id="file" name="file" accept=".csv" required>
+                            <small class="form-text text-muted">Formatos aceitos: CSV (separado por vírgula)</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">
+                            <i class="fas fa-search"></i> Pré-visualizar Arquivo
+                        </button>
+                    </form>
+
+                    {% if colunas %}
+                    <hr>
+                    
+                    <!-- Informações do arquivo -->
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle"></i> Arquivo carregado com sucesso!</h6>
+                        <p class="mb-0"><strong>Arquivo:</strong> {{ arquivo_nome }} | <strong>Colunas detectadas:</strong> {{ colunas|length }}</p>
+                    </div>
+
+                    <!-- Colunas detectadas -->
+                    <h5><i class="fas fa-list"></i> Colunas detectadas no arquivo:</h5>
+                    <div class="row mb-3">
+                        {% for col in colunas %}
+                        <div class="col-md-3 col-sm-6 mb-2">
+                            <span class="badge bg-secondary">{{ col }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Prévia dos dados -->
+                    <h5><i class="fas fa-table"></i> Prévia dos dados (primeiras 5 linhas):</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    {% for col in colunas %}
+                                    <th>{{ col }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview %}
+                                <tr>
+                                    {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Formulário de mapeamento -->
+                    <form method="post" action="{% url 'core:import_motocicletas' %}">
+                        {% csrf_token %}
+                        
+                        <h5><i class="fas fa-map"></i> Mapeamento de colunas:</h5>
+                        <p class="text-muted">Selecione qual coluna do seu arquivo corresponde a cada campo do sistema:</p>
+                        
+                        <div class="row">
+                            {% for campo in campos %}
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label"><strong>{{ campo|capfirst }}:</strong></label>
+                                <select name="map_{{ campo }}" class="form-control" {% if campo == 'marca' or campo == 'modelo' or campo == 'chassi' %}required{% endif %}>
+                                    <option value="">Selecione a coluna...</option>
+                                    {% for col in colunas %}
+                                    <option value="{{ col }}">{{ col }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">
+                                    {% if campo == 'marca' %}
+                                        Campo obrigatório - marca da motocicleta
+                                    {% elif campo == 'modelo' %}
+                                        Campo obrigatório - modelo da motocicleta
+                                    {% elif campo == 'chassi' %}
+                                        Campo obrigatório - chassi (identificador único)
+                                    {% elif campo == 'placa' %}
+                                        Campo importante - placa da moto
+                                    {% elif campo == 'valor_entrada' %}
+                                        Campo opcional - valor de entrada
+                                    {% elif campo == 'valor_atual' %}
+                                        Campo opcional - valor atual
+                                    {% elif campo == 'ano' %}
+                                        Campo opcional - ano de fabricação
+                                    {% elif campo == 'status' %}
+                                        Status: estoque, vendida, consignada
+                                    {% else %}
+                                        Campo opcional
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-upload"></i> Importar Motocicletas
+                            </button>
+                            <a href="{% url 'core:preview_import_motocicletas' %}" class="btn btn-secondary btn-lg ms-2">
+                                <i class="fas fa-refresh"></i> Carregar Novo Arquivo
+                            </a>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

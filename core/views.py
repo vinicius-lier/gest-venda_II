@@ -25,6 +25,8 @@ from django.views.decorators.http import require_GET
 from django.urls import reverse
 import os
 from django.conf import settings
+import pandas as pd
+from django.views.decorators.csrf import csrf_exempt
 
 def login_view(request):
     """View de login do sistema"""
@@ -1490,14 +1492,13 @@ def ocorrencia_detail(request, pk):
 # Views de Importação
 @login_required
 def import_data(request):
-    """Página principal de importação de dados"""
+    """Redireciona para a tela de pré-visualização de motocicletas"""
     if not request.user.is_superuser:
         messages.error(request, 'Apenas administradores podem importar dados.')
         return redirect('core:dashboard')
     
-    return render(request, 'core/import_data.html', {
-        'usuario_sistema': request.user
-    })
+    # Redirecionar diretamente para a tela de pré-visualização de motocicletas
+    return redirect('core:preview_import_motocicletas')
 
 @login_required
 def import_lojas(request):
@@ -1519,10 +1520,10 @@ def import_lojas(request):
                 for error in summary.get('errors', [])[:5]:  # Mostra apenas os primeiros 5 erros
                     messages.error(request, f'Erro: {error}')
             
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
         except Exception as e:
             messages.error(request, f'Erro durante a importação: {str(e)}')
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
     
     return render(request, 'core/import_lojas.html', {
         'usuario_sistema': request.user
@@ -1535,40 +1536,60 @@ def import_clientes(request):
         messages.error(request, 'Apenas administradores podem importar dados.')
         return redirect('core:dashboard')
     
-    if request.method == 'POST' and request.FILES.get('file'):
+    if request.method == 'POST':
         try:
             importer = DataImporter()
-            success = importer.import_clientes(request.FILES['file'])
-            summary = importer.get_import_summary()
             
-            if success:
-                messages.success(request, f'Importação concluída! {summary["success_count"]} clientes importados com sucesso.')
+            # Verificar se há mapeamento de colunas (vindo da pré-visualização)
+            column_mapping = {}
+            temp_file_path = None
+            if 'map_nome' in request.POST:
+                # Mapeamento personalizado foi enviado - usar arquivo temporário
+                if 'temp_file_path_clientes' not in request.session:
+                    messages.error(request, 'Arquivo não encontrado. Faça o upload novamente.')
+                    return redirect('core:preview_import_clientes')
+                
+                # Usar o arquivo temporário
+                temp_file_path = request.session['temp_file_path_clientes']
+                
+                # Criar mapeamento de colunas
+                column_mapping = {
+                    'nome': [request.POST.get('map_nome')],
+                    'cpf_cnpj': [request.POST.get('map_cpf_cnpj')],
+                    'rg': [request.POST.get('map_rg')],
+                    'data_nascimento': [request.POST.get('map_data_nascimento')],
+                    'telefone': [request.POST.get('map_telefone')],
+                    'email': [request.POST.get('map_email')],
+                    'endereco': [request.POST.get('map_endereco')],
+                    'cidade': [request.POST.get('map_cidade')],
+                    'estado': [request.POST.get('map_estado')],
+                    'cep': [request.POST.get('map_cep')],
+                    'tipo': [request.POST.get('map_tipo')],
+                    'observacoes': [request.POST.get('map_observacoes')]
+                }
+                
+                # Remover campos vazios
+                column_mapping = {k: v for k, v in column_mapping.items() if v[0]}
+                
+                # Limpar sessão
+                del request.session['temp_file_path_clientes']
+                
             else:
-                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} clientes importados, {summary["error_count"]} erros.')
-                for error in summary.get('errors', [])[:5]:
-                    messages.error(request, f'Erro: {error}')
+                # Upload direto (sem mapeamento)
+                if not request.FILES.get('file'):
+                    messages.error(request, 'Nenhum arquivo foi enviado.')
+                    return redirect('core:preview_import_clientes')
+                temp_file_path = request.FILES['file']
             
-            return redirect('core:import_data')
-        except Exception as e:
-            messages.error(request, f'Erro durante a importação: {str(e)}')
-            return redirect('core:import_data')
-    
-    return render(request, 'core/import_clientes.html', {
-        'usuario_sistema': request.user
-    })
-
-@login_required
-def import_motocicletas(request):
-    """Importação de motocicletas"""
-    if not request.user.is_superuser:
-        messages.error(request, 'Apenas administradores podem importar dados.')
-        return redirect('core:dashboard')
-    
-    if request.method == 'POST' and request.FILES.get('file'):
-        try:
-            importer = DataImporter()
-            success = importer.import_motocicletas(request.FILES['file'])
+            success = importer.import_motocicletas(temp_file_path, column_mapping)
             summary = importer.get_import_summary()
+            
+            # Limpar arquivo temporário se existir
+            if temp_file_path and isinstance(temp_file_path, str) and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                except:
+                    pass  # Ignorar erros de limpeza
             
             if success:
                 messages.success(request, f'Importação concluída! {summary["success_count"]} motocicletas importadas com sucesso.')
@@ -1577,10 +1598,10 @@ def import_motocicletas(request):
                 for error in summary.get('errors', [])[:5]:
                     messages.error(request, f'Erro: {error}')
             
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
         except Exception as e:
             messages.error(request, f'Erro durante a importação: {str(e)}')
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
     
     return render(request, 'core/import_motocicletas.html', {
         'usuario_sistema': request.user
@@ -1593,11 +1614,61 @@ def import_vendas(request):
         messages.error(request, 'Apenas administradores podem importar dados.')
         return redirect('core:dashboard')
     
-    if request.method == 'POST' and request.FILES.get('file'):
+    if request.method == 'POST':
         try:
             importer = DataImporter()
-            success = importer.import_vendas(request.FILES['file'])
+            
+            # Verificar se há mapeamento de colunas (vindo da pré-visualização)
+            column_mapping = {}
+            temp_file_path = None
+            if 'map_moto_chassi' in request.POST:
+                # Mapeamento personalizado foi enviado - usar arquivo temporário
+                if 'temp_file_path_vendas' not in request.session:
+                    messages.error(request, 'Arquivo não encontrado. Faça o upload novamente.')
+                    return redirect('core:preview_import_vendas')
+                
+                # Usar o arquivo temporário
+                temp_file_path = request.session['temp_file_path_vendas']
+                
+                # Criar mapeamento de colunas
+                column_mapping = {
+                    'moto_chassi': [request.POST.get('map_moto_chassi')],
+                    'comprador_cpf': [request.POST.get('map_comprador_cpf')],
+                    'vendedor_username': [request.POST.get('map_vendedor_username')],
+                    'loja_nome': [request.POST.get('map_loja_nome')],
+                    'origem': [request.POST.get('map_origem')],
+                    'forma_pagamento': [request.POST.get('map_forma_pagamento')],
+                    'status': [request.POST.get('map_status')],
+                    'valor_venda': [request.POST.get('map_valor_venda')],
+                    'valor_entrada': [request.POST.get('map_valor_entrada')],
+                    'comissao_vendedor': [request.POST.get('map_comissao_vendedor')],
+                    'data_atendimento': [request.POST.get('map_data_atendimento')],
+                    'data_venda': [request.POST.get('map_data_venda')],
+                    'observacoes': [request.POST.get('map_observacoes')]
+                }
+                
+                # Remover campos vazios
+                column_mapping = {k: v for k, v in column_mapping.items() if v[0]}
+                
+                # Limpar sessão
+                del request.session['temp_file_path_vendas']
+                
+            else:
+                # Upload direto (sem mapeamento)
+                if not request.FILES.get('file'):
+                    messages.error(request, 'Nenhum arquivo foi enviado.')
+                    return redirect('core:preview_import_vendas')
+                temp_file_path = request.FILES['file']
+            
+            success = importer.import_vendas(temp_file_path, column_mapping)
             summary = importer.get_import_summary()
+            
+            # Limpar arquivo temporário se existir
+            if temp_file_path and isinstance(temp_file_path, str) and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                except:
+                    pass  # Ignorar erros de limpeza
             
             if success:
                 messages.success(request, f'Importação concluída! {summary["success_count"]} vendas importadas com sucesso.')
@@ -1606,10 +1677,10 @@ def import_vendas(request):
                 for error in summary.get('errors', [])[:5]:
                     messages.error(request, f'Erro: {error}')
             
-            return redirect('core:import_data')
+            return redirect('core:preview_import_vendas')
         except Exception as e:
             messages.error(request, f'Erro durante a importação: {str(e)}')
-            return redirect('core:import_data')
+            return redirect('core:preview_import_vendas')
     
     return render(request, 'core/import_vendas.html', {
         'usuario_sistema': request.user
@@ -1635,10 +1706,10 @@ def import_seguradoras(request):
                 for error in summary.get('errors', [])[:5]:
                     messages.error(request, f'Erro: {error}')
             
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
         except Exception as e:
             messages.error(request, f'Erro durante a importação: {str(e)}')
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
     
     return render(request, 'core/import_seguradoras.html', {
         'usuario_sistema': request.user
@@ -1664,10 +1735,10 @@ def import_planos_seguro(request):
                 for error in summary.get('errors', [])[:5]:
                     messages.error(request, f'Erro: {error}')
             
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
         except Exception as e:
             messages.error(request, f'Erro durante a importação: {str(e)}')
-            return redirect('core:import_data')
+            return redirect('core:preview_import_motocicletas')
     
     return render(request, 'core/import_planos_seguro.html', {
         'usuario_sistema': request.user
@@ -1712,7 +1783,7 @@ def download_modelo_csv(request, tipo):
     
     if tipo not in modelos:
         messages.error(request, 'Tipo de modelo inválido.')
-        return redirect('core:import_data')
+        return redirect('core:preview_import_motocicletas')
     
     arquivo_path = os.path.join(settings.STATIC_ROOT, 'modelos', modelos[tipo])
     
@@ -1722,9 +1793,174 @@ def download_modelo_csv(request, tipo):
     
     if not os.path.exists(arquivo_path):
         messages.error(request, 'Arquivo de modelo não encontrado.')
-        return redirect('core:import_data')
+        return redirect('core:preview_import_motocicletas')
     
     with open(arquivo_path, 'rb') as f:
         response = HttpResponse(f.read(), content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{modelos[tipo]}"'
-        return response 
+        return response
+
+@csrf_exempt
+@login_required
+def preview_import_motocicletas(request):
+    """Pré-visualização do CSV para importação de motocicletas"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        
+        # Salvar o arquivo temporariamente
+        import tempfile
+        import os
+        
+        # Criar arquivo temporário
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_file_path = os.path.join(temp_dir, f"temp_{request.user.id}_{file.name}")
+        with open(temp_file_path, 'wb+') as temp_file:
+            for chunk in file.chunks():
+                temp_file.write(chunk)
+        
+        # Armazenar o caminho do arquivo temporário na sessão
+        request.session['temp_file_path'] = temp_file_path
+        
+        encodings = ['latin1', 'utf-8-sig', 'utf-8', 'cp1252', 'iso-8859-1', 'windows-1252']
+        df = None
+        for encoding in encodings:
+            try:
+                df = pd.read_csv(temp_file_path, encoding=encoding, nrows=10)
+                break
+            except Exception:
+                continue
+        if df is None:
+            messages.error(request, 'Não foi possível ler o arquivo CSV. Tente salvar como CSV (separado por vírgula) e tente novamente.')
+            return redirect('core:import_motocicletas')
+        colunas = list(df.columns)
+        preview = df.head(5).values.tolist()
+        
+        # Lista de campos para mapeamento
+        campos = ['marca', 'modelo', 'ano', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+        
+        return render(request, 'core/preview_import_motocicletas.html', {
+            'colunas': colunas,
+            'preview': preview,
+            'arquivo_nome': file.name,
+            'campos': campos,
+        })
+    
+    # Lista de campos para mapeamento (mesmo quando não há arquivo)
+    campos = ['marca', 'modelo', 'ano', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+    return render(request, 'core/preview_import_motocicletas.html', {'campos': campos})
+
+@csrf_exempt
+@login_required
+def preview_import_clientes(request):
+    """Pré-visualização do CSV para importação de clientes"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        
+        # Salvar o arquivo temporariamente
+        import tempfile
+        import os
+        
+        # Criar arquivo temporário
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_file_path = os.path.join(temp_dir, f"temp_clientes_{request.user.id}_{file.name}")
+        with open(temp_file_path, 'wb+') as temp_file:
+            for chunk in file.chunks():
+                temp_file.write(chunk)
+        
+        # Armazenar o caminho do arquivo temporário na sessão
+        request.session['temp_file_path_clientes'] = temp_file_path
+        
+        encodings = ['latin1', 'utf-8-sig', 'utf-8', 'cp1252', 'iso-8859-1', 'windows-1252']
+        df = None
+        for encoding in encodings:
+            try:
+                df = pd.read_csv(temp_file_path, encoding=encoding, nrows=10)
+                break
+            except Exception:
+                continue
+        if df is None:
+            messages.error(request, 'Não foi possível ler o arquivo CSV. Tente salvar como CSV (separado por vírgula) e tente novamente.')
+            return redirect('core:preview_import_clientes')
+        colunas = list(df.columns)
+        preview = df.head(5).values.tolist()
+        
+        # Lista de campos para mapeamento de clientes
+        campos = ['nome', 'cpf_cnpj', 'rg', 'data_nascimento', 'telefone', 'email', 'endereco', 'cidade', 'estado', 'cep', 'tipo', 'observacoes']
+        
+        return render(request, 'core/preview_import_clientes.html', {
+            'colunas': colunas,
+            'preview': preview,
+            'arquivo_nome': file.name,
+            'campos': campos,
+        })
+    
+    # Lista de campos para mapeamento (mesmo quando não há arquivo)
+    campos = ['nome', 'cpf_cnpj', 'rg', 'data_nascimento', 'telefone', 'email', 'endereco', 'cidade', 'estado', 'cep', 'tipo', 'observacoes']
+    return render(request, 'core/preview_import_clientes.html', {'campos': campos})
+
+@csrf_exempt
+@login_required
+def preview_import_vendas(request):
+    """Pré-visualização do CSV para importação de vendas"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+
+    if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
+        
+        # Salvar o arquivo temporariamente
+        import tempfile
+        import os
+        
+        # Criar arquivo temporário
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        temp_file_path = os.path.join(temp_dir, f"temp_vendas_{request.user.id}_{file.name}")
+        with open(temp_file_path, 'wb+') as temp_file:
+            for chunk in file.chunks():
+                temp_file.write(chunk)
+        
+        # Armazenar o caminho do arquivo temporário na sessão
+        request.session['temp_file_path_vendas'] = temp_file_path
+        
+        encodings = ['latin1', 'utf-8-sig', 'utf-8', 'cp1252', 'iso-8859-1', 'windows-1252']
+        df = None
+        for encoding in encodings:
+            try:
+                df = pd.read_csv(temp_file_path, encoding=encoding, nrows=10)
+                break
+            except Exception:
+                continue
+        if df is None:
+            messages.error(request, 'Não foi possível ler o arquivo CSV. Tente salvar como CSV (separado por vírgula) e tente novamente.')
+            return redirect('core:preview_import_vendas')
+        colunas = list(df.columns)
+        preview = df.head(5).values.tolist()
+        
+        # Lista de campos para mapeamento de vendas
+        campos = ['moto_chassi', 'comprador_cpf', 'vendedor_username', 'loja_nome', 'origem', 'forma_pagamento', 'status', 'valor_venda', 'valor_entrada', 'comissao_vendedor', 'data_atendimento', 'data_venda', 'observacoes']
+        
+        return render(request, 'core/preview_import_vendas.html', {
+            'colunas': colunas,
+            'preview': preview,
+            'arquivo_nome': file.name,
+            'campos': campos,
+        })
+    
+    # Lista de campos para mapeamento (mesmo quando não há arquivo)
+    campos = ['moto_chassi', 'comprador_cpf', 'vendedor_username', 'loja_nome', 'origem', 'forma_pagamento', 'status', 'valor_venda', 'valor_entrada', 'comissao_vendedor', 'data_atendimento', 'data_venda', 'observacoes']
+    return render(request, 'core/preview_import_vendas.html', {'campos': campos})

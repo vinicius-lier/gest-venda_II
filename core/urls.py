@@ -102,10 +102,9 @@ urlpatterns = [
     path('importar/', views.import_data, name='import_data'),
     path('importar/lojas/', views.import_lojas, name='import_lojas'),
     path('importar/clientes/', views.import_clientes, name='import_clientes'),
-    path('importar/motocicletas/', views.import_motocicletas, name='import_motocicletas'),
-    path('importar/vendas/', views.import_vendas, name='import_vendas'),
-    path('importar/seguradoras/', views.import_seguradoras, name='import_seguradoras'),
-    path('importar/planos-seguro/', views.import_planos_seguro, name='import_planos_seguro'),
+    path('importar/preview-motocicletas/', views.preview_import_motocicletas, name='preview_import_motocicletas'),
+    path('importar/preview-clientes/', views.preview_import_clientes, name='preview_import_clientes'),
+    path('importar/preview-vendas/', views.preview_import_vendas, name='preview_import_vendas'),
     path('download-modelo/<str:tipo>/', views.download_modelo_csv, name='download_modelo_csv'),
     
     # AJAX

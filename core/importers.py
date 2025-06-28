@@ -337,8 +337,8 @@ class DataImporter:
         for index, row in df.iterrows():
             try:
                 # Verificar se a moto já existe pelo chassi
-                chassi = self._clean_string(row.get('Chassi', ''))
-                if not chassi or chassi == '0' or chassi == '*':
+                chassi = self._clean_string(row.get('Chassi', row.get('chassi', '')))
+                if not chassi or chassi == '0' or chassi == '*' or chassi == 'N/LOCALIZADO':
                     self.log_error(f"Chassi inválido: {chassi} (Linha {index + 2})")
                     error_count += 1
                     continue
@@ -347,7 +347,7 @@ class DataImporter:
                     self.log_duplicate(f"Motocicleta com chassi {chassi} já existe", index + 2)
                     continue
                 
-                # Buscar proprietário se especificado
+                # Buscar proprietário se especificado (formato original)
                 proprietario = None
                 proprietario_cpf = self._clean_string(row.get('CPF Proprietário', ''))
                 if proprietario_cpf and proprietario_cpf != '0':
@@ -364,7 +364,7 @@ class DataImporter:
                                 tipo='proprietario'
                             )
                 
-                # Buscar fornecedor se especificado
+                # Buscar fornecedor se especificado (formato original)
                 fornecedor = None
                 fornecedor_cpf = self._clean_string(row.get('CPF fornecedor ', ''))
                 if fornecedor_cpf and fornecedor_cpf != '0':
@@ -381,15 +381,16 @@ class DataImporter:
                                 tipo='fornecedor'
                             )
                 
-                # Mapear campos do arquivo para o modelo
-                marca = self._clean_string(row.get('Marca', ''))
-                modelo = self._clean_string(row.get('Modelo', ''))
-                placa = self._clean_string(row.get('Placa', ''))
-                renavam = self._clean_string(row.get('Renavam', ''))
-                cor = self._clean_string(row.get('Cor', ''))
+                # Mapear campos do arquivo para o modelo (aceitar ambos os formatos)
+                marca = self._clean_string(row.get('Marca', row.get('marca', '')))
+                modelo = self._clean_string(row.get('Modelo', row.get('modelo', '')))
+                placa = self._clean_string(row.get('Placa', row.get('placa', '')))
+                renavam = self._clean_string(row.get('Renavam', row.get('renavam', '')))
+                cor = self._clean_string(row.get('Cor', row.get('cor', '')))
                 
-                # Extrair ano do campo FAB/MOD
+                # Extrair ano do campo FAB/MOD ou ano
                 fab_mod = self._clean_string(row.get('FAB/MOD', ''))
+                ano_field = self._clean_string(row.get('ano', ''))
                 ano = ''
                 if fab_mod:
                     # Tentar extrair ano do formato "2025/2025" ou "2025"
@@ -397,29 +398,41 @@ class DataImporter:
                         ano = fab_mod.split('/')[0]
                     else:
                         ano = fab_mod
+                elif ano_field:
+                    # Se não tem FAB/MOD, usar o campo ano
+                    if '/' in ano_field:
+                        ano = ano_field.split('/')[0]
+                    else:
+                        ano = ano_field
                 
-                # Determinar status baseado na situação
+                # Determinar status baseado na situação ou status
                 situacao = self._clean_string(row.get('Situação', '')).lower()
-                if 'vendida' in situacao:
+                status_field = self._clean_string(row.get('status', '')).lower()
+                status_text = situacao if situacao else status_field
+                
+                if 'vendida' in status_text:
                     status = 'vendida'
-                elif 'salão' in situacao:
+                elif 'salão' in status_text or 'salao' in status_text:
                     status = 'estoque'
-                elif 'oficina' in situacao:
+                elif 'oficina' in status_text:
                     status = 'manutencao'
+                elif 'pendência' in status_text or 'pendencia' in status_text:
+                    status = 'estoque'  # Tratar como estoque por enquanto
                 else:
                     status = 'estoque'
                 
                 # Determinar tipo de entrada
-                if '0km' in fab_mod.lower() or '0' in str(row.get('KM', '0')):
+                km_field = str(row.get('KM', '0'))
+                if '0km' in fab_mod.lower() or '0' in km_field or '0km' in ano_field.lower():
                     tipo_entrada = '0km'
                 else:
                     tipo_entrada = 'usada'
                 
-                # Valores (usar valores padrão se não disponíveis ou em branco)
-                valor_entrada = self._parse_decimal(row.get('valor_entrada', 0))
+                # Valores (aceitar ambos os formatos)
+                valor_entrada = self._parse_decimal(row.get('valor_entrada', row.get('valor_compra', 0)))
                 if not valor_entrada:
                     valor_entrada = 0
-                valor_atual = self._parse_decimal(row.get('valor_atual', valor_entrada))
+                valor_atual = self._parse_decimal(row.get('valor_atual', row.get('valor_venda', valor_entrada)))
                 if not valor_atual:
                     valor_atual = 0
                 
@@ -427,9 +440,12 @@ class DataImporter:
                 data_chegada = self._clean_string(row.get('Data de Chegada', ''))
                 data_entrada = self._parse_date(data_chegada) if data_chegada else timezone.now().date()
                 
+                # Observações
+                observacoes = self._clean_string(row.get('OBSERVAÇÃO', row.get('observacoes', '')))
+                
                 moto = Motocicleta.objects.create(
                     chassi=chassi,
-                    placa=placa if placa else None,
+                    placa=placa if placa and placa != '*' else None,
                     renavam=renavam if renavam and renavam != '0' else None,
                     marca=marca,
                     modelo=modelo,
@@ -444,7 +460,7 @@ class DataImporter:
                     valor_entrada=valor_entrada,
                     valor_atual=valor_atual,
                     data_entrada=data_entrada,
-                    observacoes=self._clean_string(row.get('OBSERVAÇÃO', '')),
+                    observacoes=observacoes,
                     ativo=True
                 )
                 

@@ -4,6 +4,7 @@ from django.utils import timezone
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 import uuid
+from django.db.models import JSONField
 
 # ============================================================================
 # 1. CONTROLE DE USUÁRIOS (RBAC - Role Based Access Control)
@@ -116,6 +117,66 @@ class Usuario(models.Model):
     def tem_permissao(self, modulo, acao):
         """Verifica se o usuário tem permissão para uma ação específica"""
         return self.perfil.permissoes.filter(modulo=modulo, acao=acao).exists()
+
+    def save(self, *args, **kwargs):
+        # Se é um novo usuário, configurar menus automaticamente
+        if not self.pk:  # Novo usuário
+            super().save(*args, **kwargs)
+            self.configurar_menus_automaticamente()
+        else:
+            super().save(*args, **kwargs)
+    
+    def modulo_ativo(self, modulo):
+        """Verifica se um módulo está ativo para o usuário"""
+        # Primeiro verifica se há configuração específica do usuário
+        try:
+            menu_usuario = self.menus_usuario.get(modulo=modulo)
+            return menu_usuario.ativo
+        except MenuUsuario.DoesNotExist:
+            # Se não há configuração específica, usa a do perfil
+            try:
+                menu_perfil = self.perfil.menuperfil_set.get(modulo=modulo)
+                return menu_perfil.ativo
+            except MenuPerfil.DoesNotExist:
+                return False
+
+    def configurar_menus_automaticamente(self):
+        """Configura automaticamente os menus baseado no perfil do usuário"""
+        # Módulos padrão por perfil
+        modulos_por_perfil = {
+            'admin': [
+                'clientes', 'motocicletas', 'vendas', 'consignacoes', 
+                'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias'
+            ],
+            'gerente': [
+                'clientes', 'motocicletas', 'vendas', 'consignacoes', 
+                'seguros', 'relatorios', 'ocorrencias'
+            ],
+            'vendedor': [
+                'clientes', 'motocicletas', 'vendas', 'consignacoes'
+            ],
+            'consultor': [
+                'clientes', 'motocicletas', 'vendas', 'consignacoes', 'seguros'
+            ],
+            'financeiro': [
+                'clientes', 'vendas', 'consignacoes', 'seguros', 'relatorios'
+            ],
+            'ti': [
+                'clientes', 'motocicletas', 'vendas', 'consignacoes', 
+                'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias'
+            ]
+        }
+        
+        # Obter módulos para o perfil
+        modulos = modulos_por_perfil.get(self.perfil.nome, [])
+        
+        # Criar registros de MenuPerfil
+        for modulo in modulos:
+            MenuPerfil.objects.get_or_create(
+                perfil=self.perfil,
+                modulo=modulo,
+                defaults={'ativo': True}
+            )
 
 class LogAcesso(models.Model):
     """Logs de acesso para rastreamento de ações críticas"""
@@ -881,3 +942,30 @@ class ComentarioOcorrencia(models.Model):
     
     def __str__(self):
         return f"Comentário de {self.autor.user.get_full_name()} em {self.ocorrencia.titulo}"
+
+class MenuUsuario(models.Model):
+    """Menus específicos por usuário"""
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='menus_usuario')
+    modulo = models.CharField(max_length=50)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Menu por Usuário"
+        verbose_name_plural = "Menus por Usuário"
+        unique_together = ['usuario', 'modulo']
+
+    def __str__(self):
+        return f"{self.usuario.user.username} - {self.modulo} ({'Ativo' if self.ativo else 'Inativo'})"
+
+class MenuPerfil(models.Model):
+    # Comentário temporário para forçar migração
+    perfil = models.ForeignKey(Perfil, on_delete=models.CASCADE)
+    modulo = models.CharField(max_length=50)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Menu por Perfil"
+        verbose_name_plural = "Menus por Perfil"
+
+    def __str__(self):
+        return f"{self.perfil} - {self.modulo} ({'Ativo' if self.ativo else 'Inativo'})"

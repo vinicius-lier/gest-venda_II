@@ -1,6 +1,0 @@
-chassi,placa,renavam,marca,modelo,ano,cor,cilindrada,tipo_entrada,origem,status,proprietario_cpf,fornecedor_cpf,valor_entrada,valor_atual,data_entrada,observacoes
-12345678901234567,ABC1234,12345678901,Honda,CG 150,2020,Preto,150,usada,cliente,estoque,,,8000.00,12000.00,2024-01-15,Nova em estoque
-98765432109876543,DEF5678,98765432109,Yamaha,YBR 125,2019,Vermelho,125,usada,cliente,estoque,,,7000.00,11000.00,2024-01-10,Semi-nova
-11122233344455566,GHI9012,11122233344,Honda,CB 300,2021,Branco,300,usada,cliente,estoque,,,15000.00,22000.00,2024-01-20,Nova
-22233344455566677,JKL3456,22233344455,Yamaha,MT-03,2020,Azul,321,usada,cliente,estoque,,,18000.00,25000.00,2024-01-25,Semi-nova
-33344455566677788,MNO7890,33344455566,Kawasaki,Ninja 300,2019,Verde,296,usada,cliente,estoque,,,16000.00,23000.00,2024-01-30,Semi-nova 

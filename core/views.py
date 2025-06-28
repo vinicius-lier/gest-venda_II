@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia
+from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia, MenuPerfil, Perfil, MenuUsuario
 from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, ClienteForm
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
@@ -27,6 +27,7 @@ import os
 from django.conf import settings
 import pandas as pd
 from django.views.decorators.csrf import csrf_exempt
+import json
 
 def login_view(request):
     """View de login do sistema"""
@@ -100,6 +101,24 @@ def dashboard(request):
             total_vendas=Count('vendas', filter=Q(vendas__status='vendido'))
         ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
 
+        # Preparar dados JSON para os gráficos
+        ranking_vendedores_labels = json.dumps([
+            vendedor.user.first_name or vendedor.user.username 
+            for vendedor in ranking_vendedores
+        ])
+        ranking_vendedores_data = json.dumps([
+            vendedor.total_vendas 
+            for vendedor in ranking_vendedores
+        ])
+        ranking_motos_labels = json.dumps([
+            f"{moto.marca} {moto.modelo}" 
+            for moto in ranking_motos
+        ])
+        ranking_motos_data = json.dumps([
+            moto.total_vendas 
+            for moto in ranking_motos
+        ])
+
         context = {
             'total_clientes': total_clientes,
             'total_motos': total_motos,
@@ -108,6 +127,10 @@ def dashboard(request):
             'consignacoes': consignacoes,
             'ranking_vendedores': ranking_vendedores,
             'ranking_motos': ranking_motos,
+            'ranking_vendedores_labels': ranking_vendedores_labels,
+            'ranking_vendedores_data': ranking_vendedores_data,
+            'ranking_motos_labels': ranking_motos_labels,
+            'ranking_motos_data': ranking_motos_data,
             'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
         }
         
@@ -1986,3 +2009,83 @@ def preview_import_vendas(request):
     # Lista de campos para mapeamento (mesmo quando não há arquivo)
     campos = ['moto_chassi', 'comprador_cpf', 'vendedor_username', 'loja_nome', 'origem', 'forma_pagamento', 'status', 'valor_venda', 'valor_entrada', 'comissao_vendedor', 'data_atendimento', 'data_venda', 'observacoes']
     return render(request, 'core/preview_import_vendas.html', {'campos': campos})
+
+@login_required
+def test_template(request):
+    """View de teste para verificar se o template base está funcionando"""
+    return render(request, 'core/test_template.html', {
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def usuario_menu_manage(request, usuario_id):
+    """Gerencia os menus específicos de um usuário"""
+    try:
+        usuario = Usuario.objects.get(pk=usuario_id)
+    except Usuario.DoesNotExist:
+        messages.error(request, 'Usuário não encontrado.')
+        return redirect('core:usuario_list')
+    
+    # Verificar permissões
+    if not (request.user.is_superuser or 
+            (hasattr(request.user, 'usuario_sistema') and 
+             request.user.usuario_sistema.perfil.nome in ['admin', 'gerente', 'ti'])):
+        return render(request, 'core/acesso_negado.html', {
+            'mensagem': 'Você não tem permissão para acessar esta funcionalidade.'
+        })
+    
+    if request.method == 'POST':
+        # Processar o formulário
+        modulos = [
+            ('clientes', 'Clientes'),
+            ('motocicletas', 'Motocicletas'),
+            ('vendas', 'Vendas'),
+            ('consignacoes', 'Consignações'),
+            ('seguros', 'Seguros'),
+            ('usuarios', 'Usuários'),
+            ('lojas', 'Lojas'),
+            ('relatorios', 'Relatórios'),
+            ('ocorrencias', 'Ocorrências'),
+        ]
+        
+        # Limpar configurações existentes do usuário
+        usuario.menus_usuario.all().delete()
+        
+        # Criar novas configurações baseadas no formulário
+        for cod, nome in modulos:
+            if request.POST.get(f'{usuario.pk}_{cod}'):
+                MenuUsuario.objects.create(
+                    usuario=usuario,
+                    modulo=cod,
+                    ativo=True
+                )
+        
+        messages.success(request, f'Menus do usuário {usuario.user.get_full_name()} atualizados com sucesso!')
+        return redirect('core:usuario_list')
+    
+    # Preparar dados para o template
+    modulos = [
+        ('clientes', 'Clientes'),
+        ('motocicletas', 'Motocicletas'),
+        ('vendas', 'Vendas'),
+        ('consignacoes', 'Consignações'),
+        ('seguros', 'Seguros'),
+        ('usuarios', 'Usuários'),
+        ('lojas', 'Lojas'),
+        ('relatorios', 'Relatórios'),
+        ('ocorrencias', 'Ocorrências'),
+    ]
+    
+    # Verificar quais módulos estão ativos para o usuário
+    menus_usuario = {}
+    for cod, nome in modulos:
+        menus_usuario[cod] = usuario.modulo_ativo(cod)
+    
+    context = {
+        'usuario': usuario,
+        'modulos': modulos,
+        'menus_usuario': menus_usuario,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/usuario_menu_manage.html', context)

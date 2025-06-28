@@ -64,4 +64,11 @@ def status_badge(status):
         'rejeitada': 'danger',
     }
     color = status_map.get(status, 'secondary')
-    return mark_safe(f'<span class="badge bg-{color}">{status.title()}</span>') 
+    return mark_safe(f'<span class="badge bg-{color}">{status.title()}</span>')
+
+@register.filter
+def get_item(dictionary, key):
+    """Retorna um item de um dicionário usando a chave fornecida"""
+    if dictionary is None:
+        return None
+    return dictionary.get(key) 

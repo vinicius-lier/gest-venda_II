@@ -133,6 +133,12 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     {% endif %}
+                                    {% if request.user.is_superuser or usuario_sistema.perfil.nome == 'ti' or usuario_sistema.perfil.nome == 'gerente' %}
+                                    <a href="{% url 'core:usuario_menu_manage' usuario.pk %}" 
+                                       class="btn btn-sm btn-primary" title="Configurar Menus">
+                                        <i class="fas fa-cogs"></i>
+                                    </a>
+                                    {% endif %}
                                     {% if perms.core.delete_usuario and usuario.status == 'ativo' %}
                                     <a href="{% url 'core:usuario_delete' usuario.pk %}" 
                                        class="btn btn-sm btn-danger" title="Excluir">

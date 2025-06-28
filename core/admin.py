@@ -6,7 +6,7 @@ from .models import (
     Cliente, Motocicleta, HistoricoProprietario,
     Venda, Consignacao, Seguradora, PlanoSeguro, Bem,
     CotacaoSeguro, Seguro, Repasse, AssinaturaDigital, 
-    Ocorrencia, ComentarioOcorrencia
+    Ocorrencia, ComentarioOcorrencia, MenuUsuario, MenuPerfil
 )
 
 # ============================================================================
@@ -415,4 +415,21 @@ class ComentarioOcorrenciaAdmin(admin.ModelAdmin):
     date_hierarchy = 'data_criacao'
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('ocorrencia', 'autor__user') 
+        return super().get_queryset(request).select_related('ocorrencia', 'autor__user')
+
+@admin.register(MenuUsuario)
+class MenuUsuarioAdmin(admin.ModelAdmin):
+    list_display = ['usuario', 'modulo', 'ativo']
+    list_filter = ['ativo', 'modulo']
+    search_fields = ['usuario__user__username', 'usuario__user__first_name', 'modulo']
+    list_editable = ['ativo']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('usuario__user')
+
+@admin.register(MenuPerfil)
+class MenuPerfilAdmin(admin.ModelAdmin):
+    list_display = ['perfil', 'modulo', 'ativo']
+    list_filter = ['ativo', 'modulo', 'perfil']
+    search_fields = ['perfil__nome', 'modulo']
+    list_editable = ['ativo'] 

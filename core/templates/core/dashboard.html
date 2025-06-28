@@ -201,29 +201,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 // Dados para os gráficos
-window.rankingVendedoresLabels = [
-    {% for vendedor in ranking_vendedores %}
-        '{{ vendedor.user.first_name|default:vendedor.user.username }}',
-    {% endfor %}
-];
-
-window.rankingVendedoresData = [
-    {% for vendedor in ranking_vendedores %}
-        {{ vendedor.total_vendas }},
-    {% endfor %}
-];
-
-window.rankingMotosLabels = [
-    {% for moto in ranking_motos %}
-        '{{ moto.marca }} {{ moto.modelo }}',
-    {% endfor %}
-];
-
-window.rankingMotosData = [
-    {% for moto in ranking_motos %}
-        {{ moto.total_vendas }},
-    {% endfor %}
-];
+window.rankingVendedoresLabels = {{ ranking_vendedores_labels|safe }};
+window.rankingVendedoresData = {{ ranking_vendedores_data|safe }};
+window.rankingMotosLabels = {{ ranking_motos_labels|safe }};
+window.rankingMotosData = {{ ranking_motos_data|safe }};
 </script>
 <script src="{% static 'core/js/dashboard-charts.js' %}"></script>
 {% endblock %} 

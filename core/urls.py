@@ -110,4 +110,7 @@ urlpatterns = [
     
     # AJAX
     path('ajax/buscar-motocicleta/', views.buscar_motocicleta, name='buscar_motocicleta'),
+    
+    # Administração de Menu por Usuário
+    path('usuario/<int:usuario_id>/menu/', views.usuario_menu_manage, name='usuario_menu_manage'),
 ] 

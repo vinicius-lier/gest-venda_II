@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Gestão de Menus - {{ usuario.user.get_full_name }}{% endblock %}
+
+{% block page_title %}Gestão de Menus - {{ usuario.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-cog me-2"></i>
+                    Configuração de Menus para {{ usuario.user.get_full_name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Informações:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Marque os módulos que este usuário deve ter acesso</li>
+                        <li>Se um módulo não estiver marcado, o usuário não verá essa opção no menu</li>
+                        <li>Esta configuração tem prioridade sobre a configuração do perfil</li>
+                    </ul>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-start">Módulo</th>
+                                    <th class="text-center">Acesso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cod, nome in modulos %}
+                                <tr>
+                                    <td class="text-start">
+                                        <strong>{{ nome }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ cod }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input type="checkbox" 
+                                                   class="form-check-input" 
+                                                   name="{{ usuario.pk }}_{{ cod }}" 
+                                                   value="1" 
+                                                   id="check_{{ usuario.pk }}_{{ cod }}"
+                                                   {% if menus_usuario|get_item:cod %}checked{% endif %}>
+                                            <label class="form-check-label ms-2" for="check_{{ usuario.pk }}_{{ cod }}">
+                                                {% if menus_usuario|get_item:cod %}
+                                                    <span class="text-success"><i class="fas fa-check"></i> Ativo</span>
+                                                {% else %}
+                                                    <span class="text-danger"><i class="fas fa-times"></i> Inativo</span>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="{% url 'core:usuario_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Voltar
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-save me-1"></i> Salvar Configurações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

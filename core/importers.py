@@ -359,6 +359,8 @@ class DataImporter:
         self.total_count = len(df)
         success_count = 0
         error_count = 0
+        skipped_count = 0
+        skipped_motos = []  # Lista para armazenar motos ignoradas
         
         # Se não foi fornecido mapeamento, usar o padrão
         if not column_mapping:
@@ -387,13 +389,41 @@ class DataImporter:
             try:
                 # Verificar se a moto já existe pelo chassi
                 chassi = self._clean_string(get_mapped_value(row, 'chassi'))
-                if not chassi or chassi == '0' or chassi == '*' or chassi == 'N/LOCALIZADO':
-                    self.log_error(f"Chassi inválido: {chassi} (Linha {index + 2})")
-                    error_count += 1
+                
+                # Se não tem chassi ou chassi inválido, pular e registrar
+                if not chassi or chassi == '0' or chassi == '*' or chassi == 'N/LOCALIZADO' or chassi.strip() == '':
+                    marca = self._clean_string(get_mapped_value(row, 'marca')) or 'N/A'
+                    modelo = self._clean_string(get_mapped_value(row, 'modelo')) or 'N/A'
+                    placa = self._clean_string(get_mapped_value(row, 'placa')) or 'N/A'
+                    
+                    skipped_motos.append({
+                        'linha': index + 2,
+                        'marca': marca,
+                        'modelo': modelo,
+                        'placa': placa,
+                        'chassi': chassi or 'VAZIO',
+                        'motivo': 'Chassi inválido ou vazio'
+                    })
+                    
+                    self.log_error(f"Chassi inválido: {chassi} (Linha {index + 2}) - {marca} {modelo}")
+                    skipped_count += 1
                     continue
                 
                 if Motocicleta.objects.filter(chassi=chassi).exists():
+                    marca = self._clean_string(get_mapped_value(row, 'marca')) or 'N/A'
+                    modelo = self._clean_string(get_mapped_value(row, 'modelo')) or 'N/A'
+                    
+                    skipped_motos.append({
+                        'linha': index + 2,
+                        'marca': marca,
+                        'modelo': modelo,
+                        'placa': self._clean_string(get_mapped_value(row, 'placa')) or 'N/A',
+                        'chassi': chassi,
+                        'motivo': 'Chassi já existe no sistema'
+                    })
+                    
                     self.log_duplicate(f"Motocicleta com chassi {chassi} já existe", index + 2)
+                    skipped_count += 1
                     continue
                 
                 # Buscar proprietário se especificado (formato original)
@@ -505,11 +535,25 @@ class DataImporter:
                 success_count += 1
                 
             except Exception as e:
+                marca = self._clean_string(get_mapped_value(row, 'marca')) or 'N/A'
+                modelo = self._clean_string(get_mapped_value(row, 'modelo')) or 'N/A'
+                
+                skipped_motos.append({
+                    'linha': index + 2,
+                    'marca': marca,
+                    'modelo': modelo,
+                    'placa': self._clean_string(get_mapped_value(row, 'placa')) or 'N/A',
+                    'chassi': self._clean_string(get_mapped_value(row, 'chassi')) or 'N/A',
+                    'motivo': f'Erro: {str(e)}'
+                })
+                
                 self.log_error(f"Erro ao importar motocicleta: {str(e)}", index + 2)
                 error_count += 1
         
         self.success_count = success_count
         self.error_count = error_count
+        self.skipped_count = skipped_count
+        self.skipped_motos = skipped_motos  # Armazenar lista de motos ignoradas
         return error_count == 0
     
     @transaction.atomic
@@ -737,13 +781,21 @@ class DataImporter:
     
     def get_import_summary(self):
         """Retorna resumo da importação"""
-        return {
+        summary = {
             'total_count': self.total_count,
             'success_count': self.success_count,
             'error_count': self.error_count,
             'duplicates_count': self.duplicates_count,
             'errors': self.errors
         }
+        
+        # Adicionar informações sobre motos ignoradas se disponível
+        if hasattr(self, 'skipped_count'):
+            summary['skipped_count'] = self.skipped_count
+        if hasattr(self, 'skipped_motos'):
+            summary['skipped_motos'] = self.skipped_motos
+            
+        return summary
     
     def clear_logs(self):
         """Limpa os logs de importação"""

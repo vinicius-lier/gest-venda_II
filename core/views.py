@@ -1898,6 +1898,17 @@ def preview_import_motocicletas(request):
     
     # Lista de campos para mapeamento (mesmo quando não há arquivo)
     campos = ['marca', 'modelo', 'ano', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+    
+    # Verificar se há relatório de importação na sessão
+    import_report = request.session.get('import_report')
+    if import_report:
+        # Remover o relatório da sessão após exibir
+        del request.session['import_report']
+        return render(request, 'core/preview_import_motocicletas.html', {
+            'campos': campos,
+            'import_report': import_report
+        })
+    
     return render(request, 'core/preview_import_motocicletas.html', {'campos': campos})
 
 @csrf_exempt
@@ -2144,8 +2155,19 @@ def import_motocicletas(request):
 
             if success:
                 messages.success(request, f'Importação concluída! {summary["success_count"]} motocicletas importadas com sucesso.')
+                if summary.get("skipped_count", 0) > 0:
+                    messages.warning(request, f'{summary["skipped_count"]} motocicletas foram ignoradas (sem chassi válido ou duplicadas).')
                 if summary["error_count"] > 0:
                     messages.warning(request, f'{summary["error_count"]} registros com erros foram ignorados.')
+                
+                # Armazenar relatório na sessão para exibição
+                if summary.get("skipped_motos"):
+                    request.session['import_report'] = {
+                        'success_count': summary["success_count"],
+                        'skipped_count': summary.get("skipped_count", 0),
+                        'error_count': summary["error_count"],
+                        'skipped_motos': summary["skipped_motos"][:50]  # Limitar a 50 para não sobrecarregar a sessão
+                    }
             else:
                 messages.error(request, f'Erro na importação: {summary.get("errors", ["Erro desconhecido"])[0] if summary.get("errors") else "Erro desconhecido"}')
 

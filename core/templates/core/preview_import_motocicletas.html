@@ -157,5 +157,101 @@
             </div>
         </div>
     </div>
+    
+    <!-- Relatório de Importação -->
+    {% if import_report %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-chart-bar"></i> Relatório de Importação
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="alert alert-success text-center">
+                                <h5>{{ import_report.success_count }}</h5>
+                                <small>Importadas com sucesso</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="alert alert-warning text-center">
+                                <h5>{{ import_report.skipped_count }}</h5>
+                                <small>Ignoradas</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="alert alert-danger text-center">
+                                <h5>{{ import_report.error_count }}</h5>
+                                <small>Com erros</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="alert alert-info text-center">
+                                <h5>{{ import_report.success_count|add:import_report.skipped_count|add:import_report.error_count }}</h5>
+                                <small>Total processadas</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if import_report.skipped_motos %}
+                    <h5><i class="fas fa-exclamation-triangle text-warning"></i> Motocicletas não importadas:</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Linha</th>
+                                    <th>Marca</th>
+                                    <th>Modelo</th>
+                                    <th>Placa</th>
+                                    <th>Chassi</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for moto in import_report.skipped_motos %}
+                                <tr>
+                                    <td>{{ moto.linha }}</td>
+                                    <td>{{ moto.marca }}</td>
+                                    <td>{{ moto.modelo }}</td>
+                                    <td>{{ moto.placa }}</td>
+                                    <td>
+                                        {% if moto.chassi == 'VAZIO' %}
+                                            <span class="badge bg-danger">Vazio</span>
+                                        {% else %}
+                                            {{ moto.chassi }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if 'Chassi inválido' in moto.motivo %}
+                                            <span class="badge bg-warning text-dark">Chassi inválido</span>
+                                        {% elif 'já existe' in moto.motivo %}
+                                            <span class="badge bg-info">Duplicada</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ moto.motivo }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted">
+                        <small>
+                            <i class="fas fa-info-circle"></i> 
+                            Motocicletas sem chassi válido ou com chassi duplicado foram automaticamente ignoradas.
+                            {% if import_report.skipped_motos|length >= 50 %}
+                                <br>Mostrando apenas as primeiras 50 motos ignoradas.
+                            {% endif %}
+                        </small>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %} 

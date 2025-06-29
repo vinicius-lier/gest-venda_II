@@ -352,9 +352,16 @@ class DataImporter:
     @transaction.atomic
     def import_motocicletas(self, file: UploadedFile, column_mapping=None):
         """Importa motocicletas do arquivo com mapeamento de colunas opcional"""
+        print(f"DEBUG: Iniciando importação de motocicletas")
+        print(f"DEBUG: Column mapping: {column_mapping}")
+        
         df = self.read_file(file)
         if df is None:
+            print("DEBUG: Falha ao ler arquivo")
             return False
+        
+        print(f"DEBUG: DataFrame carregado com {len(df)} linhas")
+        print(f"DEBUG: Colunas do DataFrame: {list(df.columns)}")
         
         self.total_count = len(df)
         success_count = 0
@@ -387,26 +394,31 @@ class DataImporter:
         
         for index, row in df.iterrows():
             try:
-                # Verificar se a moto já existe pelo chassi
-                chassi = self._clean_string(get_mapped_value(row, 'chassi'))
+                # Extrair dados usando o mapeamento
+                dados = {}
+                for campo, possiveis_nomes in column_mapping.items():
+                    valor = None
+                    for nome in possiveis_nomes:
+                        if nome in row:
+                            valor = row[nome]
+                            break
+                    dados[campo] = valor
                 
-                # Se não tem chassi ou chassi inválido, pular e registrar
-                if not chassi or chassi == '0' or chassi == '*' or chassi == 'N/LOCALIZADO' or chassi.strip() == '':
-                    marca = self._clean_string(get_mapped_value(row, 'marca')) or 'N/A'
-                    modelo = self._clean_string(get_mapped_value(row, 'modelo')) or 'N/A'
-                    placa = self._clean_string(get_mapped_value(row, 'placa')) or 'N/A'
-                    
-                    skipped_motos.append({
-                        'linha': index + 2,
-                        'marca': marca,
-                        'modelo': modelo,
-                        'placa': placa,
-                        'chassi': chassi or 'VAZIO',
-                        'motivo': 'Chassi inválido ou vazio'
-                    })
-                    
-                    self.log_error(f"Chassi inválido: {chassi} (Linha {index + 2}) - {marca} {modelo}")
+                print(f"DEBUG: Linha {index + 1} - Dados extraídos: {dados}")
+                
+                # Validar chassi
+                chassi = str(dados.get('chassi', '')).strip()
+                if not chassi or chassi in ['0', '*', 'N/LOCALIZADO', 'nan']:
+                    print(f"DEBUG: Linha {index + 1} - Chassi inválido: '{chassi}' - IGNORANDO")
                     skipped_count += 1
+                    skipped_motos.append({
+                        'linha': index + 1,
+                        'marca': dados.get('marca', 'N/A'),
+                        'modelo': dados.get('modelo', 'N/A'),
+                        'placa': dados.get('placa', 'N/A'),
+                        'chassi': chassi,
+                        'motivo': 'Chassi inválido'
+                    })
                     continue
                 
                 if Motocicleta.objects.filter(chassi=chassi).exists():
@@ -510,28 +522,22 @@ class DataImporter:
                 # Observações
                 observacoes = self._clean_string(get_mapped_value(row, 'observacoes'))
                 
-                moto = Motocicleta.objects.create(
+                # Criar a motocicleta
+                motocicleta = Motocicleta.objects.create(
+                    marca=dados.get('marca', ''),
+                    modelo=dados.get('modelo', ''),
+                    ano=dados.get('ano', ''),
+                    cor=dados.get('cor', ''),
+                    placa=dados.get('placa', ''),
                     chassi=chassi,
-                    placa=placa if placa and placa != '*' else None,
-                    renavam=renavam if renavam and renavam != '0' else None,
-                    marca=marca,
-                    modelo=modelo,
-                    ano=ano,
-                    cor=cor,
-                    cilindrada='',  # Não disponível no arquivo
-                    tipo_entrada=tipo_entrada,
-                    origem='cliente',
-                    status=status,
-                    proprietario=proprietario,
-                    fornecedor=fornecedor,
-                    valor_entrada=valor_entrada,
-                    valor_atual=valor_atual,
-                    data_entrada=data_entrada,
-                    observacoes=observacoes,
+                    valor_entrada=self._parse_decimal(dados.get('valor_entrada')),
+                    valor_atual=self._parse_decimal(dados.get('valor_atual')),
+                    status=dados.get('status', 'estoque'),
+                    observacoes=dados.get('observacoes', ''),
                     ativo=True
                 )
                 
-                self.log_success(f"Motocicleta {moto.marca} {moto.modelo} importada com sucesso")
+                print(f"DEBUG: Linha {index + 1} - Motocicleta criada com sucesso: {motocicleta.marca} {motocicleta.modelo} (Chassi: {motocicleta.chassi})")
                 success_count += 1
                 
             except Exception as e:

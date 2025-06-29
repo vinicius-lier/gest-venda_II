@@ -523,10 +523,23 @@ class DataImporter:
                 observacoes = self._clean_string(get_mapped_value(row, 'observacoes'))
                 
                 # Criar a motocicleta
+                ano = dados.get('ano', '')
+                if ano:
+                    # Tratar formato "2024/2025" ou apenas "2025"
+                    ano_str = str(ano).strip()
+                    if '/' in ano_str:
+                        # Se tem barra, pegar o ano modelo (último ano)
+                        ano = ano_str.split('/')[-1][:4]
+                    else:
+                        # Se não tem barra, usar o ano como está
+                        ano = ano_str[:4]
+                else:
+                    ano = ''
+                
                 motocicleta = Motocicleta.objects.create(
                     marca=dados.get('marca', ''),
                     modelo=dados.get('modelo', ''),
-                    ano=dados.get('ano', ''),
+                    ano=ano,
                     cor=dados.get('cor', ''),
                     placa=dados.get('placa', ''),
                     chassi=chassi,

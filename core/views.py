@@ -13,7 +13,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .importers import DataImporter, MotocicletaImporter
+from .importers import DataImporter
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 import csv

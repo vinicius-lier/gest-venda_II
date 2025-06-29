@@ -103,6 +103,7 @@ urlpatterns = [
     path('importar/', views.import_data, name='import_data'),
     path('importar/lojas/', views.import_lojas, name='import_lojas'),
     path('importar/clientes/', views.import_clientes, name='import_clientes'),
+    path('importar/motocicletas/', views.import_motocicletas, name='import_motocicletas'),
     path('importar/preview-motocicletas/', views.preview_import_motocicletas, name='preview_import_motocicletas'),
     path('importar/preview-clientes/', views.preview_import_clientes, name='preview_import_clientes'),
     path('importar/preview-vendas/', views.preview_import_vendas, name='preview_import_vendas'),

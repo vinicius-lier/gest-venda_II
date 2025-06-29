@@ -13,7 +13,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .importers import DataImporter
+from .importers import DataImporter, MotocicletaImporter
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 import csv
@@ -1882,7 +1882,7 @@ def preview_import_motocicletas(request):
                 continue
         if df is None:
             messages.error(request, 'Não foi possível ler o arquivo CSV. Tente salvar como CSV (separado por vírgula) e tente novamente.')
-            return redirect('core:import_motocicletas')
+            return redirect('core:preview_import_motocicletas')
         colunas = list(df.columns)
         preview = df.head(5).values.tolist()
         
@@ -2095,3 +2095,68 @@ def usuario_menu_manage(request, usuario_id):
     }
     
     return render(request, 'core/usuario_menu_manage.html', context)
+
+@login_required
+def import_motocicletas(request):
+    """Processa a importação de motocicletas com base no mapeamento"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+
+    if request.method == 'POST':
+        # Verificar se existe arquivo temporário na sessão
+        temp_file_path = request.session.get('temp_file_path')
+        if not temp_file_path or not os.path.exists(temp_file_path):
+            messages.error(request, 'Arquivo não encontrado. Faça upload novamente.')
+            return redirect('core:preview_import_motocicletas')
+
+        # Extrair mapeamento das colunas
+        column_mapping = {}
+        campos = ['marca', 'modelo', 'ano', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+        
+        for campo in campos:
+            map_key = f'map_{campo}'
+            if map_key in request.POST and request.POST[map_key]:
+                column_mapping[campo] = request.POST[map_key]
+
+        # Verificar campos obrigatórios
+        campos_obrigatorios = ['marca', 'modelo', 'chassi']
+        campos_faltando = [campo for campo in campos_obrigatorios if campo not in column_mapping]
+        
+        if campos_faltando:
+            messages.error(request, f'Campos obrigatórios não mapeados: {", ".join(campos_faltando)}')
+            return redirect('core:preview_import_motocicletas')
+
+        try:
+            # Importar usando o importador
+            from .importers import DataImporter
+            importer = DataImporter()
+            success = importer.import_motocicletas(temp_file_path, column_mapping)
+            summary = importer.get_import_summary()
+            
+            # Limpar arquivo temporário
+            try:
+                os.remove(temp_file_path)
+                del request.session['temp_file_path']
+            except:
+                pass
+
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} motocicletas importadas com sucesso.')
+                if summary["error_count"] > 0:
+                    messages.warning(request, f'{summary["error_count"]} registros com erros foram ignorados.')
+            else:
+                messages.error(request, f'Erro na importação: {summary.get("errors", ["Erro desconhecido"])[0] if summary.get("errors") else "Erro desconhecido"}')
+
+        except Exception as e:
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            # Limpar arquivo temporário em caso de erro
+            try:
+                os.remove(temp_file_path)
+                del request.session['temp_file_path']
+            except:
+                pass
+
+        return redirect('core:preview_import_motocicletas')
+
+    return redirect('core:preview_import_motocicletas')

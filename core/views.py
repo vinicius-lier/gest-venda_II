@@ -2117,7 +2117,8 @@ def import_motocicletas(request):
         for campo in campos:
             map_key = f'map_{campo}'
             if map_key in request.POST and request.POST[map_key]:
-                column_mapping[campo] = request.POST[map_key]
+                # Converter para o formato esperado pelo importador (lista de possíveis nomes)
+                column_mapping[campo] = [request.POST[map_key]]
 
         # Verificar campos obrigatórios
         campos_obrigatorios = ['marca', 'modelo', 'chassi']

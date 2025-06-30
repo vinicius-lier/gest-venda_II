@@ -60,7 +60,6 @@ else:
     
     # Configurações para desenvolvimento
     TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp_uploads')
-    FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp_uploads')
     FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
     DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 

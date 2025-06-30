@@ -1860,41 +1860,75 @@ def preview_import_motocicletas(request):
         import tempfile
         import os
         
-        # Criar arquivo temporário
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
-        os.makedirs(temp_dir, exist_ok=True)
+        # Usar configuração do settings
+        temp_dir = getattr(settings, 'TEMP_DIR', '/tmp')
+        
+        # Criar diretório se não existir (apenas em desenvolvimento)
+        if not os.path.exists(temp_dir):
+            try:
+                os.makedirs(temp_dir, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Erro ao criar diretório temporário: {str(e)}")
+                messages.error(request, 'Erro ao criar diretório temporário.')
+                return redirect('core:preview_import_motocicletas')
         
         temp_file_path = os.path.join(temp_dir, f"temp_{request.user.id}_{file.name}")
-        with open(temp_file_path, 'wb+') as temp_file:
-            for chunk in file.chunks():
-                temp_file.write(chunk)
         
-        # Armazenar o caminho do arquivo temporário na sessão
-        request.session['temp_file_path'] = temp_file_path
-        
-        encodings = ['latin1', 'utf-8-sig', 'utf-8', 'cp1252', 'iso-8859-1', 'windows-1252']
-        df = None
-        for encoding in encodings:
+        try:
+            with open(temp_file_path, 'wb+') as temp_file:
+                for chunk in file.chunks():
+                    temp_file.write(chunk)
+            
+            # Armazenar o caminho do arquivo temporário na sessão
+            request.session['temp_file_path'] = temp_file_path
+            
+            # Tentar ler o arquivo com diferentes encodings
+            encodings = ['latin1', 'utf-8-sig', 'utf-8', 'cp1252', 'iso-8859-1', 'windows-1252']
+            df = None
+            
+            for encoding in encodings:
+                try:
+                    df = pd.read_csv(temp_file_path, encoding=encoding, nrows=10)
+                    break
+                except Exception as e:
+                    logger.warning(f"Falha ao ler com encoding {encoding}: {str(e)}")
+                    continue
+            
+            if df is None:
+                messages.error(request, 'Não foi possível ler o arquivo CSV. Tente salvar como CSV (separado por vírgula) e tente novamente.')
+                # Limpar arquivo temporário
+                try:
+                    os.remove(temp_file_path)
+                    del request.session['temp_file_path']
+                except:
+                    pass
+                return redirect('core:preview_import_motocicletas')
+            
+            colunas = list(df.columns)
+            preview = df.head(5).values.tolist()
+            
+            # Lista de campos para mapeamento
+            campos = ['marca', 'modelo', 'ano', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+            
+            return render(request, 'core/preview_import_motocicletas.html', {
+                'colunas': colunas,
+                'preview': preview,
+                'arquivo_nome': file.name,
+                'campos': campos,
+            })
+            
+        except Exception as e:
+            logger.error(f"Erro ao processar arquivo: {str(e)}")
+            messages.error(request, f'Erro ao processar arquivo: {str(e)}')
+            # Limpar arquivo temporário
             try:
-                df = pd.read_csv(temp_file_path, encoding=encoding, nrows=10)
-                break
-            except Exception:
-                continue
-        if df is None:
-            messages.error(request, 'Não foi possível ler o arquivo CSV. Tente salvar como CSV (separado por vírgula) e tente novamente.')
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+                if 'temp_file_path' in request.session:
+                    del request.session['temp_file_path']
+            except:
+                pass
             return redirect('core:preview_import_motocicletas')
-        colunas = list(df.columns)
-        preview = df.head(5).values.tolist()
-        
-        # Lista de campos para mapeamento
-        campos = ['marca', 'modelo', 'ano', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
-        
-        return render(request, 'core/preview_import_motocicletas.html', {
-            'colunas': colunas,
-            'preview': preview,
-            'arquivo_nome': file.name,
-            'campos': campos,
-        })
     
     # Lista de campos para mapeamento (mesmo quando não há arquivo)
     campos = ['marca', 'modelo', 'ano', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
@@ -2117,8 +2151,16 @@ def import_motocicletas(request):
     if request.method == 'POST':
         # Verificar se existe arquivo temporário na sessão
         temp_file_path = request.session.get('temp_file_path')
-        if not temp_file_path or not os.path.exists(temp_file_path):
+        if not temp_file_path:
             messages.error(request, 'Arquivo não encontrado. Faça upload novamente.')
+            return redirect('core:preview_import_motocicletas')
+        
+        # Verificar se o arquivo existe
+        if not os.path.exists(temp_file_path):
+            messages.error(request, 'Arquivo temporário não encontrado. Faça upload novamente.')
+            # Limpar sessão
+            if 'temp_file_path' in request.session:
+                del request.session['temp_file_path']
             return redirect('core:preview_import_motocicletas')
 
         # Extrair mapeamento das colunas
@@ -2131,13 +2173,13 @@ def import_motocicletas(request):
                 # Converter para o formato esperado pelo importador (lista de possíveis nomes)
                 column_mapping[campo] = [request.POST[map_key]]
 
-        # Verificar campos obrigatórios
-        campos_obrigatorios = ['marca', 'modelo', 'chassi']
-        campos_faltando = [campo for campo in campos_obrigatorios if campo not in column_mapping]
-        
-        if campos_faltando:
-            messages.error(request, f'Campos obrigatórios não mapeados: {", ".join(campos_faltando)}')
-            return redirect('core:preview_import_motocicletas')
+        # Verificar campos obrigatórios - REMOVIDO PARA PERMITIR IMPORTAR MESMO COM DADOS DIVERGENTES
+        # campos_obrigatorios = ['marca', 'modelo', 'chassi']
+        # campos_faltando = [campo for campo in campos_obrigatorios if campo not in column_mapping]
+        # 
+        # if campos_faltando:
+        #     messages.error(request, f'Campos obrigatórios não mapeados: {", ".join(campos_faltando)}')
+        #     return redirect('core:preview_import_motocicletas')
 
         try:
             # Importar usando o importador
@@ -2150,13 +2192,13 @@ def import_motocicletas(request):
             try:
                 os.remove(temp_file_path)
                 del request.session['temp_file_path']
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Erro ao limpar arquivo temporário: {str(e)}")
 
             if success:
                 messages.success(request, f'Importação concluída! {summary["success_count"]} motocicletas importadas com sucesso.')
                 if summary.get("skipped_count", 0) > 0:
-                    messages.warning(request, f'{summary["skipped_count"]} motocicletas foram ignoradas (sem chassi válido ou duplicadas).')
+                    messages.warning(request, f'{summary["skipped_count"]} motocicletas foram ignoradas (duplicadas ou com erros).')
                 if summary["error_count"] > 0:
                     messages.warning(request, f'{summary["error_count"]} registros com erros foram ignorados.')
                 
@@ -2172,13 +2214,16 @@ def import_motocicletas(request):
                 messages.error(request, f'Erro na importação: {summary.get("errors", ["Erro desconhecido"])[0] if summary.get("errors") else "Erro desconhecido"}')
 
         except Exception as e:
+            logger.error(f"Erro durante a importação: {str(e)}")
             messages.error(request, f'Erro durante a importação: {str(e)}')
             # Limpar arquivo temporário em caso de erro
             try:
-                os.remove(temp_file_path)
-                del request.session['temp_file_path']
-            except:
-                pass
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+                if 'temp_file_path' in request.session:
+                    del request.session['temp_file_path']
+            except Exception as cleanup_error:
+                logger.warning(f"Erro ao limpar arquivo temporário: {str(cleanup_error)}")
 
         return redirect('core:preview_import_motocicletas')
 

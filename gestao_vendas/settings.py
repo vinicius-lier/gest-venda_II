@@ -46,12 +46,24 @@ if IS_PRODUCTION:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    
+    # Configurações específicas para Heroku
+    TEMP_DIR = '/tmp'
+    FILE_UPLOAD_TEMP_DIR = '/tmp'
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB
 else:
     DEBUG = True
     # Configurações para desenvolvimento
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    
+    # Configurações para desenvolvimento
+    TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp_uploads')
+    FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp_uploads')
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 
 # Application definition
 

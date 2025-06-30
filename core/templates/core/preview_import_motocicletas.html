@@ -42,6 +42,9 @@
                             <li>Use codificação UTF-8 ou Latin1</li>
                             <li>Faça upload do arquivo e visualize as colunas detectadas</li>
                             <li>Mapeie cada coluna do CSV para o campo correspondente do sistema</li>
+                            <li><strong>NOVO:</strong> O sistema agora permite importar motocicletas mesmo com dados divergentes</li>
+                            <li>Chassis inválidos serão substituídos por identificadores temporários</li>
+                            <li>Campos não mapeados receberão valores padrão ("NÃO INFORMADO")</li>
                             <li>Clique em "Importar Motocicletas" para finalizar</li>
                         </ul>
                     </div>
@@ -112,7 +115,7 @@
                             {% for campo in campos %}
                             <div class="col-md-4 mb-3">
                                 <label class="form-label"><strong>{{ campo|capfirst }}:</strong></label>
-                                <select name="map_{{ campo }}" class="form-control" {% if campo == 'marca' or campo == 'modelo' or campo == 'chassi' %}required{% endif %}>
+                                <select name="map_{{ campo }}" class="form-control">
                                     <option value="">Selecione a coluna...</option>
                                     {% for col in colunas %}
                                     <option value="{{ col }}">{{ col }}</option>
@@ -120,19 +123,19 @@
                                 </select>
                                 <small class="form-text text-muted">
                                     {% if campo == 'marca' %}
-                                        Campo obrigatório - marca da motocicleta
+                                        Campo importante - marca da motocicleta (será "NÃO INFORMADO" se não mapeado)
                                     {% elif campo == 'modelo' %}
-                                        Campo obrigatório - modelo da motocicleta
+                                        Campo importante - modelo da motocicleta (será "NÃO INFORMADO" se não mapeado)
                                     {% elif campo == 'chassi' %}
-                                        Campo obrigatório - chassi (identificador único)
+                                        Campo importante - chassi (será gerado automaticamente se inválido)
                                     {% elif campo == 'placa' %}
-                                        Campo importante - placa da moto
+                                        Campo opcional - placa da moto
                                     {% elif campo == 'valor_entrada' %}
                                         Campo opcional - valor de entrada
                                     {% elif campo == 'valor_atual' %}
                                         Campo opcional - valor atual
                                     {% elif campo == 'ano' %}
-                                        Campo opcional - ano de fabricação
+                                        Campo opcional - ano de fabricação (será "NÃO INFORMADO" se não mapeado)
                                     {% elif campo == 'status' %}
                                         Status: estoque, vendida, consignada
                                     {% else %}
@@ -218,8 +221,10 @@
                                     <td>{{ moto.modelo }}</td>
                                     <td>{{ moto.placa }}</td>
                                     <td>
-                                        {% if moto.chassi == 'VAZIO' %}
-                                            <span class="badge bg-danger">Vazio</span>
+                                        {% if moto.chassi == 'VAZIO' or moto.chassi == '0' or moto.chassi == '*' or moto.chassi == 'N/LOCALIZADO' %}
+                                            <span class="badge bg-danger">Vazio/Inválido</span>
+                                        {% elif 'TEMP_' in moto.chassi %}
+                                            <span class="badge bg-warning text-dark">Temporário</span>
                                         {% else %}
                                             {{ moto.chassi }}
                                         {% endif %}
@@ -229,6 +234,8 @@
                                             <span class="badge bg-warning text-dark">Chassi inválido</span>
                                         {% elif 'já existe' in moto.motivo %}
                                             <span class="badge bg-info">Duplicada</span>
+                                        {% elif 'Temporário' in moto.motivo %}
+                                            <span class="badge bg-success">Importada com chassi temporário</span>
                                         {% else %}
                                             <span class="badge bg-danger">{{ moto.motivo }}</span>
                                         {% endif %}
@@ -241,9 +248,10 @@
                     <p class="text-muted">
                         <small>
                             <i class="fas fa-info-circle"></i> 
-                            Motocicletas sem chassi válido ou com chassi duplicado foram automaticamente ignoradas.
+                            Motocicletas com chassi inválido foram importadas com identificadores temporários.
+                            Motocicletas duplicadas foram automaticamente ignoradas.
                             {% if import_report.skipped_motos|length >= 50 %}
-                                <br>Mostrando apenas as primeiras 50 motos ignoradas.
+                                <br>Mostrando apenas as primeiras 50 motos processadas.
                             {% endif %}
                         </small>
                     </p>

@@ -352,16 +352,16 @@ class DataImporter:
     @transaction.atomic
     def import_motocicletas(self, file: UploadedFile, column_mapping=None):
         """Importa motocicletas do arquivo com mapeamento de colunas opcional"""
-        print(f"DEBUG: Iniciando importação de motocicletas")
-        print(f"DEBUG: Column mapping: {column_mapping}")
+        logger.info(f"Iniciando importação de motocicletas")
+        logger.info(f"Column mapping: {column_mapping}")
         
         df = self.read_file(file)
         if df is None:
-            print("DEBUG: Falha ao ler arquivo")
+            logger.error("Falha ao ler arquivo")
             return False
         
-        print(f"DEBUG: DataFrame carregado com {len(df)} linhas")
-        print(f"DEBUG: Colunas do DataFrame: {list(df.columns)}")
+        logger.info(f"DataFrame carregado com {len(df)} linhas")
+        logger.info(f"Colunas do DataFrame: {list(df.columns)}")
         
         self.total_count = len(df)
         success_count = 0
@@ -404,24 +404,20 @@ class DataImporter:
                             break
                     dados[campo] = valor
                 
-                print(f"DEBUG: Linha {index + 1} - Dados extraídos: {dados}")
+                logger.debug(f"Linha {index + 1} - Dados extraídos: {dados}")
                 
-                # Validar chassi
+                # Validar chassi - PERMITIR IMPORTAR MESMO COM CHASSI INVÁLIDO
                 chassi = str(dados.get('chassi', '')).strip()
-                if not chassi or chassi in ['0', '*', 'N/LOCALIZADO', 'nan']:
-                    print(f"DEBUG: Linha {index + 1} - Chassi inválido: '{chassi}' - IGNORANDO")
-                    skipped_count += 1
-                    skipped_motos.append({
-                        'linha': index + 1,
-                        'marca': dados.get('marca', 'N/A'),
-                        'modelo': dados.get('modelo', 'N/A'),
-                        'placa': dados.get('placa', 'N/A'),
-                        'chassi': chassi,
-                        'motivo': 'Chassi inválido'
-                    })
-                    continue
+                chassi_valido = True
                 
-                if Motocicleta.objects.filter(chassi=chassi).exists():
+                if not chassi or chassi in ['0', '*', 'N/LOCALIZADO', 'nan', 'None', '']:
+                    logger.warning(f"Linha {index + 1} - Chassi inválido: '{chassi}' - IMPORTANDO MESMO ASSIM")
+                    chassi_valido = False
+                    # Gerar chassi temporário para permitir importação
+                    chassi = f"TEMP_{index + 1}_{int(timezone.now().timestamp())}"
+                
+                # Verificar se chassi já existe (apenas se for válido)
+                if chassi_valido and Motocicleta.objects.filter(chassi=chassi).exists():
                     marca = self._clean_string(get_mapped_value(row, 'marca')) or 'N/A'
                     modelo = self._clean_string(get_mapped_value(row, 'modelo')) or 'N/A'
                     
@@ -448,12 +444,15 @@ class DataImporter:
                         # Criar cliente proprietário se não existir
                         proprietario_nome = self._clean_string(row.get('Proprietário', ''))
                         if proprietario_nome:
-                            proprietario = Cliente.objects.create(
-                                nome=proprietario_nome,
-                                cpf_cnpj=proprietario_cpf,
-                                telefone=self._clean_string(row.get('Tel Proprietário', '')),
-                                tipo='proprietario'
-                            )
+                            try:
+                                proprietario = Cliente.objects.create(
+                                    nome=proprietario_nome,
+                                    cpf_cnpj=proprietario_cpf,
+                                    telefone=self._clean_string(row.get('Tel Proprietário', '')),
+                                    tipo='proprietario'
+                                )
+                            except Exception as e:
+                                logger.warning(f"Erro ao criar proprietário: {str(e)}")
                 
                 # Buscar fornecedor se especificado (formato original)
                 fornecedor = None
@@ -465,19 +464,22 @@ class DataImporter:
                         # Criar cliente fornecedor se não existir
                         fornecedor_nome = self._clean_string(row.get('Fornecedor ', ''))
                         if fornecedor_nome:
-                            fornecedor = Cliente.objects.create(
-                                nome=fornecedor_nome,
-                                cpf_cnpj=fornecedor_cpf,
-                                telefone=self._clean_string(row.get('Tel Fornecedor', '')),
-                                tipo='fornecedor'
-                            )
+                            try:
+                                fornecedor = Cliente.objects.create(
+                                    nome=fornecedor_nome,
+                                    cpf_cnpj=fornecedor_cpf,
+                                    telefone=self._clean_string(row.get('Tel Fornecedor', '')),
+                                    tipo='fornecedor'
+                                )
+                            except Exception as e:
+                                logger.warning(f"Erro ao criar fornecedor: {str(e)}")
                 
                 # Mapear campos usando o mapeamento fornecido
-                marca = self._clean_string(get_mapped_value(row, 'marca'))
-                modelo = self._clean_string(get_mapped_value(row, 'modelo'))
-                placa = self._clean_string(get_mapped_value(row, 'placa'))
-                renavam = self._clean_string(row.get('Renavam', row.get('renavam', '')))
-                cor = self._clean_string(get_mapped_value(row, 'cor'))
+                marca = self._clean_string(get_mapped_value(row, 'marca')) or 'NÃO INFORMADO'
+                modelo = self._clean_string(get_mapped_value(row, 'modelo')) or 'NÃO INFORMADO'
+                placa = self._clean_string(get_mapped_value(row, 'placa')) or ''
+                renavam = self._clean_string(row.get('Renavam', row.get('renavam', ''))) or ''
+                cor = self._clean_string(get_mapped_value(row, 'cor')) or 'NÃO INFORMADO'
                 
                 # Extrair ano do campo mapeado
                 ano_field = self._clean_string(get_mapped_value(row, 'ano'))
@@ -488,25 +490,30 @@ class DataImporter:
                         ano = ano_field.split('/')[0]
                     else:
                         ano = ano_field
+                else:
+                    ano = 'NÃO INFORMADO'
                 
                 # Determinar status baseado no campo mapeado
-                status_field = self._clean_string(get_mapped_value(row, 'status')).lower()
-                status_text = status_field
-                
-                if 'vendida' in status_text:
-                    status = 'vendida'
-                elif 'salão' in status_text or 'salao' in status_text:
-                    status = 'estoque'
-                elif 'oficina' in status_text:
-                    status = 'manutencao'
-                elif 'pendência' in status_text or 'pendencia' in status_text:
-                    status = 'estoque'  # Tratar como estoque por enquanto
+                status_field = self._clean_string(get_mapped_value(row, 'status'))
+                if status_field:
+                    status_text = status_field.lower()
+                    
+                    if 'vendida' in status_text:
+                        status = 'vendida'
+                    elif 'salão' in status_text or 'salao' in status_text:
+                        status = 'estoque'
+                    elif 'oficina' in status_text:
+                        status = 'manutencao'
+                    elif 'pendência' in status_text or 'pendencia' in status_text:
+                        status = 'estoque'  # Tratar como estoque por enquanto
+                    else:
+                        status = 'estoque'
                 else:
                     status = 'estoque'
                 
                 # Determinar tipo de entrada
                 km_field = str(row.get('KM', '0'))
-                if '0km' in ano_field.lower() or '0' in km_field or '0km' in ano_field.lower():
+                if ano_field and ('0km' in ano_field.lower() or '0' in km_field or '0km' in ano_field.lower()):
                     tipo_entrada = '0km'
                 else:
                     tipo_entrada = 'usada'
@@ -520,38 +527,69 @@ class DataImporter:
                 data_entrada = self._parse_date(data_chegada) if data_chegada else timezone.now().date()
                 
                 # Observações
-                observacoes = self._clean_string(get_mapped_value(row, 'observacoes'))
+                observacoes = self._clean_string(get_mapped_value(row, 'observacoes')) or ''
                 
-                # Criar a motocicleta
-                ano = dados.get('ano', '')
-                if ano:
-                    # Tratar formato "2024/2025" ou apenas "2025"
-                    ano_str = str(ano).strip()
-                    if '/' in ano_str:
-                        # Se tem barra, pegar o ano modelo (último ano)
-                        ano = ano_str.split('/')[-1][:4]
-                    else:
-                        # Se não tem barra, usar o ano como está
-                        ano = ano_str[:4]
-                else:
-                    ano = ''
+                # Adicionar informação sobre chassi temporário nas observações
+                if not chassi_valido:
+                    observacoes = f"CHASSI TEMPORÁRIO - Dados originais divergentes. {observacoes}".strip()
                 
-                motocicleta = Motocicleta.objects.create(
-                    marca=dados.get('marca', ''),
-                    modelo=dados.get('modelo', ''),
-                    ano=ano,
-                    cor=dados.get('cor', ''),
-                    placa=dados.get('placa', ''),
-                    chassi=chassi,
-                    valor_entrada=self._parse_decimal(dados.get('valor_entrada')),
-                    valor_atual=self._parse_decimal(dados.get('valor_atual')),
-                    status=dados.get('status', 'estoque'),
-                    observacoes=dados.get('observacoes', ''),
-                    ativo=True
-                )
-                
-                print(f"DEBUG: Linha {index + 1} - Motocicleta criada com sucesso: {motocicleta.marca} {motocicleta.modelo} (Chassi: {motocicleta.chassi})")
-                success_count += 1
+                # Criar a motocicleta com tratamento de erros mais robusto
+                try:
+                    motocicleta = Motocicleta.objects.create(
+                        marca=marca,
+                        modelo=modelo,
+                        ano=ano,
+                        cor=cor,
+                        placa=placa,
+                        chassi=chassi,
+                        renavam=renavam,
+                        valor_entrada=valor_entrada,
+                        valor_atual=valor_atual,
+                        status=status,
+                        tipo_entrada=tipo_entrada,
+                        origem='cliente',  # Valor padrão
+                        observacoes=observacoes,
+                        proprietario=proprietario,
+                        fornecedor=fornecedor,
+                        data_entrada=data_entrada,
+                        ativo=True
+                    )
+                    
+                    logger.info(f"Linha {index + 1} - Motocicleta criada com sucesso: {motocicleta.marca} {motocicleta.modelo} (Chassi: {motocicleta.chassi})")
+                    success_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao criar motocicleta na linha {index + 1}: {str(e)}")
+                    # Tentar criar com dados mínimos
+                    try:
+                        motocicleta = Motocicleta.objects.create(
+                            marca=marca,
+                            modelo=modelo,
+                            ano=ano,
+                            cor=cor,
+                            placa=placa,
+                            chassi=chassi,
+                            valor_entrada=0,
+                            valor_atual=0,
+                            status='estoque',
+                            tipo_entrada='usada',
+                            origem='cliente',
+                            observacoes=f"IMPORTADO COM DADOS MÍNIMOS - Erro: {str(e)}. {observacoes}",
+                            ativo=True
+                        )
+                        logger.info(f"Linha {index + 1} - Motocicleta criada com dados mínimos: {motocicleta.marca} {motocicleta.modelo}")
+                        success_count += 1
+                    except Exception as e2:
+                        logger.error(f"Erro fatal ao criar motocicleta na linha {index + 1}: {str(e2)}")
+                        skipped_motos.append({
+                            'linha': index + 2,
+                            'marca': marca,
+                            'modelo': modelo,
+                            'placa': placa,
+                            'chassi': chassi,
+                            'motivo': f'Erro fatal: {str(e2)}'
+                        })
+                        error_count += 1
                 
             except Exception as e:
                 marca = self._clean_string(get_mapped_value(row, 'marca')) or 'N/A'

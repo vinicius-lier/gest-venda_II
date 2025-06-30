@@ -1,6 +1,6 @@
 # 🏍️ Sistema de Gestão Operacional de Vendas
 
-Sistema completo para gestão de vendas de motocicletas com controle de acesso baseado em roles (RBAC) e rastreamento completo de operações.
+Sistema completo para gestão de vendas de motocicletas, incluindo controle de estoque, clientes, vendas, consignações e seguros.
 
 ## 🚀 Características Principais
 
@@ -291,4 +291,71 @@ Para suporte, entre em contato através de:
 
 ---
 
-**Desenvolvido com ❤️ para gestão eficiente de vendas de motocicletas** 
+**Desenvolvido com ❤️ para gestão eficiente de vendas de motocicletas**
+
+## Importação de Dados - NOVO
+
+### Melhorias na Importação de Motocicletas
+
+O sistema agora permite importar motocicletas mesmo com dados divergentes do sistema anterior:
+
+#### Principais Melhorias:
+
+1. **Importação com Dados Divergentes**: 
+   - Chassis inválidos são substituídos por identificadores temporários
+   - Campos não mapeados recebem valores padrão ("NÃO INFORMADO")
+   - Sistema continua funcionando mesmo com dados incompletos
+
+2. **Tratamento Robusto de Erros**:
+   - Logs detalhados para debug
+   - Tratamento específico para ambiente Heroku
+   - Limpeza automática de arquivos temporários
+
+3. **Compatibilidade com Heroku**:
+   - Uso do diretório `/tmp` para arquivos temporários
+   - Configurações específicas para produção
+   - Melhor tratamento de memória
+
+#### Como Usar:
+
+1. Acesse **Importação > Motocicletas**
+2. Faça upload do arquivo CSV
+3. Mapeie as colunas (não é mais obrigatório mapear todos os campos)
+4. Clique em "Importar Motocicletas"
+
+#### Campos Importantes:
+
+- **Marca/Modelo**: Se não mapeados, recebem "NÃO INFORMADO"
+- **Chassi**: Se inválido, recebe identificador temporário (TEMP_linha_timestamp)
+- **Ano**: Se não mapeado, recebe "NÃO INFORMADO"
+- **Outros campos**: Valores padrão são aplicados automaticamente
+
+#### Comandos de Manutenção:
+
+```bash
+# Limpar arquivos temporários (local)
+python manage.py cleanup_temp_files
+
+# Limpar arquivos temporários (Heroku)
+heroku run python manage.py cleanup_temp_files --force
+
+# Limpar arquivos mais antigos que 12 horas
+python manage.py cleanup_temp_files --older-than 12 --force
+```
+
+## Estrutura do Projeto
+
+```
+gestao_operacional_vendas/
+├── core/                    # App principal
+│   ├── models.py           # Modelos de dados
+│   ├── views.py            # Views do sistema
+│   ├── forms.py            # Formulários
+│   ├── importers.py        # Sistema de importação
+│   └── templates/          # Templates HTML
+├── administrativo/         # App administrativo
+├── gestao_vendas/         # Configurações do projeto
+├── media/                 # Arquivos de mídia
+├── static/                # Arquivos estáticos
+└── requirements.txt       # Dependências
+``` 

@@ -127,6 +127,98 @@ class MotocicletaAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def delete_model(self, request, obj):
+        """Verifica dependências antes de excluir a motocicleta"""
+        from django.contrib import messages
+        
+        # Verificar se a moto pode ser excluída
+        if obj.vendas.exists():
+            messages.error(request, 'Não é possível excluir uma motocicleta que possui vendas registradas.')
+            return
+        
+        # Verificar se tem consignação
+        try:
+            consignacao = obj.consignacao
+            if consignacao:
+                messages.error(request, 'Não é possível excluir uma motocicleta que possui consignação ativa.')
+                return
+        except Exception:
+            pass  # Não tem consignação, pode continuar
+        
+        # Verificar se tem seguro
+        try:
+            seguro = obj.seguro
+            if seguro:
+                messages.error(request, 'Não é possível excluir uma motocicleta que possui seguro ativo.')
+                return
+        except Exception:
+            pass  # Não tem seguro, pode continuar
+        
+        if obj.repasses.exists():
+            messages.error(request, 'Não é possível excluir uma motocicleta que possui repasses registrados.')
+            return
+        
+        # Verificar se tem controle de chave
+        try:
+            from administrativo.models import ControleChave
+            if ControleChave.objects.filter(motocicleta=obj).exists():
+                messages.error(request, 'Não é possível excluir uma motocicleta que possui registros de controle de chave.')
+                return
+        except ImportError:
+            pass  # App administrativo não está disponível, pode continuar
+        
+        # Se chegou até aqui, pode excluir (marcar como inativo)
+        obj.ativo = False
+        obj.save()
+        messages.success(request, 'Motocicleta marcada como inativa com sucesso!')
+    
+    def delete_queryset(self, request, queryset):
+        """Verifica dependências antes de excluir múltiplas motocicletas"""
+        from django.contrib import messages
+        
+        for obj in queryset:
+            # Verificar se a moto pode ser excluída
+            if obj.vendas.exists():
+                messages.error(request, f'Não é possível excluir a motocicleta {obj} que possui vendas registradas.')
+                continue
+            
+            # Verificar se tem consignação
+            try:
+                consignacao = obj.consignacao
+                if consignacao:
+                    messages.error(request, f'Não é possível excluir a motocicleta {obj} que possui consignação ativa.')
+                    continue
+            except Exception:
+                pass  # Não tem consignação, pode continuar
+            
+            # Verificar se tem seguro
+            try:
+                seguro = obj.seguro
+                if seguro:
+                    messages.error(request, f'Não é possível excluir a motocicleta {obj} que possui seguro ativo.')
+                    continue
+            except Exception:
+                pass  # Não tem seguro, pode continuar
+            
+            if obj.repasses.exists():
+                messages.error(request, f'Não é possível excluir a motocicleta {obj} que possui repasses registrados.')
+                continue
+            
+            # Verificar se tem controle de chave
+            try:
+                from administrativo.models import ControleChave
+                if ControleChave.objects.filter(motocicleta=obj).exists():
+                    messages.error(request, f'Não é possível excluir a motocicleta {obj} que possui registros de controle de chave.')
+                    continue
+            except ImportError:
+                pass  # App administrativo não está disponível, pode continuar
+            
+            # Se chegou até aqui, pode excluir (marcar como inativo)
+            obj.ativo = False
+            obj.save()
+        
+        messages.success(request, 'Motocicletas processadas com sucesso!')
 
 @admin.register(HistoricoProprietario)
 class HistoricoProprietarioAdmin(admin.ModelAdmin):

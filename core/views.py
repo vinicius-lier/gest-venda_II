@@ -2227,3 +2227,17 @@ def import_motocicletas(request):
         return redirect('core:preview_import_motocicletas')
 
     return redirect('core:preview_import_motocicletas')
+
+def try_read_csv(file_path):
+    # Tenta diferentes separadores e encodings
+    separators = [',', ';', '\t']
+    encodings = ['utf-8', 'latin1']
+    for sep in separators:
+        for enc in encodings:
+            try:
+                df = pd.read_csv(file_path, sep=sep, encoding=enc)
+                if df.shape[1] > 1:
+                    return df, sep, enc
+            except Exception as e:
+                continue
+    return None, None, None

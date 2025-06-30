@@ -104,7 +104,7 @@ class MotocicletaAdmin(admin.ModelAdmin):
             'fields': ('chassi', 'placa', 'renavam', 'matricula')
         }),
         ('Características', {
-            'fields': ('marca', 'modelo', 'ano', 'cor', 'cilindrada')
+            'fields': ('marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'cilindrada')
         }),
         ('Classificação', {
             'fields': ('tipo_entrada', 'origem', 'status')

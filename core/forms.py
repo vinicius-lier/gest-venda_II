@@ -9,7 +9,7 @@ class MotocicletaForm(forms.ModelForm):
     class Meta:
         model = Motocicleta
         fields = [
-            'marca', 'modelo', 'ano', 'cor', 'cilindrada', 'chassi', 'placa', 'renavam',
+            'marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'cilindrada', 'chassi', 'placa', 'renavam',
             'tipo_entrada', 'origem', 'status', 'proprietario', 'fornecedor', 'loja_origem',
             'valor_entrada', 'valor_atual', 'data_entrada', 'observacoes',
             'foto_principal', 'foto_frontal', 'foto_traseira', 'foto_lado_esquerdo', 'foto_lado_direito',
@@ -25,6 +25,7 @@ class MotocicletaForm(forms.ModelForm):
             'placa': forms.TextInput(attrs={'class': 'form-control'}),
             'chassi': forms.TextInput(attrs={'class': 'form-control'}),
             'ano': forms.TextInput(attrs={'class': 'form-control'}),
+            'ano_fabricacao': forms.TextInput(attrs={'class': 'form-control'}),
             'cor': forms.TextInput(attrs={'class': 'form-control'}),
             'renavam': forms.TextInput(attrs={'class': 'form-control'}),
             'cilindrada': forms.TextInput(attrs={'class': 'form-control'}),

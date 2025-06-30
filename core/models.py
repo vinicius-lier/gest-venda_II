@@ -302,6 +302,7 @@ class Motocicleta(models.Model):
     marca = models.CharField(max_length=50)
     modelo = models.CharField(max_length=100)
     ano = models.CharField(max_length=4)
+    ano_fabricacao = models.CharField(max_length=4, blank=True, null=True, help_text="Ano de fabricação (quando diferente do ano do modelo)")
     cor = models.CharField(max_length=50)
     cilindrada = models.CharField(max_length=20, blank=True, null=True)
     
@@ -343,7 +344,10 @@ class Motocicleta(models.Model):
         verbose_name_plural = 'Motocicletas'
     
     def __str__(self):
-        return f"{self.marca} {self.modelo} {self.ano} - {self.placa or self.chassi}"
+        ano_display = self.ano
+        if self.ano_fabricacao and self.ano_fabricacao != self.ano:
+            ano_display = f"{self.ano}/{self.ano_fabricacao}"
+        return f"{self.marca} {self.modelo} {ano_display} - {self.placa or self.chassi}"
     
     def get_status_color(self):
         """Retorna a cor CSS para o status da motocicleta"""

@@ -1625,7 +1625,7 @@ def import_clientes(request):
                     return redirect('core:preview_import_clientes')
                 temp_file_path = request.FILES['file']
             
-            success = importer.import_motocicletas(temp_file_path, column_mapping)
+            success = importer.import_clientes(temp_file_path, column_mapping)
             summary = importer.get_import_summary()
             
             # Limpar arquivo temporário se existir
@@ -1636,16 +1636,16 @@ def import_clientes(request):
                     pass  # Ignorar erros de limpeza
             
             if success:
-                messages.success(request, f'Importação concluída! {summary["success_count"]} motocicletas importadas com sucesso.')
+                messages.success(request, f'Importação concluída! {summary["success_count"]} clientes importados com sucesso.')
             else:
-                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} motocicletas importadas, {summary["error_count"]} erros.')
+                messages.warning(request, f'Importação concluída com erros. {summary["success_count"]} clientes importados, {summary["error_count"]} erros.')
                 for error in summary.get('errors', [])[:5]:
                     messages.error(request, f'Erro: {error}')
             
-            return redirect('core:preview_import_motocicletas')
+            return redirect('core:preview_import_clientes')
         except Exception as e:
             messages.error(request, f'Erro durante a importação: {str(e)}')
-            return redirect('core:preview_import_motocicletas')
+            return redirect('core:preview_import_clientes')
     
     return render(request, 'core/import_motocicletas.html', {
         'usuario_sistema': request.user
@@ -2237,6 +2237,77 @@ def import_motocicletas(request):
         return redirect('core:preview_import_motocicletas')
 
     return redirect('core:preview_import_motocicletas')
+
+@login_required
+def import_clientes_process(request):
+    """Processa a importação de clientes com base no mapeamento"""
+    if not request.user.is_superuser:
+        messages.error(request, 'Apenas administradores podem importar dados.')
+        return redirect('core:dashboard')
+
+    if request.method == 'POST':
+        # Verificar se existe arquivo temporário na sessão
+        temp_file_path = request.session.get('temp_file_path_clientes')
+        if not temp_file_path:
+            messages.error(request, 'Arquivo não encontrado. Faça upload novamente.')
+            return redirect('core:preview_import_clientes')
+        
+        # Verificar se o arquivo existe
+        if not os.path.exists(temp_file_path):
+            messages.error(request, 'Arquivo temporário não encontrado. Faça upload novamente.')
+            # Limpar sessão
+            if 'temp_file_path_clientes' in request.session:
+                del request.session['temp_file_path_clientes']
+            return redirect('core:preview_import_clientes')
+
+        # Extrair mapeamento das colunas
+        column_mapping = {}
+        campos = ['nome', 'cpf_cnpj', 'rg', 'data_nascimento', 'telefone', 'email', 'endereco', 'cidade', 'estado', 'cep', 'tipo', 'observacoes']
+        
+        for campo in campos:
+            map_key = f'map_{campo}'
+            if map_key in request.POST and request.POST[map_key]:
+                # Converter para o formato esperado pelo importador (lista de possíveis nomes)
+                column_mapping[campo] = [request.POST[map_key]]
+
+        try:
+            # Importar usando o importador
+            from .importers import DataImporter
+            importer = DataImporter()
+            success = importer.import_clientes(temp_file_path, column_mapping)
+            summary = importer.get_import_summary()
+            
+            # Limpar arquivo temporário
+            try:
+                os.remove(temp_file_path)
+                del request.session['temp_file_path_clientes']
+            except Exception as e:
+                logger.warning(f"Erro ao limpar arquivo temporário: {str(e)}")
+
+            if success:
+                messages.success(request, f'Importação concluída! {summary["success_count"]} clientes importados com sucesso.')
+                if summary.get("skipped_count", 0) > 0:
+                    messages.warning(request, f'{summary["skipped_count"]} clientes foram ignorados (duplicados ou com erros).')
+                if summary["error_count"] > 0:
+                    messages.warning(request, f'{summary["error_count"]} registros com erros foram ignorados.')
+            else:
+                messages.error(request, f'Erro na importação: {summary.get("errors", ["Erro desconhecido"])[0] if summary.get("errors") else "Erro desconhecido"}')
+
+        except Exception as e:
+            logger.error(f"Erro durante a importação: {str(e)}")
+            messages.error(request, f'Erro durante a importação: {str(e)}')
+            # Limpar arquivo temporário em caso de erro
+            try:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+                if 'temp_file_path_clientes' in request.session:
+                    del request.session['temp_file_path_clientes']
+            except Exception as cleanup_error:
+                logger.warning(f"Erro ao limpar arquivo temporário: {str(cleanup_error)}")
+
+        return redirect('core:preview_import_clientes')
+
+    return redirect('core:preview_import_clientes')
 
 def try_read_file(file_path):
     ext = os.path.splitext(file_path)[1].lower()

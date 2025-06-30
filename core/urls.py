@@ -21,6 +21,7 @@ urlpatterns = [
     path('clientes/<int:pk>/', views.cliente_detail, name='cliente_detail'),
     path('clientes/<int:pk>/editar/', views.cliente_update, name='cliente_update'),
     path('clientes/<int:pk>/excluir/', views.cliente_delete, name='cliente_delete'),
+    path('clientes/<int:pk>/reativar/', views.cliente_reactivate, name='cliente_reactivate'),
     
     # Motocicletas
     path('motocicletas/', views.motocicleta_list, name='motocicleta_list'),

@@ -19,6 +19,12 @@
         </a>
         {% endif %}
         
+        {% if not cliente.ativo and perms.core.change_cliente %}
+        <a href="{% url 'core:cliente_reactivate' cliente.pk %}" class="btn btn-success">
+            <i class="fas fa-user-check me-1"></i>Reativar
+        </a>
+        {% endif %}
+        
         {% if perms.core.delete_cliente %}
         <a href="{% url 'core:cliente_delete' cliente.pk %}" class="btn btn-danger">
             <i class="fas fa-trash me-1"></i>Excluir

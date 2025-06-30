@@ -196,6 +196,23 @@ def cliente_create(request):
         form = ClienteForm(request.POST)
         if form.is_valid():
             try:
+                # Verificar se o cliente já existe pelo CPF/CNPJ
+                cpf_cnpj = form.cleaned_data.get('cpf_cnpj')
+                if cpf_cnpj:
+                    cliente_existente = Cliente.objects.filter(cpf_cnpj=cpf_cnpj).first()
+                    if cliente_existente:
+                        if cliente_existente.ativo:
+                            messages.error(request, f'Cliente com CPF/CNPJ {cpf_cnpj} já existe e está ativo.')
+                        else:
+                            messages.warning(request, f'Cliente com CPF/CNPJ {cpf_cnpj} já existe mas está inativo. Deseja reativá-lo?')
+                            # Redirecionar para a página de detalhes do cliente existente
+                            return redirect('core:cliente_detail', pk=cliente_existente.pk)
+                        return render(request, 'core/cliente_form.html', {
+                            'form': form,
+                            'cliente': None,
+                            'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+                        })
+                
                 cliente = form.save()
                 messages.success(request, 'Cliente registrado com sucesso!')
                 return redirect('core:cliente_list')
@@ -2338,3 +2355,21 @@ def try_read_file(file_path):
             except Exception as e:
                 continue
     return None, None, None
+
+@login_required
+def cliente_reactivate(request, pk):
+    """Reativa um cliente inativo"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_cliente')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para reativar clientes.'})
+    
+    cliente = get_object_or_404(Cliente, pk=pk)
+    if request.method == 'POST':
+        cliente.ativo = True
+        cliente.save()
+        messages.success(request, f'Cliente {cliente.nome} reativado com sucesso!')
+        return redirect('core:cliente_detail', pk=cliente.pk)
+    
+    return render(request, 'core/cliente_reactivate.html', {
+        'cliente': cliente,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })

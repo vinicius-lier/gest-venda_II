@@ -195,11 +195,19 @@ def cliente_create(request):
     if request.method == 'POST':
         form = ClienteForm(request.POST)
         if form.is_valid():
-            cliente = form.save()
-            messages.success(request, 'Cliente registrado com sucesso!')
-            return redirect('core:cliente_list')
+            try:
+                cliente = form.save()
+                messages.success(request, 'Cliente registrado com sucesso!')
+                return redirect('core:cliente_list')
+            except Exception as e:
+                messages.error(request, f'Erro ao salvar cliente: {str(e)}')
         else:
-            messages.error(request, 'Erro ao registrar cliente. Verifique os dados.')
+            # Mostrar erros específicos do formulário
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'Erro no campo {field}: {error}')
+            if not form.errors:
+                messages.error(request, 'Erro ao registrar cliente. Verifique os dados.')
     else:
         form = ClienteForm()
     

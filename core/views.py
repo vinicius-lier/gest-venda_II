@@ -2382,3 +2382,61 @@ def cliente_reactivate(request, pk):
         'cliente': cliente,
         'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
     })
+
+@login_required
+def motocicleta_remove_proprietario(request, pk):
+    """Remove o relacionamento entre motocicleta e proprietário"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_motocicleta')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para editar motocicletas.'})
+    
+    motocicleta = get_object_or_404(Motocicleta, pk=pk)
+    
+    if request.method == 'POST':
+        # Verificar se há vendas registradas
+        if motocicleta.vendas.exists():
+            messages.error(request, 'Não é possível remover o proprietário de uma motocicleta que possui vendas registradas.')
+            return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        
+        # Verificar se tem consignação ativa
+        try:
+            if motocicleta.consignacao and motocicleta.consignacao.status in ['disponivel', 'em_negociacao']:
+                messages.error(request, 'Não é possível remover o proprietário de uma motocicleta que possui consignação ativa.')
+                return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        except Exception:
+            pass
+        
+        # Verificar se tem seguro ativo
+        try:
+            if motocicleta.seguro and motocicleta.seguro.status == 'ativo':
+                messages.error(request, 'Não é possível remover o proprietário de uma motocicleta que possui seguro ativo.')
+                return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        except Exception:
+            pass
+        
+        # Registrar no histórico se houver proprietário atual
+        if motocicleta.proprietario:
+            from .models import HistoricoProprietario
+            HistoricoProprietario.objects.create(
+                moto=motocicleta,
+                proprietario=motocicleta.proprietario,
+                data_inicio=motocicleta.data_entrada,
+                data_fim=timezone.now().date(),
+                motivo='remocao',
+                valor_transacao=motocicleta.valor_atual
+            )
+        
+        # Remover o proprietário
+        proprietario_anterior = motocicleta.proprietario
+        motocicleta.proprietario = None
+        motocicleta.save()
+        
+        messages.success(request, f'Proprietário removido com sucesso da motocicleta {motocicleta}.')
+        if proprietario_anterior:
+            messages.info(request, f'Histórico de propriedade registrado para {proprietario_anterior.nome}.')
+        
+        return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+    
+    return render(request, 'core/motocicleta_remove_proprietario.html', {
+        'motocicleta': motocicleta,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })

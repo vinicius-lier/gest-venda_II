@@ -29,6 +29,7 @@ urlpatterns = [
     path('motocicletas/<int:pk>/', views.motocicleta_detail, name='motocicleta_detail'),
     path('motocicletas/<int:pk>/editar/', views.motocicleta_update, name='motocicleta_update'),
     path('motocicletas/<int:pk>/excluir/', views.motocicleta_delete, name='motocicleta_delete'),
+    path('motocicletas/<int:pk>/remover-proprietario/', views.motocicleta_remove_proprietario, name='motocicleta_remove_proprietario'),
     
     # Vendas
     path('vendas/', views.venda_list, name='venda_list'),

@@ -435,6 +435,15 @@ def motocicleta_delete(request, pk):
             messages.error(request, 'Não é possível excluir uma motocicleta que possui repasses registrados.')
             return redirect('core:motocicleta_detail', pk=motocicleta.pk)
         
+        # Verificar se tem controle de chave
+        try:
+            from administrativo.models import ControleChave
+            if ControleChave.objects.filter(motocicleta=motocicleta).exists():
+                messages.error(request, 'Não é possível excluir uma motocicleta que possui registros de controle de chave.')
+                return redirect('core:motocicleta_detail', pk=motocicleta.pk)
+        except ImportError:
+            pass  # App administrativo não está disponível, pode continuar
+        
         # Marcar como inativo (soft delete)
         motocicleta.ativo = False
         motocicleta.save()

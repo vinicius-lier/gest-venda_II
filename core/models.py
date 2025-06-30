@@ -317,8 +317,8 @@ class Motocicleta(models.Model):
     loja_origem = models.ForeignKey(Loja, on_delete=models.SET_NULL, related_name='motos_origem', blank=True, null=True)
     
     # Valores
-    valor_entrada = models.DecimalField(max_digits=10, decimal_places=2)
-    valor_atual = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_entrada = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    valor_atual = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     
     # Datas
     data_entrada = models.DateField(default=timezone.now)

@@ -163,6 +163,21 @@
                                                     <td>{{ hist.proprietario.nome }}</td>
                                                     <td>{{ hist.proprietario.cpf_cnpj }}</td>
                                                     <td>{{ hist.data_inicio|date:"d/m/Y" }}</td>
+                                                    <td>{{ hist.data_fim|date:"d/m/Y" }}</td>
+                                                    <td>{{ hist.motivo }}</td>
+                                                    <td>R$ {{ hist.valor_transacao|floatformat:2 }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <p>Nenhum histórico de proprietários registrado.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Sidebar com Relacionamentos -->
                         <div class="col-md-4">
                             <!-- Proprietário -->

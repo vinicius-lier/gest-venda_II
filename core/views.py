@@ -553,7 +553,14 @@ def venda_create(request):
             messages.success(request, 'Venda registrada com sucesso!')
             return redirect('core:venda_list')
     else:
-        form = VendaForm()
+        moto_id = request.GET.get('moto')
+        initial = {}
+        if moto_id:
+            try:
+                initial['moto'] = int(moto_id)
+            except Exception:
+                pass
+        form = VendaForm(initial=initial)
         # Definir vendedor padrão como usuário logado
         form.fields['vendedor'].initial = request.user
     

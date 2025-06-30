@@ -374,8 +374,8 @@ class DataImporter:
             column_mapping = {
                 'marca': ['Marca', 'marca'],
                 'modelo': ['Modelo', 'modelo'],
-                'ano': ['FAB/MOD', 'ano'],
-                'ano_fabricacao': ['FAB/MOD', 'ano_fabricacao'],
+                'ano': ['Ano Modelo', 'ano_modelo', 'ano'],
+                'ano_fabricacao': ['Ano Fabricação', 'ano_fabricacao', 'fab', 'fabricação'],
                 'cor': ['Cor', 'cor'],
                 'placa': ['Placa', 'placa'],
                 'chassi': ['Chassi', 'chassi'],
@@ -484,32 +484,15 @@ class DataImporter:
                 
                 # Extrair ano do campo mapeado
                 ano_field = self._clean_string(get_mapped_value(row, 'ano'))
-                ano = ''
-                ano_fabricacao = None
+                ano = ano_field or '0000'
+                ano_fabricacao_field = self._clean_string(get_mapped_value(row, 'ano_fabricacao'))
+                ano_fabricacao = ano_fabricacao_field or ano
                 
-                if ano_field:
-                    # Tentar extrair ano do formato "2025/2025" ou "2025"
-                    if '/' in ano_field:
-                        partes = ano_field.split('/')
-                        if len(partes) >= 2:
-                            ano = partes[0]  # Ano do modelo
-                            ano_fabricacao = partes[1]  # Ano de fabricação
-                        else:
-                            ano = ano_field
-                    else:
-                        ano = ano_field
-                    
-                    # Validar se o ano tem no máximo 4 caracteres
-                    if len(ano) > 4:
-                        ano = ano[:4]  # Truncar para 4 caracteres
-                    if ano_fabricacao and len(ano_fabricacao) > 4:
-                        ano_fabricacao = ano_fabricacao[:4]  # Truncar para 4 caracteres
-                else:
-                    ano = '0000'  # Valor padrão para ano não informado (4 caracteres)
-                
-                # Se não há ano de fabricação específico, usar o mesmo do modelo
-                if not ano_fabricacao:
-                    ano_fabricacao = ano
+                # Validar se o ano tem no máximo 4 caracteres
+                if len(ano) > 4:
+                    ano = ano[:4]  # Truncar para 4 caracteres
+                if ano_fabricacao and len(ano_fabricacao) > 4:
+                    ano_fabricacao = ano_fabricacao[:4]  # Truncar para 4 caracteres
                 
                 # Determinar status baseado no campo mapeado
                 status_field = self._clean_string(get_mapped_value(row, 'status'))
@@ -566,7 +549,7 @@ class DataImporter:
                         valor_atual=valor_atual,
                         status=status,
                         tipo_entrada=tipo_entrada,
-                        origem='cliente',  # Valor padrão
+                        origem='cliente',
                         observacoes=observacoes,
                         proprietario=proprietario,
                         fornecedor=fornecedor,

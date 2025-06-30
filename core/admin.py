@@ -93,8 +93,8 @@ class ClienteAdmin(admin.ModelAdmin):
 
 @admin.register(Motocicleta)
 class MotocicletaAdmin(admin.ModelAdmin):
-    list_display = ['marca', 'modelo', 'ano', 'placa', 'chassi', 'status', 'valor_atual']
-    list_filter = ['status', 'tipo_entrada', 'origem', 'marca', 'ano']
+    list_display = ['marca', 'modelo', 'ano', 'ano_fabricacao', 'placa', 'chassi', 'status', 'valor_atual']
+    list_filter = ['status', 'tipo_entrada', 'origem', 'marca', 'ano', 'ano_fabricacao']
     search_fields = ['marca', 'modelo', 'placa', 'chassi', 'matricula']
     ordering = ['marca', 'modelo']
     readonly_fields = ['matricula']

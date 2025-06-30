@@ -29,12 +29,14 @@ import pandas as pd
 from django.views.decorators.csrf import csrf_exempt
 import json
 
+logger = logging.getLogger(__name__)
+
 def login_view(request):
     """View de login do sistema"""
-    logger = logging.getLogger('core')
+    logger.info(f"Tentativa de login para usuário: {request.POST.get('username', 'N/A')}")
     
     if request.method == 'POST':
-        logger.info(f"Tentativa de login para usuário: {request.POST.get('username', 'N/A')}")
+        logger.info(f"Formulário válido para usuário: {request.POST.get('username', 'N/A')}")
         
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -74,7 +76,6 @@ def logout_view(request):
 @login_required
 def dashboard(request):
     """Dashboard principal do sistema"""
-    logger = logging.getLogger('core')
     logger.info(f"Dashboard acessado por: {request.user.username}")
     
     try:
@@ -1441,8 +1442,6 @@ def ocorrencia_list(request):
 @login_required
 def ocorrencia_create(request):
     """Criação de nova ocorrência"""
-    logger = logging.getLogger('core')
-    
     logger.info(f"ocorrencia_create: Usuário {request.user.username} tentando criar ocorrência")
     
     # Verificar se o usuário tem usuario_sistema

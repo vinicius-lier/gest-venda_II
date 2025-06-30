@@ -1829,20 +1829,30 @@ def download_modelo_csv(request, tipo):
         messages.error(request, 'Tipo de modelo inválido.')
         return redirect('core:preview_import_motocicletas')
     
-    arquivo_path = os.path.join(settings.STATIC_ROOT, 'modelos', modelos[tipo])
+    # Primeiro, tentar no diretório modelos_importacao (onde os arquivos realmente estão)
+    arquivo_path = os.path.join(settings.BASE_DIR, 'modelos_importacao', modelos[tipo])
     
     if not os.path.exists(arquivo_path):
-        # Se não existir no STATIC_ROOT, tenta no diretório static do projeto
+        # Se não existir, tentar no STATIC_ROOT
+        arquivo_path = os.path.join(settings.STATIC_ROOT, 'modelos', modelos[tipo])
+    
+    if not os.path.exists(arquivo_path):
+        # Se ainda não existir, tentar no diretório static do projeto
         arquivo_path = os.path.join(settings.BASE_DIR, 'static', 'modelos', modelos[tipo])
     
     if not os.path.exists(arquivo_path):
         messages.error(request, 'Arquivo de modelo não encontrado.')
         return redirect('core:preview_import_motocicletas')
     
-    with open(arquivo_path, 'rb') as f:
-        response = HttpResponse(f.read(), content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="{modelos[tipo]}"'
-        return response
+    try:
+        with open(arquivo_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = f'attachment; filename="{modelos[tipo]}"'
+            return response
+    except Exception as e:
+        logger.error(f"Erro ao ler arquivo de modelo {arquivo_path}: {str(e)}")
+        messages.error(request, 'Erro ao ler arquivo de modelo.')
+        return redirect('core:preview_import_motocicletas')
 
 @csrf_exempt
 @login_required

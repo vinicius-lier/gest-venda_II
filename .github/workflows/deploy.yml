@@ -1,0 +1,54 @@
+name: Deploy to Heroku
+
+on:
+  push:
+    branches: [ main, fix-dashboard ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run tests
+      run: |
+        python manage.py check
+        python manage.py test --verbosity=2
+        
+    - name: Deploy to Heroku
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix-dashboard'
+      uses: akhileshns/heroku-deploy@v3.12.14
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: "gestao-vendas-prado-novo"
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        branch: "main"
+        
+    - name: Run migrations
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix-dashboard'
+      run: |
+        heroku run python manage.py migrate --app gestao-vendas-prado-novo
+        
+    - name: Collect static files
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix-dashboard'
+      run: |
+        heroku run python manage.py collectstatic --noinput --app gestao-vendas-prado-novo
+        
+    - name: Cleanup temp files
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix-dashboard'
+      run: |
+        heroku run python manage.py cleanup_temp_files --force --app gestao-vendas-prado-novo 

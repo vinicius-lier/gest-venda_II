@@ -49,6 +49,10 @@
                                             <td><strong>Cilindrada:</strong></td>
                                             <td>{{ motocicleta.cilindrada|default:"Não informado" }}</td>
                                         </tr>
+                                        <tr>
+                                            <td><strong>Rodagem:</strong></td>
+                                            <td>{% if motocicleta.rodagem %}{{ motocicleta.rodagem|floatformat:0 }} km{% else %}Não informado{% endif %}</td>
+                                        </tr>
                                     </table>
                                 </div>
                                 <div class="col-md-6">

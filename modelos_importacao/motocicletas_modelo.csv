@@ -1,6 +1,6 @@
-marca,modelo,ano,cor,placa,chassi,valor_compra,valor_venda,status,observacoes
-Honda,CG 150,2020,Preto,ABC1234,12345678901234567,8000.00,12000.00,estoque,Nova em estoque
-Yamaha,YBR 125,2019,Vermelho,DEF5678,98765432109876543,7000.00,11000.00,estoque,Semi-nova
-Honda,CB 300,2021,Branco,GHI9012,11122233344455566,15000.00,22000.00,estoque,Nova
-Yamaha,MT-03,2020,Azul,JKL3456,22233344455566677,18000.00,25000.00,estoque,Semi-nova
-Kawasaki,Ninja 300,2019,Verde,MNO7890,33344455566677788,16000.00,23000.00,estoque,Semi-nova 
+marca,modelo,ano,cor,placa,chassi,rodagem,valor_compra,valor_venda,status,observacoes
+Honda,CG 150,2020,Preto,ABC1234,12345678901234567,0,8000.00,12000.00,estoque,Nova em estoque
+Yamaha,YBR 125,2019,Vermelho,DEF5678,98765432109876543,15000,7000.00,11000.00,estoque,Semi-nova
+Honda,CB 300,2021,Branco,GHI9012,11122233344455566,0,15000.00,22000.00,estoque,Nova
+Yamaha,MT-03,2020,Azul,JKL3456,22233344455566677,25000,18000.00,25000.00,pendencia,Aguardando documentação
+Kawasaki,Ninja 300,2019,Verde,MNO7890,33344455566677788,18000,16000.00,23000.00,bloqueada,Desistência do consignante 

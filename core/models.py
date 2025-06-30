@@ -291,6 +291,8 @@ class Motocicleta(models.Model):
         ('repasse', 'Repasse'),
         ('reservada', 'Reservada'),
         ('manutencao', 'Em Manutenção'),
+        ('pendencia', 'Pendência'),
+        ('bloqueada', 'Bloqueada'),
     ]
     
     # Identificação
@@ -305,6 +307,7 @@ class Motocicleta(models.Model):
     ano_fabricacao = models.CharField(max_length=4, blank=True, null=True, help_text="Ano de fabricação (quando diferente do ano do modelo)")
     cor = models.CharField(max_length=50)
     cilindrada = models.CharField(max_length=20, blank=True, null=True)
+    rodagem = models.IntegerField(blank=True, null=True, help_text="Quilometragem atual da motocicleta (em km)")
     
     # Classificação
     tipo_entrada = models.CharField(max_length=20, choices=TIPO_ENTRADA_CHOICES)

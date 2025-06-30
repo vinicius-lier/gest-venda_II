@@ -1917,7 +1917,7 @@ def preview_import_motocicletas(request):
             preview = df.head(5).values.tolist()
             
             # Lista de campos para mapeamento
-            campos = ['marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+            campos = ['marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'placa', 'chassi', 'rodagem', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
             
             return render(request, 'core/preview_import_motocicletas.html', {
                 'colunas': colunas,
@@ -1940,7 +1940,7 @@ def preview_import_motocicletas(request):
             return redirect('core:preview_import_motocicletas')
     
     # Lista de campos para mapeamento (mesmo quando não há arquivo)
-    campos = ['marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+    campos = ['marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'placa', 'chassi', 'rodagem', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
     
     # Verificar se há relatório de importação na sessão
     import_report = request.session.get('import_report')
@@ -2174,7 +2174,7 @@ def import_motocicletas(request):
 
         # Extrair mapeamento das colunas
         column_mapping = {}
-        campos = ['marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'placa', 'chassi', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
+        campos = ['marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'placa', 'chassi', 'rodagem', 'valor_entrada', 'valor_atual', 'status', 'observacoes']
         
         for campo in campos:
             map_key = f'map_{campo}'

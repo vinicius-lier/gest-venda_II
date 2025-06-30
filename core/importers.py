@@ -379,6 +379,7 @@ class DataImporter:
                 'cor': ['Cor', 'cor'],
                 'placa': ['Placa', 'placa'],
                 'chassi': ['Chassi', 'chassi'],
+                'rodagem': ['Rodagem', 'rodagem', 'km', 'quilometragem'],
                 'valor_entrada': ['valor_entrada', 'valor_compra'],
                 'valor_atual': ['valor_atual', 'valor_venda'],
                 'status': ['Situação', 'status'],
@@ -524,6 +525,15 @@ class DataImporter:
                     valor_entrada = self._parse_decimal(get_mapped_value(row, 'valor_entrada'), 0)
                     valor_atual = self._parse_decimal(get_mapped_value(row, 'valor_atual'), valor_entrada)
                     
+                    # Processar rodagem
+                    rodagem_valor = get_mapped_value(row, 'rodagem')
+                    rodagem = None
+                    if rodagem_valor is not None and str(rodagem_valor).strip():
+                        try:
+                            rodagem = int(float(str(rodagem_valor).replace(',', '').replace('.', '')))
+                        except (ValueError, TypeError):
+                            rodagem = None
+                    
                     # Data de entrada
                     data_chegada = self._clean_string(row.get('Data de Chegada', ''))
                     data_entrada = self._parse_date(data_chegada) if data_chegada else timezone.now().date()
@@ -546,6 +556,7 @@ class DataImporter:
                             placa=placa,
                             chassi=chassi,
                             renavam=renavam,
+                            rodagem=rodagem,
                             valor_entrada=valor_entrada,
                             valor_atual=valor_atual,
                             status=status,

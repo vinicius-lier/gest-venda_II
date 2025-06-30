@@ -83,6 +83,7 @@
                                 <th class="text-dark">Placa</th>
                                 <th class="text-dark">Marca/Modelo</th>
                                 <th class="text-dark">Ano</th>
+                                <th class="text-dark">Rodagem</th>
                                 <th class="text-dark">Status</th>
                                 <th class="text-dark">Valor Atual</th>
                                 <th class="text-dark">Proprietário</th>
@@ -108,6 +109,13 @@
                                     <small class="text-muted">{{ moto.cor }}</small>
                                 </td>
                                 <td>{{ moto.ano }}</td>
+                                <td>
+                                    {% if moto.rodagem %}
+                                    <small>{{ moto.rodagem|floatformat:0 }} km</small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if moto.status == 'estoque' %}
                                     <span class="badge bg-success">Em Estoque</span>

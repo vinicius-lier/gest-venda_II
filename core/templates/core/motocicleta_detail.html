@@ -139,8 +139,30 @@
                                 </div>
                             </div>
                             {% endif %}
-                        </div>
 
+                            <!-- Histórico de Proprietários -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5 class="text-primary">Histórico de Proprietários</h5>
+                                    {% if motocicleta.historico_proprietarios.all %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nome</th>
+                                                    <th>CPF/CNPJ</th>
+                                                    <th>Data Início</th>
+                                                    <th>Data Fim</th>
+                                                    <th>Motivo</th>
+                                                    <th>Valor Transação</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for hist in motocicleta.historico_proprietarios.all %}
+                                                <tr>
+                                                    <td>{{ hist.proprietario.nome }}</td>
+                                                    <td>{{ hist.proprietario.cpf_cnpj }}</td>
+                                                    <td>{{ hist.data_inicio|date:"d/m/Y" }}</td>
                         <!-- Sidebar com Relacionamentos -->
                         <div class="col-md-4">
                             <!-- Proprietário -->

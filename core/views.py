@@ -202,17 +202,20 @@ def cliente_create(request):
                     cliente_existente = Cliente.objects.filter(cpf_cnpj=cpf_cnpj).first()
                     if cliente_existente:
                         if cliente_existente.ativo:
-                            messages.error(request, f'Cliente com CPF/CNPJ {cpf_cnpj} já existe e está ativo.')
+                            messages.error(request, f'Já existe um cliente ativo com este CPF/CNPJ. Caso deseje atualizar os dados, edite o cadastro existente.')
                         else:
-                            messages.warning(request, f'Cliente com CPF/CNPJ {cpf_cnpj} já existe mas está inativo. Deseja reativá-lo?')
-                            # Redirecionar para a página de detalhes do cliente existente
-                            return redirect('core:cliente_detail', pk=cliente_existente.pk)
+                            messages.warning(request, f'Já existe um cliente com este CPF/CNPJ, mas ele está inativo. Você pode reativá-lo abaixo.')
+                            # Exibir botão/link para reativar
+                            return render(request, 'core/cliente_form.html', {
+                                'form': form,
+                                'cliente_inativo': cliente_existente,
+                                'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+                            })
                         return render(request, 'core/cliente_form.html', {
                             'form': form,
                             'cliente': None,
                             'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
                         })
-                
                 cliente = form.save()
                 messages.success(request, 'Cliente registrado com sucesso!')
                 return redirect('core:cliente_list')
@@ -227,7 +230,6 @@ def cliente_create(request):
                 messages.error(request, 'Erro ao registrar cliente. Verifique os dados.')
     else:
         form = ClienteForm()
-    
     return render(request, 'core/cliente_form.html', {
         'form': form,
         'cliente': None,
@@ -2470,5 +2472,42 @@ def motocicleta_remove_proprietario(request, pk):
     
     return render(request, 'core/motocicleta_remove_proprietario.html', {
         'motocicleta': motocicleta,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def motocicleta_transferir_propriedade(request, pk):
+    """Transfere a propriedade da motocicleta para outro cliente"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_motocicleta')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para transferir propriedade de motocicletas.'})
+    
+    motocicleta = get_object_or_404(Motocicleta, pk=pk)
+    from .models import Cliente, HistoricoProprietario
+    if request.method == 'POST':
+        novo_proprietario_id = request.POST.get('novo_proprietario')
+        if not novo_proprietario_id:
+            messages.error(request, 'Selecione o novo proprietário.')
+            return redirect('core:motocicleta_transferir_propriedade', pk=pk)
+        novo_proprietario = get_object_or_404(Cliente, pk=novo_proprietario_id)
+        # Registrar histórico do proprietário anterior
+        if motocicleta.proprietario:
+            HistoricoProprietario.objects.create(
+                moto=motocicleta,
+                proprietario=motocicleta.proprietario,
+                data_inicio=motocicleta.data_entrada,
+                data_fim=timezone.now().date(),
+                motivo='transferencia',
+                valor_transacao=motocicleta.valor_atual
+            )
+        # Transferir propriedade
+        motocicleta.proprietario = novo_proprietario
+        motocicleta.save()
+        messages.success(request, f'Propriedade transferida para {novo_proprietario.nome} com sucesso!')
+        return redirect('core:motocicleta_detail', pk=pk)
+    # Listar clientes ativos para seleção
+    clientes = Cliente.objects.filter(ativo=True).order_by('nome')
+    return render(request, 'core/motocicleta_transferir_propriedade.html', {
+        'motocicleta': motocicleta,
+        'clientes': clientes,
         'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
     })

@@ -202,6 +202,25 @@
                         </button>
                     </div>
                 </form>
+
+                {% if cliente_inativo %}
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="fas fa-user-slash fa-2x me-3"></i>
+                    <div>
+                        <strong>Já existe um cliente com este CPF/CNPJ, mas ele está inativo.</strong><br>
+                        Você pode reativar o cliente <b>{{ cliente_inativo.nome }}</b> agora mesmo.
+                        <form method="post" action="{% url 'core:cliente_reactivate' cliente_inativo.pk %}" class="mt-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fas fa-user-check me-1"></i> Reativar Cliente
+                            </button>
+                            <a href="{% url 'core:cliente_detail' cliente_inativo.pk %}" class="btn btn-outline-primary btn-sm ms-2">
+                                <i class="fas fa-eye me-1"></i> Ver Detalhes
+                            </a>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

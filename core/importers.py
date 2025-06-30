@@ -329,7 +329,7 @@ class DataImporter:
                         cidade=self._clean_string(get_mapped_value(row, 'cidade')),
                         estado=self._clean_string(get_mapped_value(row, 'estado')),
                         cep=self._clean_string(get_mapped_value(row, 'cep')),
-                        ativo=self._parse_boolean(get_mapped_value(row, 'ativo'), True)
+                        ativo=self._parse_boolean(row.get('ativo', True))
                     )
                     
                     self.log_success(f"Cliente {cliente.nome} importado com sucesso")
@@ -452,7 +452,8 @@ class DataImporter:
                                         nome=proprietario_nome,
                                         cpf_cnpj=proprietario_cpf,
                                         telefone=self._clean_string(row.get('Tel Proprietário', '')),
-                                        tipo='proprietario'
+                                        tipo='proprietario',
+                                        ativo=self._parse_boolean(row.get('ativo', True))
                                     )
                                 except Exception as e:
                                     logger.warning(f"Erro ao criar proprietário: {str(e)}")
@@ -472,7 +473,8 @@ class DataImporter:
                                         nome=fornecedor_nome,
                                         cpf_cnpj=fornecedor_cpf,
                                         telefone=self._clean_string(row.get('Tel Fornecedor', '')),
-                                        tipo='fornecedor'
+                                        tipo='fornecedor',
+                                        ativo=self._parse_boolean(row.get('ativo', True))
                                     )
                                 except Exception as e:
                                     logger.warning(f"Erro ao criar fornecedor: {str(e)}")
@@ -566,7 +568,7 @@ class DataImporter:
                             proprietario=proprietario,
                             fornecedor=fornecedor,
                             data_entrada=data_entrada,
-                            ativo=True
+                            ativo=self._parse_boolean(row.get('ativo', True))
                         )
                         
                         logger.info(f"Linha {index + 1} - Motocicleta criada com sucesso: {motocicleta.marca} {motocicleta.modelo} (Chassi: {motocicleta.chassi})")
@@ -590,7 +592,7 @@ class DataImporter:
                                 tipo_entrada='usada',
                                 origem='cliente',
                                 observacoes=f"IMPORTADO COM DADOS MÍNIMOS - Erro: {str(e)}. {observacoes}",
-                                ativo=True
+                                ativo=self._parse_boolean(row.get('ativo', True))
                             )
                             logger.info(f"Linha {index + 1} - Motocicleta criada com dados mínimos: {motocicleta.marca} {motocicleta.modelo}")
                             success_count += 1
@@ -735,7 +737,7 @@ class DataImporter:
                     data_atendimento=self._parse_date(get_mapped_value(row, 'data_atendimento')),
                     data_venda=self._parse_date(get_mapped_value(row, 'data_venda')),
                     observacoes=self._clean_string(get_mapped_value(row, 'observacoes')),
-                    ativo=True
+                    ativo=self._parse_boolean(row.get('ativo', True))
                 )
                 
                 self.log_success(f"Venda da moto {moto.marca} {moto.modelo} importada com sucesso")

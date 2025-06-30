@@ -49,7 +49,6 @@ if IS_PRODUCTION:
     
     # Configurações específicas para Heroku
     TEMP_DIR = '/tmp'
-    FILE_UPLOAD_TEMP_DIR = '/tmp'
     FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB
     DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB
 else:

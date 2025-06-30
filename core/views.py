@@ -288,9 +288,41 @@ def cliente_delete(request, pk):
     
     cliente = get_object_or_404(Cliente, pk=pk)
     if request.method == 'POST':
-        cliente.ativo = False
-        cliente.save()
-        messages.success(request, 'Cliente marcado como inativo com sucesso!')
+        # Verificar se o cliente é proprietário de motocicletas
+        motocicletas_proprietario = cliente.motos_propriedade.all()
+        
+        if motocicletas_proprietario.exists():
+            # Registrar no histórico antes de remover
+            from .models import HistoricoProprietario
+            for moto in motocicletas_proprietario:
+                HistoricoProprietario.objects.create(
+                    moto=moto,
+                    proprietario=cliente,
+                    data_inicio=moto.data_entrada,
+                    data_fim=timezone.now().date(),
+                    motivo='exclusao_cliente',
+                    valor_transacao=moto.valor_atual
+                )
+                # Remover o proprietário da motocicleta
+                moto.proprietario = None
+                moto.save()
+            
+            messages.warning(request, f'Proprietário removido de {motocicletas_proprietario.count()} motocicleta(s) antes da exclusão do cliente.')
+        
+        # Verificar se o cliente é fornecedor de motocicletas
+        motocicletas_fornecedor = cliente.motos_fornecidas.all()
+        
+        if motocicletas_fornecedor.exists():
+            # Remover o fornecedor das motocicletas
+            for moto in motocicletas_fornecedor:
+                moto.fornecedor = None
+                moto.save()
+            
+            messages.warning(request, f'Fornecedor removido de {motocicletas_fornecedor.count()} motocicleta(s) antes da exclusão do cliente.')
+        
+        # Agora pode excluir o cliente
+        cliente.delete()
+        messages.success(request, f'Cliente {cliente.nome} excluído com sucesso!')
         return redirect('core:cliente_list')
     
     return render(request, 'core/cliente_confirm_delete.html', {

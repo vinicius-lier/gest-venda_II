@@ -8,6 +8,7 @@ from .models import (
     CotacaoSeguro, Seguro, Repasse, AssinaturaDigital, 
     Ocorrencia, ComentarioOcorrencia, MenuUsuario, MenuPerfil
 )
+from django.utils import timezone
 
 # ============================================================================
 # ADMINISTRAÇÃO DO SISTEMA RBAC
@@ -86,6 +87,88 @@ class ClienteAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def delete_model(self, request, obj):
+        """Permite excluir cliente mesmo sendo proprietário de motocicletas"""
+        from django.contrib import messages
+        
+        # Verificar se o cliente é proprietário de motocicletas
+        motocicletas_proprietario = obj.motos_propriedade.all()
+        
+        if motocicletas_proprietario.exists():
+            # Registrar no histórico antes de remover
+            from .models import HistoricoProprietario
+            for moto in motocicletas_proprietario:
+                HistoricoProprietario.objects.create(
+                    moto=moto,
+                    proprietario=obj,
+                    data_inicio=moto.data_entrada,
+                    data_fim=timezone.now().date(),
+                    motivo='exclusao_cliente',
+                    valor_transacao=moto.valor_atual
+                )
+                # Remover o proprietário da motocicleta
+                moto.proprietario = None
+                moto.save()
+            
+            messages.warning(request, f'Proprietário removido de {motocicletas_proprietario.count()} motocicleta(s) antes da exclusão do cliente.')
+        
+        # Verificar se o cliente é fornecedor de motocicletas
+        motocicletas_fornecedor = obj.motos_fornecidas.all()
+        
+        if motocicletas_fornecedor.exists():
+            # Remover o fornecedor das motocicletas
+            for moto in motocicletas_fornecedor:
+                moto.fornecedor = None
+                moto.save()
+            
+            messages.warning(request, f'Fornecedor removido de {motocicletas_fornecedor.count()} motocicleta(s) antes da exclusão do cliente.')
+        
+        # Agora pode excluir o cliente
+        obj.delete()
+        messages.success(request, f'Cliente {obj.nome} excluído com sucesso!')
+    
+    def delete_queryset(self, request, queryset):
+        """Permite excluir múltiplos clientes mesmo sendo proprietários de motocicletas"""
+        from django.contrib import messages
+        
+        for obj in queryset:
+            # Verificar se o cliente é proprietário de motocicletas
+            motocicletas_proprietario = obj.motos_propriedade.all()
+            
+            if motocicletas_proprietario.exists():
+                # Registrar no histórico antes de remover
+                from .models import HistoricoProprietario
+                for moto in motocicletas_proprietario:
+                    HistoricoProprietario.objects.create(
+                        moto=moto,
+                        proprietario=obj,
+                        data_inicio=moto.data_entrada,
+                        data_fim=timezone.now().date(),
+                        motivo='exclusao_cliente',
+                        valor_transacao=moto.valor_atual
+                    )
+                    # Remover o proprietário da motocicleta
+                    moto.proprietario = None
+                    moto.save()
+                
+                messages.warning(request, f'Proprietário removido de {motocicletas_proprietario.count()} motocicleta(s) antes da exclusão do cliente {obj.nome}.')
+            
+            # Verificar se o cliente é fornecedor de motocicletas
+            motocicletas_fornecedor = obj.motos_fornecidas.all()
+            
+            if motocicletas_fornecedor.exists():
+                # Remover o fornecedor das motocicletas
+                for moto in motocicletas_fornecedor:
+                    moto.fornecedor = None
+                    moto.save()
+                
+                messages.warning(request, f'Fornecedor removido de {motocicletas_fornecedor.count()} motocicleta(s) antes da exclusão do cliente {obj.nome}.')
+            
+            # Agora pode excluir o cliente
+            obj.delete()
+        
+        messages.success(request, f'{queryset.count()} cliente(s) excluído(s) com sucesso!')
 
 # ============================================================================
 # ADMINISTRAÇÃO DE MOTOCICLETAS

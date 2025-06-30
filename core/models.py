@@ -376,6 +376,8 @@ class HistoricoProprietario(models.Model):
         ('venda', 'Venda'),
         ('consignacao', 'Consignação'),
         ('repasse', 'Repasse'),
+        ('remocao', 'Remoção Manual'),
+        ('exclusao_cliente', 'Exclusão do Cliente'),
     ]
     
     moto = models.ForeignKey(Motocicleta, on_delete=models.CASCADE, related_name='historico_proprietarios')

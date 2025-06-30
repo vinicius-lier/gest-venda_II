@@ -2228,8 +2228,16 @@ def import_motocicletas(request):
 
     return redirect('core:preview_import_motocicletas')
 
-def try_read_csv(file_path):
-    # Tenta diferentes separadores e encodings
+def try_read_file(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in ['.xlsx', '.xls']:
+        try:
+            df = pd.read_excel(file_path)
+            if df.shape[1] > 1:
+                return df, 'excel', None
+        except Exception as e:
+            return None, 'excel', str(e)
+    # Tenta CSV com diferentes separadores e encodings
     separators = [',', ';', '\t']
     encodings = ['utf-8', 'latin1']
     for sep in separators:

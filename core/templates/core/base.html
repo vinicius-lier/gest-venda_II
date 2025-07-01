@@ -159,6 +159,13 @@
                             </a>
                         </li>
                         {% endif %}
+                        {% if usuario_sistema|modulo_ativo:"financeiro" %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'core:dashboard_financeiro' %}">
+                                <i class="fas fa-chart-line me-2"></i> Financeiro
+                            </a>
+                        </li>
+                        {% endif %}
                     </ul>
                     
                     <!-- Seção Administrativa -->

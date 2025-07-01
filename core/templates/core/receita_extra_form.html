@@ -1,0 +1,113 @@
+{% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if receita %}
+        Editar Receita Extra
+    {% else %}
+        Nova Receita Extra
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        {% if receita %}
+                            <i class="fas fa-edit"></i> Editar Receita Extra
+                        {% else %}
+                            <i class="fas fa-plus"></i> Nova Receita Extra
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.descricao|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.valor|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.data|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.loja|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form.observacoes|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.loja|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.responsavel|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                {% if receita %}
+                                    Atualizar Receita Extra
+                                {% else %}
+                                    Criar Receita Extra
+                                {% endif %}
+                            </button>
+                            
+                            <a href="{% url 'core:receita_extra_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                            
+                            {% if receita %}
+                                <a href="{% url 'core:receita_extra_detail' receita.pk %}" class="btn btn-info">
+                                    <i class="fas fa-eye"></i> Ver Detalhes
+                                </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Formatação automática do campo valor
+        $('#id_valor').on('input', function() {
+            let value = $(this).val().replace(/\D/g, '');
+            value = (parseFloat(value) / 100).toFixed(2);
+            $(this).val(value);
+        });
+        
+        // Data atual como padrão se não houver data
+        if (!$('#id_data').val()) {
+            let today = new Date().toISOString().split('T')[0];
+            $('#id_data').val(today);
+        }
+        
+        // Auto-completar responsável com usuário atual
+        if (!$('#id_responsavel').val()) {
+            $('#id_responsavel').val('{{ request.user.usuario_sistema.id }}');
+        }
+    });
+</script>
+{% endblock %} 

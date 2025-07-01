@@ -22,6 +22,7 @@ urlpatterns = [
     path('clientes/<int:pk>/editar/', views.cliente_update, name='cliente_update'),
     path('clientes/<int:pk>/excluir/', views.cliente_delete, name='cliente_delete'),
     path('clientes/<int:pk>/reativar/', views.cliente_reactivate, name='cliente_reactivate'),
+    path('clientes/exportar/', views.exportar_clientes_xlsx, name='exportar_clientes_xlsx'),
     
     # Motocicletas
     path('motocicletas/', views.motocicleta_list, name='motocicleta_list'),
@@ -31,6 +32,7 @@ urlpatterns = [
     path('motocicletas/<int:pk>/excluir/', views.motocicleta_delete, name='motocicleta_delete'),
     path('motocicletas/<int:pk>/remover-proprietario/', views.motocicleta_remove_proprietario, name='motocicleta_remove_proprietario'),
     path('motocicletas/<int:pk>/transferir-propriedade/', views.motocicleta_transferir_propriedade, name='motocicleta_transferir_propriedade'),
+    path('motocicletas/exportar/', views.exportar_motocicletas_xlsx, name='exportar_motocicletas_xlsx'),
     
     # Vendas
     path('vendas/', views.venda_list, name='venda_list'),
@@ -39,6 +41,7 @@ urlpatterns = [
     path('vendas/<int:pk>/', views.venda_detail, name='venda_detail'),
     path('vendas/<int:pk>/excluir/', views.venda_delete, name='venda_delete'),
     path('vendas/<int:pk>/cancelar/', views.venda_cancel, name='venda_cancel'),
+    path('vendas/exportar/', views.exportar_vendas_xlsx, name='exportar_vendas_xlsx'),
     
     # Consignações
     path('consignacoes/', views.consignacao_list, name='consignacao_list'),
@@ -118,4 +121,55 @@ urlpatterns = [
     
     # Administração de Menu por Usuário
     path('usuario/<int:usuario_id>/menu/', views.usuario_menu_manage, name='usuario_menu_manage'),
+    
+    # ============================================================================
+    # MÓDULO FINANCEIRO
+    # ============================================================================
+    
+    # Dashboard Financeiro
+    path('financeiro/', views.dashboard_financeiro, name='dashboard_financeiro'),
+    path('financeiro/exportar_xlsx/', views.exportar_dashboard_financeiro_xlsx, name='exportar_dashboard_financeiro_xlsx'),
+    
+    # Vendas Financeiras
+    path('financeiro/vendas/', views.venda_financeira_list, name='venda_financeira_list'),
+    path('financeiro/vendas/novo/', views.venda_financeira_create, name='venda_financeira_create'),
+    path('financeiro/vendas/<int:pk>/', views.venda_financeira_detail, name='venda_financeira_detail'),
+    
+    # Despesas
+    path('financeiro/despesas/', views.despesa_list, name='despesa_list'),
+    path('financeiro/despesas/novo/', views.despesa_create, name='despesa_create'),
+    path('financeiro/despesas/<int:pk>/', views.despesa_detail, name='despesa_detail'),
+    path('financeiro/despesas/<int:pk>/editar/', views.despesa_update, name='despesa_update'),
+    path('financeiro/despesas/<int:pk>/excluir/', views.despesa_delete, name='despesa_delete'),
+    path('financeiro/despesas/exportar/', views.exportar_despesas_xlsx, name='exportar_despesas_xlsx'),
+    
+    # Receitas Extras
+    path('financeiro/receitas/', views.receita_extra_list, name='receita_extra_list'),
+    path('financeiro/receitas/novo/', views.receita_extra_create, name='receita_extra_create'),
+    path('financeiro/receitas/<int:pk>/', views.receita_extra_detail, name='receita_extra_detail'),
+    path('financeiro/receitas/<int:pk>/editar/', views.receita_extra_update, name='receita_extra_update'),
+    path('financeiro/receitas/<int:pk>/excluir/', views.receita_extra_delete, name='receita_extra_delete'),
+    path('financeiro/receitas/exportar/', views.exportar_receitas_extras_xlsx, name='exportar_receitas_extras_xlsx'),
+    
+    # Pagamentos
+    path('financeiro/pagamentos/', views.pagamento_list, name='pagamento_list'),
+    path('financeiro/pagamentos/novo/', views.pagamento_create, name='pagamento_create'),
+    path('financeiro/pagamentos/<int:pk>/', views.pagamento_detail, name='pagamento_detail'),
+    path('financeiro/pagamentos/<int:pk>/editar/', views.pagamento_update, name='pagamento_update'),
+    path('financeiro/pagamentos/<int:pk>/excluir/', views.pagamento_delete, name='pagamento_delete'),
+    
+    # ============================================================================
+    # EXPORTAÇÕES XLSX
+    # ============================================================================
+    
+    # Exportações do módulo financeiro
+    path('financeiro/vendas/exportar/', views.exportar_vendas_xlsx, name='exportar_vendas_xlsx'),
+    path('financeiro/despesas/exportar/', views.exportar_despesas_xlsx, name='exportar_despesas_xlsx'),
+    path('financeiro/receitas/exportar/', views.exportar_receitas_extras_xlsx, name='exportar_receitas_extras_xlsx'),
+    path('financeiro/pagamentos/exportar/', views.exportar_pagamentos_xlsx, name='exportar_pagamentos_xlsx'),
+    
+    # Exportações gerais
+    path('vendas/exportar/', views.exportar_vendas_xlsx, name='exportar_vendas_xlsx_geral'),
+    path('motocicletas/exportar/', views.exportar_motocicletas_xlsx, name='exportar_motocicletas_xlsx'),
+    path('clientes/exportar/', views.exportar_clientes_xlsx, name='exportar_clientes_xlsx'),
 ] 

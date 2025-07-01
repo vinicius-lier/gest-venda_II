@@ -147,12 +147,12 @@ class Usuario(models.Model):
             'admin': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                 'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
-                'seguradoras', 'bens', 'cotacoes'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro'
             ],
             'gerente': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                 'seguros', 'relatorios', 'ocorrencias',
-                'seguradoras', 'bens', 'cotacoes'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro'
             ],
             'vendedor': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes',
@@ -164,12 +164,12 @@ class Usuario(models.Model):
             ],
             'financeiro': [
                 'clientes', 'vendas', 'consignacoes', 'seguros', 'relatorios',
-                'seguradoras', 'bens', 'cotacoes'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro'
             ],
             'ti': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                 'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
-                'seguradoras', 'bens', 'cotacoes'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro'
             ]
         }
         
@@ -229,6 +229,7 @@ class Cliente(models.Model):
     nome = models.CharField(max_length=100)
     cpf_cnpj = models.CharField(max_length=18, unique=True)
     rg = models.CharField(max_length=20, blank=True, null=True)
+    data_nascimento = models.DateField(blank=True, null=True)
     
     # Contatos
     telefone = models.CharField(max_length=15)
@@ -984,3 +985,201 @@ class MenuPerfil(models.Model):
 
     def __str__(self):
         return f"{self.perfil} - {self.modulo} ({'Ativo' if self.ativo else 'Inativo'})"
+
+# ============================================================================
+# 10. MÓDULO FINANCEIRO
+# ============================================================================
+
+class VendaFinanceira(models.Model):
+    """Modelo para vendas com análise financeira detalhada"""
+    CANAL_VENDA_CHOICES = [
+        ('loja', 'Loja Física'),
+        ('olx', 'OLX'),
+        ('whatsapp', 'WhatsApp'),
+        ('instagram', 'Instagram'),
+        ('facebook', 'Facebook'),
+        ('site', 'Site'),
+        ('telefone', 'Telefone'),
+        ('indicacao', 'Indicação'),
+        ('outros', 'Outros'),
+    ]
+    
+    # Relacionamentos
+    venda = models.OneToOneField(Venda, on_delete=models.CASCADE, related_name='financeiro', blank=True, null=True)
+    moto = models.ForeignKey(Motocicleta, on_delete=models.CASCADE, related_name='vendas_financeiras')
+    
+    # Dados da venda
+    data = models.DateField(default=timezone.now)
+    produto = models.CharField(max_length=200, help_text="Descrição do produto vendido")
+    quantidade = models.IntegerField(default=1)
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    custo_unitario = models.DecimalField(max_digits=10, decimal_places=2, help_text="Custo de aquisição do produto")
+    canal_venda = models.CharField(max_length=20, choices=CANAL_VENDA_CHOICES, default='loja')
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Venda Financeira'
+        verbose_name_plural = 'Vendas Financeiras'
+        ordering = ['-data']
+    
+    def __str__(self):
+        return f"{self.produto} - {self.data} (R$ {self.preco_unitario})"
+    
+    @property
+    def valor_total(self):
+        """Valor total da venda"""
+        return self.preco_unitario * self.quantidade
+    
+    @property
+    def valor_liquido(self):
+        """Valor líquido após desconto"""
+        return self.valor_total - self.desconto
+    
+    @property
+    def custo_total(self):
+        """Custo total"""
+        return self.custo_unitario * self.quantidade
+    
+    @property
+    def lucro(self):
+        """Lucro da venda"""
+        return self.valor_liquido - self.custo_total
+    
+    @property
+    def margem_lucro(self):
+        """Margem de lucro em percentual"""
+        if self.valor_liquido > 0:
+            return (self.lucro / self.valor_liquido) * 100
+        return 0
+
+class Despesa(models.Model):
+    """Modelo para despesas da empresa"""
+    CATEGORIA_CHOICES = [
+        ('aluguel', 'Aluguel'),
+        ('marketing', 'Marketing'),
+        ('salario', 'Salário'),
+        ('energia', 'Energia'),
+        ('agua', 'Água'),
+        ('internet', 'Internet'),
+        ('telefone', 'Telefone'),
+        ('manutencao', 'Manutenção'),
+        ('combustivel', 'Combustível'),
+        ('impostos', 'Impostos'),
+        ('seguros', 'Seguros'),
+        ('fornecedores', 'Fornecedores'),
+        ('outros', 'Outros'),
+    ]
+    
+    TIPO_CHOICES = [
+        ('fixa', 'Fixa'),
+        ('variavel', 'Variável'),
+    ]
+    
+    # Identificação
+    descricao = models.CharField(max_length=200)
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES)
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    data = models.DateField(default=timezone.now)
+    fixa_variavel = models.CharField(max_length=20, choices=TIPO_CHOICES, default='variavel')
+    centro_custo = models.CharField(max_length=100, blank=True, null=True, help_text="Ex: Oficina, Loja 1, Delivery")
+    
+    # Relacionamentos
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='despesas')
+    responsavel = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='despesas_registradas')
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Despesa'
+        verbose_name_plural = 'Despesas'
+        ordering = ['-data']
+    
+    def __str__(self):
+        return f"{self.descricao} - R$ {self.valor} ({self.get_categoria_display()})"
+
+class ReceitaExtra(models.Model):
+    """Receitas extras além das vendas principais"""
+    # Identificação
+    descricao = models.CharField(max_length=200)
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    data = models.DateField(default=timezone.now)
+    
+    # Relacionamentos
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='receitas_extras')
+    responsavel = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='receitas_registradas')
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Receita Extra'
+        verbose_name_plural = 'Receitas Extras'
+        ordering = ['-data']
+    
+    def __str__(self):
+        return f"{self.descricao} - R$ {self.valor} ({self.data})"
+
+class Pagamento(models.Model):
+    """Controle de pagamentos futuros ou realizados"""
+    TIPO_CHOICES = [
+        ('entrada', 'Entrada'),
+        ('saida', 'Saída'),
+    ]
+    
+    REFERENTE_CHOICES = [
+        ('venda', 'Venda'),
+        ('despesa', 'Despesa'),
+        ('receita_extra', 'Receita Extra'),
+        ('outros', 'Outros'),
+    ]
+    
+    # Identificação
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    referente_a = models.CharField(max_length=20, choices=REFERENTE_CHOICES)
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    vencimento = models.DateField()
+    pago = models.BooleanField(default=False)
+    data_pagamento = models.DateField(blank=True, null=True)
+    
+    # Relacionamentos
+    loja = models.ForeignKey(Loja, on_delete=models.CASCADE, related_name='pagamentos')
+    responsavel = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='pagamentos_registrados')
+    
+    # Referências específicas
+    venda = models.ForeignKey(Venda, on_delete=models.CASCADE, related_name='pagamentos', blank=True, null=True)
+    despesa = models.ForeignKey(Despesa, on_delete=models.CASCADE, related_name='pagamentos', blank=True, null=True)
+    receita_extra = models.ForeignKey(ReceitaExtra, on_delete=models.CASCADE, related_name='pagamentos', blank=True, null=True)
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Pagamento'
+        verbose_name_plural = 'Pagamentos'
+        ordering = ['vencimento']
+    
+    def __str__(self):
+        status = "Pago" if self.pago else "Pendente"
+        return f"{self.get_tipo_display()} - R$ {self.valor} - {status} ({self.vencimento})"
+    
+    @property
+    def atrasado(self):
+        """Verifica se o pagamento está atrasado"""
+        from datetime import date
+        return not self.pago and self.vencimento < date.today()
+    
+    @property
+    def dias_atraso(self):
+        """Calcula quantos dias está atrasado"""
+        if self.atrasado:
+            from datetime import date
+            return (date.today() - self.vencimento).days
+        return 0

@@ -1,0 +1,181 @@
+{% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if pagamento %}
+        Editar Pagamento
+    {% else %}
+        Novo Pagamento
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        {% if pagamento %}
+                            <i class="fas fa-edit"></i> Editar Pagamento
+                        {% else %}
+                            <i class="fas fa-plus"></i> Novo Pagamento
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.tipo|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.referente_a|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.valor|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.vencimento|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.pago|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.data_pagamento|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.loja|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.responsavel|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <!-- Campos de referência específica -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.venda|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.despesa|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.receita_extra|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form.observacoes|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                {% if pagamento %}
+                                    Atualizar Pagamento
+                                {% else %}
+                                    Criar Pagamento
+                                {% endif %}
+                            </button>
+                            
+                            <a href="{% url 'core:pagamento_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                            
+                            {% if pagamento %}
+                                <a href="{% url 'core:pagamento_detail' pagamento.pk %}" class="btn btn-info">
+                                    <i class="fas fa-eye"></i> Ver Detalhes
+                                </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Formatação automática do campo valor
+        $('#id_valor').on('input', function() {
+            let value = $(this).val().replace(/\D/g, '');
+            value = (parseFloat(value) / 100).toFixed(2);
+            $(this).val(value);
+        });
+        
+        // Data atual como padrão para vencimento se não houver data
+        if (!$('#id_vencimento').val()) {
+            let today = new Date().toISOString().split('T')[0];
+            $('#id_vencimento').val(today);
+        }
+        
+        // Auto-completar responsável com usuário atual
+        if (!$('#id_responsavel').val()) {
+            $('#id_responsavel').val('{{ request.user.usuario_sistema.id }}');
+        }
+        
+        // Mostrar/ocultar campos de referência baseado no tipo
+        function toggleReferenciaFields() {
+            let referenteA = $('#id_referente_a').val();
+            
+            // Ocultar todos os campos de referência
+            $('#id_venda').closest('.form-group').hide();
+            $('#id_despesa').closest('.form-group').hide();
+            $('#id_receita_extra').closest('.form-group').hide();
+            
+            // Mostrar apenas o campo relevante
+            if (referenteA === 'venda') {
+                $('#id_venda').closest('.form-group').show();
+            } else if (referenteA === 'despesa') {
+                $('#id_despesa').closest('.form-group').show();
+            } else if (referenteA === 'receita_extra') {
+                $('#id_receita_extra').closest('.form-group').show();
+            }
+        }
+        
+        // Executar na inicialização
+        toggleReferenciaFields();
+        
+        // Executar quando o campo referente_a mudar
+        $('#id_referente_a').on('change', toggleReferenciaFields);
+        
+        // Mostrar/ocultar data_pagamento baseado no status pago
+        function toggleDataPagamento() {
+            let pago = $('#id_pago').is(':checked');
+            if (pago) {
+                $('#id_data_pagamento').closest('.form-group').show();
+                if (!$('#id_data_pagamento').val()) {
+                    let today = new Date().toISOString().split('T')[0];
+                    $('#id_data_pagamento').val(today);
+                }
+            } else {
+                $('#id_data_pagamento').closest('.form-group').hide();
+                $('#id_data_pagamento').val('');
+            }
+        }
+        
+        // Executar na inicialização
+        toggleDataPagamento();
+        
+        // Executar quando o checkbox pago mudar
+        $('#id_pago').on('change', toggleDataPagamento);
+    });
+</script>
+{% endblock %} 

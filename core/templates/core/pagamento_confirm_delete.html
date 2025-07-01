@@ -1,0 +1,106 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Confirmar Exclusão - Pagamento #{{ pagamento.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5>Você tem certeza que deseja excluir este pagamento?</h5>
+                        <p>Esta ação não pode ser desfeita.</p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Detalhes do Pagamento:</h6>
+                            <dl>
+                                <dt>ID:</dt>
+                                <dd>{{ pagamento.id }}</dd>
+                                
+                                <dt>Tipo:</dt>
+                                <dd>
+                                    <span class="badge {% if pagamento.tipo == 'entrada' %}badge-success{% else %}badge-danger{% endif %}">
+                                        {{ pagamento.get_tipo_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt>Valor:</dt>
+                                <dd class="h5 text-primary">R$ {{ pagamento.valor|floatformat:2 }}</dd>
+                                
+                                <dt>Status:</dt>
+                                <dd>
+                                    {% if pagamento.pago %}
+                                        <span class="badge badge-success">Pago</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">Pendente</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Informações Adicionais:</h6>
+                            <dl>
+                                <dt>Referente a:</dt>
+                                <dd>{{ pagamento.get_referente_a_display }}</dd>
+                                
+                                <dt>Vencimento:</dt>
+                                <dd>
+                                    {% if pagamento.vencimento %}
+                                        {{ pagamento.vencimento|date:"d/m/Y" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt>Loja:</dt>
+                                <dd>{{ pagamento.loja.nome|default:"-" }}</dd>
+                                
+                                <dt>Responsável:</dt>
+                                <dd>{{ pagamento.responsavel.nome|default:"-" }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    <!-- Referência Específica -->
+                    {% if pagamento.referente_a == 'venda' and pagamento.venda %}
+                        <div class="alert alert-info">
+                            <strong>Venda Relacionada:</strong> Venda #{{ pagamento.venda.id }} - 
+                            {{ pagamento.venda.cliente.nome }} ({{ pagamento.venda.motocicleta.modelo }})
+                        </div>
+                    {% elif pagamento.referente_a == 'despesa' and pagamento.despesa %}
+                        <div class="alert alert-warning">
+                            <strong>Despesa Relacionada:</strong> Despesa #{{ pagamento.despesa.id }} - 
+                            {{ pagamento.despesa.descricao }}
+                        </div>
+                    {% elif pagamento.referente_a == 'receita_extra' and pagamento.receita_extra %}
+                        <div class="alert alert-success">
+                            <strong>Receita Extra Relacionada:</strong> Receita #{{ pagamento.receita_extra.id }} - 
+                            {{ pagamento.receita_extra.descricao }}
+                        </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Confirmar Exclusão
+                            </button>
+                            <a href="{% url 'core:pagamento_detail' pagamento.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

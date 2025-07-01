@@ -13,11 +13,16 @@
         <i class="fas fa-motorcycle me-2"></i>Motocicletas
     </h1>
     
-    {% if perms.core.add_motocicleta %}
-    <a href="{% url 'core:motocicleta_create' %}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i>Nova Motocicleta
-    </a>
-    {% endif %}
+    <div>
+        <a href="{% url 'core:exportar_motocicletas_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
+            <i class="fas fa-file-excel me-1"></i>Exportar XLSX
+        </a>
+        {% if perms.core.add_motocicleta %}
+        <a href="{% url 'core:motocicleta_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nova Motocicleta
+        </a>
+        {% endif %}
+    </div>
 </div>
 
 <div class="row mb-4">

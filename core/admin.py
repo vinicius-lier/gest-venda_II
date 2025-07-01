@@ -6,7 +6,8 @@ from .models import (
     Cliente, Motocicleta, HistoricoProprietario,
     Venda, Consignacao, Seguradora, PlanoSeguro, Bem,
     CotacaoSeguro, Seguro, Repasse, AssinaturaDigital, 
-    Ocorrencia, ComentarioOcorrencia, MenuUsuario, MenuPerfil
+    Ocorrencia, ComentarioOcorrencia, MenuUsuario, MenuPerfil,
+    VendaFinanceira, Despesa, ReceitaExtra, Pagamento
 )
 from django.utils import timezone
 
@@ -77,7 +78,7 @@ class ClienteAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Identificação', {
-            'fields': ('nome', 'cpf_cnpj', 'rg', 'tipo')
+            'fields': ('nome', 'cpf_cnpj', 'rg', 'data_nascimento', 'tipo')
         }),
         ('Contatos', {
             'fields': ('telefone', 'email', 'endereco', 'cidade', 'estado', 'cep')
@@ -607,4 +608,102 @@ class MenuPerfilAdmin(admin.ModelAdmin):
     list_display = ['perfil', 'modulo', 'ativo']
     list_filter = ['ativo', 'modulo', 'perfil']
     search_fields = ['perfil__nome', 'modulo']
-    list_editable = ['ativo'] 
+    list_editable = ['ativo']
+
+# ============================================================================
+# ADMINISTRAÇÃO DO MÓDULO FINANCEIRO
+# ============================================================================
+
+@admin.register(VendaFinanceira)
+class VendaFinanceiraAdmin(admin.ModelAdmin):
+    list_display = ['produto', 'data', 'canal_venda', 'preco_unitario', 'quantidade', 'lucro', 'margem_lucro']
+    list_filter = ['canal_venda', 'data', 'venda__loja']
+    search_fields = ['produto', 'venda__comprador__nome', 'moto__marca', 'moto__modelo']
+    ordering = ['-data']
+    readonly_fields = ['data_cadastro', 'valor_total', 'valor_liquido', 'custo_total', 'lucro', 'margem_lucro']
+    
+    fieldsets = (
+        ('Relacionamentos', {
+            'fields': ('venda', 'moto')
+        }),
+        ('Dados da Venda', {
+            'fields': ('produto', 'quantidade', 'preco_unitario', 'desconto', 'custo_unitario', 'canal_venda')
+        }),
+        ('Cálculos', {
+            'fields': ('valor_total', 'valor_liquido', 'custo_total', 'lucro', 'margem_lucro'),
+            'classes': ('collapse',)
+        }),
+        ('Metadados', {
+            'fields': ('observacoes', 'data_cadastro'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(Despesa)
+class DespesaAdmin(admin.ModelAdmin):
+    list_display = ['descricao', 'categoria', 'valor', 'data', 'fixa_variavel', 'centro_custo', 'loja']
+    list_filter = ['categoria', 'fixa_variavel', 'data', 'loja']
+    search_fields = ['descricao', 'centro_custo', 'loja__nome']
+    ordering = ['-data']
+    readonly_fields = ['data_cadastro']
+    
+    fieldsets = (
+        ('Identificação', {
+            'fields': ('descricao', 'categoria', 'valor', 'data')
+        }),
+        ('Classificação', {
+            'fields': ('fixa_variavel', 'centro_custo')
+        }),
+        ('Relacionamentos', {
+            'fields': ('loja', 'responsavel')
+        }),
+        ('Metadados', {
+            'fields': ('observacoes', 'data_cadastro'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(ReceitaExtra)
+class ReceitaExtraAdmin(admin.ModelAdmin):
+    list_display = ['descricao', 'valor', 'data', 'loja', 'responsavel']
+    list_filter = ['data', 'loja']
+    search_fields = ['descricao', 'loja__nome', 'responsavel__user__first_name']
+    ordering = ['-data']
+    readonly_fields = ['data_cadastro']
+    
+    fieldsets = (
+        ('Identificação', {
+            'fields': ('descricao', 'valor', 'data')
+        }),
+        ('Relacionamentos', {
+            'fields': ('loja', 'responsavel')
+        }),
+        ('Metadados', {
+            'fields': ('observacoes', 'data_cadastro'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(Pagamento)
+class PagamentoAdmin(admin.ModelAdmin):
+    list_display = ['tipo', 'referente_a', 'valor', 'vencimento', 'pago', 'data_pagamento', 'loja']
+    list_filter = ['tipo', 'referente_a', 'pago', 'vencimento', 'loja']
+    search_fields = ['observacoes', 'loja__nome', 'responsavel__user__first_name']
+    ordering = ['vencimento']
+    readonly_fields = ['data_cadastro', 'atrasado', 'dias_atraso']
+    
+    fieldsets = (
+        ('Identificação', {
+            'fields': ('tipo', 'referente_a', 'valor', 'vencimento')
+        }),
+        ('Status', {
+            'fields': ('pago', 'data_pagamento')
+        }),
+        ('Relacionamentos', {
+            'fields': ('loja', 'responsavel', 'venda', 'despesa', 'receita_extra')
+        }),
+        ('Metadados', {
+            'fields': ('observacoes', 'data_cadastro'),
+            'classes': ('collapse',)
+        }),
+    ) 

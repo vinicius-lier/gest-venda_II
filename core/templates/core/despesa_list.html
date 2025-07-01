@@ -1,0 +1,203 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Despesas - Gestão Operacional de Vendas{% endblock %}
+
+{% block page_title %}Despesas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-money-bill-wave me-2"></i>Lista de Despesas
+                </h6>
+                <div>
+                    <a href="{% url 'core:exportar_despesas_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn-success btn-sm me-2">
+                        <i class="fas fa-file-excel me-1"></i>Exportar XLSX
+                    </a>
+                    <a href="{% url 'core:despesa_create' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Nova Despesa
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="categoria_filter" class="form-label">Categoria</label>
+                        <select class="form-select" id="categoria_filter">
+                            <option value="">Todas</option>
+                            <option value="aluguel">Aluguel</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="salario">Salário</option>
+                            <option value="energia">Energia</option>
+                            <option value="agua">Água</option>
+                            <option value="internet">Internet</option>
+                            <option value="telefone">Telefone</option>
+                            <option value="manutencao">Manutenção</option>
+                            <option value="combustivel">Combustível</option>
+                            <option value="impostos">Impostos</option>
+                            <option value="seguros">Seguros</option>
+                            <option value="fornecedores">Fornecedores</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="data_inicio_filter" class="form-label">Data Início</label>
+                        <input type="date" class="form-control" id="data_inicio_filter">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="data_fim_filter" class="form-label">Data Fim</label>
+                        <input type="date" class="form-control" id="data_fim_filter">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-primary me-2" onclick="aplicarFiltros()">
+                            <i class="fas fa-filter me-1"></i>Filtrar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="limparFiltros()">
+                            <i class="fas fa-times me-1"></i>Limpar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="despesasTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Valor</th>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Centro de Custo</th>
+                                <th>Loja</th>
+                                <th>Responsável</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for despesa in despesas %}
+                            <tr>
+                                <td>{{ despesa.descricao }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ despesa.get_categoria_display }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <strong class="text-danger">R$ {{ despesa.valor|floatformat:2 }}</strong>
+                                </td>
+                                <td>{{ despesa.data|date:"d/m/Y" }}</td>
+                                <td>
+                                    <span class="badge {% if despesa.fixa_variavel == 'fixa' %}bg-warning{% else %}bg-success{% endif %}">
+                                        {{ despesa.get_fixa_variavel_display }}
+                                    </span>
+                                </td>
+                                <td>{{ despesa.centro_custo|default:"-" }}</td>
+                                <td>{{ despesa.loja.nome }}</td>
+                                <td>{{ despesa.responsavel.user.get_full_name }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'core:despesa_detail' despesa.pk %}" 
+                                           class="btn btn-sm btn-outline-primary" title="Visualizar">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'core:despesa_update' despesa.pk %}" 
+                                           class="btn btn-sm btn-outline-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'core:despesa_delete' despesa.pk %}" 
+                                           class="btn btn-sm btn-outline-danger" title="Excluir">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">
+                                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                                    <br>Nenhuma despesa encontrada.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Resumo -->
+                {% if despesas %}
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Total de Despesas</h6>
+                                <h4 class="mb-0">{{ despesas.count }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Valor Total</h6>
+                                <h4 class="mb-0">R$ {{ total_valor|floatformat:2 }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Média por Despesa</h6>
+                                <h4 class="mb-0">R$ {{ media_valor|floatformat:2 }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function aplicarFiltros() {
+    const categoria = document.getElementById('categoria_filter').value;
+    const dataInicio = document.getElementById('data_inicio_filter').value;
+    const dataFim = document.getElementById('data_fim_filter').value;
+    
+    let url = window.location.pathname + '?';
+    const params = [];
+    
+    if (categoria) params.push(`categoria=${categoria}`);
+    if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+    if (dataFim) params.push(`data_fim=${dataFim}`);
+    
+    if (params.length > 0) {
+        url += params.join('&');
+        window.location.href = url;
+    }
+}
+
+function limparFiltros() {
+    document.getElementById('categoria_filter').value = '';
+    document.getElementById('data_inicio_filter').value = '';
+    document.getElementById('data_fim_filter').value = '';
+    window.location.href = window.location.pathname;
+}
+
+// Aplicar filtros ativos
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('categoria')) {
+        document.getElementById('categoria_filter').value = urlParams.get('categoria');
+    }
+    if (urlParams.get('data_inicio')) {
+        document.getElementById('data_inicio_filter').value = urlParams.get('data_inicio');
+    }
+    if (urlParams.get('data_fim')) {
+        document.getElementById('data_fim_filter').value = urlParams.get('data_fim');
+    }
+});
+</script>
+{% endblock %} 

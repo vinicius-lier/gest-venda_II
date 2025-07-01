@@ -1,0 +1,165 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{{ despesa.descricao }} - Gestão Operacional de Vendas{% endblock %}
+
+{% block page_title %}Detalhes da Despesa{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-money-bill-wave me-2"></i>{{ despesa.descricao }}
+                </h6>
+                <div>
+                    <a href="{% url 'core:despesa_update' despesa.pk %}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit me-1"></i>Editar
+                    </a>
+                    <a href="{% url 'core:despesa_delete' despesa.pk %}" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash me-1"></i>Excluir
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-1"></i>Informações Básicas
+                        </h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Descrição:</label>
+                            <p class="form-control-plaintext">{{ despesa.descricao }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Categoria:</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge bg-info">{{ despesa.get_categoria_display }}</span>
+                            </p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Valor:</label>
+                            <p class="form-control-plaintext">
+                                <span class="h5 text-danger">R$ {{ despesa.valor|floatformat:2 }}</span>
+                            </p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data:</label>
+                            <p class="form-control-plaintext">{{ despesa.data|date:"d/m/Y" }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo:</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge {% if despesa.fixa_variavel == 'fixa' %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ despesa.get_fixa_variavel_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-building me-1"></i>Informações Organizacionais
+                        </h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Centro de Custo:</label>
+                            <p class="form-control-plaintext">{{ despesa.centro_custo|default:"Não informado" }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Loja:</label>
+                            <p class="form-control-plaintext">{{ despesa.loja.nome }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Responsável:</label>
+                            <p class="form-control-plaintext">{{ despesa.responsavel.user.get_full_name }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data de Cadastro:</label>
+                            <p class="form-control-plaintext">{{ despesa.data_cadastro|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if despesa.observacoes %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-sticky-note me-1"></i>Observações
+                        </h6>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-0">{{ despesa.observacoes|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <a href="{% url 'core:despesa_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Card de Resumo -->
+        <div class="card shadow mb-3">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-pie me-2"></i>Resumo
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-danger mb-0">R$ {{ despesa.valor|floatformat:2 }}</h4>
+                            <small class="text-muted">Valor</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info mb-0">{{ despesa.data|date:"d/m" }}</h4>
+                        <small class="text-muted">Data</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card de Ações Rápidas -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-bolt me-2"></i>Ações Rápidas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'core:despesa_update' despesa.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit me-1"></i>Editar Despesa
+                    </a>
+                    <a href="{% url 'core:despesa_delete' despesa.pk %}" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Excluir Despesa
+                    </a>
+                    <a href="{% url 'core:despesa_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-1"></i>Ver Todas as Despesas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

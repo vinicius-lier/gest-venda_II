@@ -60,6 +60,16 @@
                             {{ form.rg.errors }}
                         </div>
 
+                        <!-- Data de Nascimento -->
+                        <div class="col-md-4 mb-3">
+                            <label for="data_nascimento" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>Data de Nascimento
+                            </label>
+                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" 
+                                   value="{{ form.data_nascimento.value|date:'Y-m-d'|default:'' }}">
+                            {{ form.data_nascimento.errors }}
+                        </div>
+
                         <!-- Telefone -->
                         <div class="col-md-4 mb-3">
                             <label for="telefone" class="form-label">

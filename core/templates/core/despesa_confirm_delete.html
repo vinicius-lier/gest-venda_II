@@ -1,0 +1,63 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Excluir Despesa - Gestão Operacional de Vendas{% endblock %}
+
+{% block page_title %}Excluir Despesa{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Atenção!
+                    </h5>
+                    <p class="mb-0">
+                        Você está prestes a excluir a despesa <strong>"{{ despesa.descricao }}"</strong>.
+                        Esta ação não pode ser desfeita.
+                    </p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Detalhes da Despesa:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Descrição:</strong> {{ despesa.descricao }}</li>
+                            <li><strong>Categoria:</strong> {{ despesa.get_categoria_display }}</li>
+                            <li><strong>Valor:</strong> R$ {{ despesa.valor|floatformat:2 }}</li>
+                            <li><strong>Data:</strong> {{ despesa.data|date:"d/m/Y" }}</li>
+                            <li><strong>Loja:</strong> {{ despesa.loja.nome }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-danger">Impacto da Exclusão:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-times text-danger me-1"></i>Despesa será removida permanentemente</li>
+                            <li><i class="fas fa-times text-danger me-1"></i>Relatórios financeiros serão afetados</li>
+                            <li><i class="fas fa-times text-danger me-1"></i>Histórico será perdido</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'core:despesa_detail' despesa.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Confirmar Exclusão
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

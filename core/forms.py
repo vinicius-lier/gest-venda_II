@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia
+from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia, VendaFinanceira, Despesa, ReceitaExtra, Pagamento
 from django.utils import timezone
 from django.db import models
 
@@ -187,11 +187,12 @@ class ConsignacaoForm(forms.ModelForm):
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ['nome', 'cpf_cnpj', 'rg', 'telefone', 'email', 'endereco', 'cidade', 'estado', 'cep', 'tipo', 'observacoes', 'ativo']
+        fields = ['nome', 'cpf_cnpj', 'rg', 'data_nascimento', 'telefone', 'email', 'endereco', 'cidade', 'estado', 'cep', 'tipo', 'observacoes', 'ativo']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control'}),
             'cpf_cnpj': forms.TextInput(attrs={'class': 'form-control'}),
             'rg': forms.TextInput(attrs={'class': 'form-control'}),
+            'data_nascimento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'telefone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'endereco': forms.TextInput(attrs={'class': 'form-control'}),
@@ -559,4 +560,133 @@ class ComentarioOcorrenciaForm(forms.ModelForm):
             'conteudo': 'Comentário',
             'privado': 'Comentário privado (apenas para administradores)'
         }
+
+# ============================================================================
+# FORMULÁRIOS DO MÓDULO FINANCEIRO
+# ============================================================================
+
+class VendaFinanceiraForm(forms.ModelForm):
+    class Meta:
+        model = VendaFinanceira
+        fields = [
+            'venda', 'moto', 'produto', 'quantidade', 'preco_unitario', 
+            'desconto', 'custo_unitario', 'canal_venda', 'observacoes'
+        ]
+        widgets = {
+            'venda': forms.Select(attrs={'class': 'form-select'}),
+            'moto': forms.Select(attrs={'class': 'form-select'}),
+            'produto': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantidade': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'preco_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'desconto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'custo_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'canal_venda': forms.Select(attrs={'class': 'form-select'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar vendas
+        self.fields['venda'].queryset = Venda.objects.all().order_by('-data_venda')
+        self.fields['venda'].label_from_instance = lambda obj: f"{obj.comprador.nome} - {obj.moto} (R$ {obj.valor_venda})"
+        
+        # Filtrar motocicletas
+        self.fields['moto'].queryset = Motocicleta.objects.all().order_by('marca', 'modelo')
+        self.fields['moto'].label_from_instance = lambda obj: f"{obj.marca} {obj.modelo} {obj.ano} - {obj.placa or obj.chassi}"
+
+class DespesaForm(forms.ModelForm):
+    class Meta:
+        model = Despesa
+        fields = [
+            'descricao', 'categoria', 'valor', 'data', 'fixa_variavel', 
+            'centro_custo', 'loja', 'responsavel', 'observacoes'
+        ]
+        widgets = {
+            'descricao': forms.TextInput(attrs={'class': 'form-control'}),
+            'categoria': forms.Select(attrs={'class': 'form-select'}),
+            'valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'data': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'fixa_variavel': forms.Select(attrs={'class': 'form-select'}),
+            'centro_custo': forms.TextInput(attrs={'class': 'form-control'}),
+            'loja': forms.Select(attrs={'class': 'form-select'}),
+            'responsavel': forms.Select(attrs={'class': 'form-select'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar lojas ativas
+        self.fields['loja'].queryset = Loja.objects.filter(ativo=True).order_by('nome')
+        
+        # Filtrar usuários ativos
+        usuarios_ativos = Usuario.objects.filter(status='ativo').order_by('user__first_name', 'user__last_name')
+        self.fields['responsavel'].queryset = usuarios_ativos
+        self.fields['responsavel'].label_from_instance = lambda obj: f"{obj.user.get_full_name()} ({obj.loja.nome})"
+
+class ReceitaExtraForm(forms.ModelForm):
+    class Meta:
+        model = ReceitaExtra
+        fields = ['descricao', 'valor', 'data', 'loja', 'responsavel', 'observacoes']
+        widgets = {
+            'descricao': forms.TextInput(attrs={'class': 'form-control'}),
+            'valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'data': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'loja': forms.Select(attrs={'class': 'form-select'}),
+            'responsavel': forms.Select(attrs={'class': 'form-select'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar lojas ativas
+        self.fields['loja'].queryset = Loja.objects.filter(ativo=True).order_by('nome')
+        
+        # Filtrar usuários ativos
+        usuarios_ativos = Usuario.objects.filter(status='ativo').order_by('user__first_name', 'user__last_name')
+        self.fields['responsavel'].queryset = usuarios_ativos
+        self.fields['responsavel'].label_from_instance = lambda obj: f"{obj.user.get_full_name()} ({obj.loja.nome})"
+
+class PagamentoForm(forms.ModelForm):
+    class Meta:
+        model = Pagamento
+        fields = [
+            'tipo', 'referente_a', 'valor', 'vencimento', 'pago', 'data_pagamento',
+            'loja', 'responsavel', 'venda', 'despesa', 'receita_extra', 'observacoes'
+        ]
+        widgets = {
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'referente_a': forms.Select(attrs={'class': 'form-select'}),
+            'valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'vencimento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'pago': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'data_pagamento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'loja': forms.Select(attrs={'class': 'form-select'}),
+            'responsavel': forms.Select(attrs={'class': 'form-select'}),
+            'venda': forms.Select(attrs={'class': 'form-select'}),
+            'despesa': forms.Select(attrs={'class': 'form-select'}),
+            'receita_extra': forms.Select(attrs={'class': 'form-select'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar lojas ativas
+        self.fields['loja'].queryset = Loja.objects.filter(ativo=True).order_by('nome')
+        
+        # Filtrar usuários ativos
+        usuarios_ativos = Usuario.objects.filter(status='ativo').order_by('user__first_name', 'user__last_name')
+        self.fields['responsavel'].queryset = usuarios_ativos
+        self.fields['responsavel'].label_from_instance = lambda obj: f"{obj.user.get_full_name()} ({obj.loja.nome})"
+        
+        # Filtrar vendas
+        self.fields['venda'].queryset = Venda.objects.all().order_by('-data_venda')
+        self.fields['venda'].label_from_instance = lambda obj: f"{obj.comprador.nome} - {obj.moto} (R$ {obj.valor_venda})"
+        
+        # Filtrar despesas
+        self.fields['despesa'].queryset = Despesa.objects.all().order_by('-data')
+        self.fields['despesa'].label_from_instance = lambda obj: f"{obj.descricao} - R$ {obj.valor}"
+        
+        # Filtrar receitas extras
+        self.fields['receita_extra'].queryset = ReceitaExtra.objects.all().order_by('-data')
+        self.fields['receita_extra'].label_from_instance = lambda obj: f"{obj.descricao} - R$ {obj.valor}"
 

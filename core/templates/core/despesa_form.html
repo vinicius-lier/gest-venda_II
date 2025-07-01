@@ -1,0 +1,213 @@
+{% extends 'core/base.html' %}
+
+{% block title %}
+{% if despesa %}Editar Despesa{% else %}Nova Despesa{% endif %} - Gestão Operacional de Vendas
+{% endblock %}
+
+{% block page_title %}
+{% if despesa %}Editar Despesa{% else %}Nova Despesa{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    {% if despesa %}Editar Despesa{% else %}Nova Despesa{% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {{ form.non_field_errors }}
+                    
+                    <div class="row">
+                        <!-- Descrição -->
+                        <div class="col-md-8 mb-3">
+                            <label for="descricao" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Descrição *
+                            </label>
+                            <input type="text" class="form-control" id="descricao" name="descricao" 
+                                   value="{{ form.descricao.value|default:'' }}" required>
+                            {{ form.descricao.errors }}
+                            <div class="invalid-feedback">
+                                Por favor, informe a descrição da despesa.
+                            </div>
+                        </div>
+
+                        <!-- Categoria -->
+                        <div class="col-md-4 mb-3">
+                            <label for="categoria" class="form-label">
+                                <i class="fas fa-folder me-1"></i>Categoria *
+                            </label>
+                            <select class="form-select" id="categoria" name="categoria" required>
+                                <option value="">Selecione...</option>
+                                <option value="aluguel" {% if form.categoria.value == 'aluguel' %}selected{% endif %}>Aluguel</option>
+                                <option value="marketing" {% if form.categoria.value == 'marketing' %}selected{% endif %}>Marketing</option>
+                                <option value="salario" {% if form.categoria.value == 'salario' %}selected{% endif %}>Salário</option>
+                                <option value="energia" {% if form.categoria.value == 'energia' %}selected{% endif %}>Energia</option>
+                                <option value="agua" {% if form.categoria.value == 'agua' %}selected{% endif %}>Água</option>
+                                <option value="internet" {% if form.categoria.value == 'internet' %}selected{% endif %}>Internet</option>
+                                <option value="telefone" {% if form.categoria.value == 'telefone' %}selected{% endif %}>Telefone</option>
+                                <option value="manutencao" {% if form.categoria.value == 'manutencao' %}selected{% endif %}>Manutenção</option>
+                                <option value="combustivel" {% if form.categoria.value == 'combustivel' %}selected{% endif %}>Combustível</option>
+                                <option value="impostos" {% if form.categoria.value == 'impostos' %}selected{% endif %}>Impostos</option>
+                                <option value="seguros" {% if form.categoria.value == 'seguros' %}selected{% endif %}>Seguros</option>
+                                <option value="fornecedores" {% if form.categoria.value == 'fornecedores' %}selected{% endif %}>Fornecedores</option>
+                                <option value="outros" {% if form.categoria.value == 'outros' %}selected{% endif %}>Outros</option>
+                            </select>
+                            {{ form.categoria.errors }}
+                            <div class="invalid-feedback">
+                                Por favor, selecione a categoria.
+                            </div>
+                        </div>
+
+                        <!-- Valor -->
+                        <div class="col-md-4 mb-3">
+                            <label for="valor" class="form-label">
+                                <i class="fas fa-dollar-sign me-1"></i>Valor *
+                            </label>
+                            <input type="number" class="form-control" id="valor" name="valor" 
+                                   value="{{ form.valor.value|default:'' }}" step="0.01" min="0" required>
+                            {{ form.valor.errors }}
+                            <div class="invalid-feedback">
+                                Por favor, informe o valor da despesa.
+                            </div>
+                        </div>
+
+                        <!-- Data -->
+                        <div class="col-md-4 mb-3">
+                            <label for="data" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>Data *
+                            </label>
+                            <input type="date" class="form-control" id="data" name="data" 
+                                   value="{{ form.data.value|date:'Y-m-d'|default:'' }}" required>
+                            {{ form.data.errors }}
+                            <div class="invalid-feedback">
+                                Por favor, informe a data da despesa.
+                            </div>
+                        </div>
+
+                        <!-- Fixa/Variável -->
+                        <div class="col-md-4 mb-3">
+                            <label for="fixa_variavel" class="form-label">
+                                <i class="fas fa-chart-line me-1"></i>Tipo *
+                            </label>
+                            <select class="form-select" id="fixa_variavel" name="fixa_variavel" required>
+                                <option value="">Selecione...</option>
+                                <option value="fixa" {% if form.fixa_variavel.value == 'fixa' %}selected{% endif %}>Fixa</option>
+                                <option value="variavel" {% if form.fixa_variavel.value == 'variavel' %}selected{% endif %}>Variável</option>
+                            </select>
+                            {{ form.fixa_variavel.errors }}
+                            <div class="invalid-feedback">
+                                Por favor, selecione o tipo.
+                            </div>
+                        </div>
+
+                        <!-- Centro de Custo -->
+                        <div class="col-md-6 mb-3">
+                            <label for="centro_custo" class="form-label">
+                                <i class="fas fa-building me-1"></i>Centro de Custo
+                            </label>
+                            <input type="text" class="form-control" id="centro_custo" name="centro_custo" 
+                                   value="{{ form.centro_custo.value|default:'' }}" 
+                                   placeholder="Ex: Oficina, Loja 1, Delivery">
+                            {{ form.centro_custo.errors }}
+                        </div>
+
+                        <!-- Loja -->
+                        <div class="col-md-6 mb-3">
+                            <label for="loja" class="form-label">
+                                <i class="fas fa-store me-1"></i>Loja *
+                            </label>
+                            <select class="form-select" id="loja" name="loja" required>
+                                <option value="">Selecione...</option>
+                                {% for choice in form.loja.field.choices %}
+                                    {% if choice.0 %}
+                                        <option value="{{ choice.0 }}" {% if form.loja.value == choice.0 %}selected{% endif %}>
+                                            {{ choice.1 }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {{ form.loja.errors }}
+                            <div class="invalid-feedback">
+                                Por favor, selecione a loja.
+                            </div>
+                        </div>
+
+                        <!-- Responsável -->
+                        <div class="col-md-6 mb-3">
+                            <label for="responsavel" class="form-label">
+                                <i class="fas fa-user me-1"></i>Responsável *
+                            </label>
+                            <select class="form-select" id="responsavel" name="responsavel" required>
+                                <option value="">Selecione...</option>
+                                {% for choice in form.responsavel.field.choices %}
+                                    {% if choice.0 %}
+                                        <option value="{{ choice.0 }}" {% if form.responsavel.value == choice.0 %}selected{% endif %}>
+                                            {{ choice.1 }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {{ form.responsavel.errors }}
+                            <div class="invalid-feedback">
+                                Por favor, selecione o responsável.
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="col-12 mb-3">
+                            <label for="observacoes" class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>Observações
+                            </label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3">{{ form.observacoes.value|default:'' }}</textarea>
+                            {{ form.observacoes.errors }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'core:despesa_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if despesa %}Atualizar{% else %}Salvar{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validação do formulário
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Máscara para valor
+document.getElementById('valor').addEventListener('input', function(e) {
+    let value = e.target.value;
+    value = value.replace(/\D/g, '');
+    value = (parseFloat(value) / 100).toFixed(2);
+    e.target.value = value;
+});
+</script>
+{% endblock %} 

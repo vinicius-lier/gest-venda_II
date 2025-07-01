@@ -14,6 +14,9 @@
             <p class="text-muted">Gerencie todas as vendas de motocicletas</p>
         </div>
         <div>
+            <a href="{% url 'core:exportar_vendas_xlsx_geral' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
+                <i class="fas fa-file-excel me-1"></i>Exportar XLSX
+            </a>
             <a href="{% url 'core:venda_create' %}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>Nova Venda
             </a>

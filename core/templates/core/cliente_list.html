@@ -16,11 +16,16 @@
         <p class="text-muted mb-0">Selecione um cliente para alterar ou adicione um novo.</p>
     </div>
     
-    {% if perms.core.add_cliente %}
-    <a href="{% url 'core:cliente_create' %}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i>Adicionar cliente
-    </a>
-    {% endif %}
+    <div>
+        <a href="{% url 'core:exportar_clientes_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
+            <i class="fas fa-file-excel me-1"></i>Exportar XLSX
+        </a>
+        {% if perms.core.add_cliente %}
+        <a href="{% url 'core:cliente_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Adicionar cliente
+        </a>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Barra de ferramentas do Django Admin -->

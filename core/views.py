@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia, MenuPerfil, Perfil, MenuUsuario
+from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia, MenuPerfil, Perfil, MenuUsuario, VendaFinanceira, Despesa, ReceitaExtra, Pagamento
 from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, ClienteForm
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
@@ -28,6 +28,10 @@ from django.conf import settings
 import pandas as pd
 from django.views.decorators.csrf import csrf_exempt
 import json
+import openpyxl
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font
+import locale
 
 logger = logging.getLogger(__name__)
 
@@ -2178,6 +2182,7 @@ def usuario_menu_manage(request, usuario_id):
             ('seguradoras', 'Seguradoras'),
             ('bens', 'Bens'),
             ('cotacoes', 'Cotações'),
+            ('financeiro', 'Financeiro'),
         ]
         
         # Limpar configurações existentes do usuário
@@ -2209,6 +2214,7 @@ def usuario_menu_manage(request, usuario_id):
         ('seguradoras', 'Seguradoras'),
         ('bens', 'Bens'),
         ('cotacoes', 'Cotações'),
+        ('financeiro', 'Financeiro'),
     ]
     
     # Verificar quais módulos estão ativos para o usuário
@@ -2518,3 +2524,1051 @@ def motocicleta_transferir_propriedade(request, pk):
         'clientes': clientes,
         'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
     })
+
+# ============================================================================
+# VIEWS DO MÓDULO FINANCEIRO
+# ============================================================================
+
+@login_required
+def dashboard_financeiro(request):
+    """Dashboard financeiro com KPIs, gráficos e análises"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_vendafinanceira')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para acessar o dashboard financeiro.'})
+    
+    # Obter parâmetros de filtro
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    loja_id = request.GET.get('loja')
+    
+    # Converter datas
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    
+    if data_inicio:
+        data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+    else:
+        data_inicio = timezone.now().date() - timedelta(days=30)
+    
+    if data_fim:
+        data_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+    else:
+        data_fim = timezone.now().date()
+    
+    # Obter loja se especificada
+    loja = None
+    if loja_id:
+        try:
+            loja = Loja.objects.get(id=loja_id)
+        except Loja.DoesNotExist:
+            pass
+    
+    # Calcular dados financeiros
+    from .financeiro import CalculadoraFinanceira
+    
+    calc = CalculadoraFinanceira(loja=loja, data_inicio=data_inicio, data_fim=data_fim)
+    resumo = calc.get_resumo_financeiro()
+    
+    # Obter dados para tabelas
+    from .models import Pagamento, VendaFinanceira
+    
+    # Pagamentos pendentes
+    pagamentos_pendentes = Pagamento.objects.filter(
+        pago=False,
+        loja=loja if loja else Q(),
+        vencimento__lte=data_fim + timedelta(days=30)  # Próximos 30 dias
+    ).order_by('vencimento')[:10]
+    
+    # Vendas com maior lucro (ordenadas por data, depois calculamos o lucro em Python)
+    if loja:
+        vendas_maior_lucro = Venda.objects.filter(
+            data_venda__gte=data_inicio,
+            data_venda__lte=data_fim,
+            loja=loja
+        ).order_by('-data_venda')[:50]  # Pegamos mais registros para depois filtrar os top 10
+    else:
+        vendas_maior_lucro = Venda.objects.filter(
+            data_venda__gte=data_inicio,
+            data_venda__lte=data_fim
+        ).order_by('-data_venda')[:50]  # Pegamos mais registros para depois filtrar os top 10
+    
+    # Calcular lucro para cada venda e ordenar
+    vendas_com_lucro = []
+    for venda in vendas_maior_lucro:
+        lucro = venda.valor_venda - (venda.valor_entrada or 0)
+        vendas_com_lucro.append((venda, lucro))
+    
+    # Ordenar por lucro e pegar top 10
+    vendas_com_lucro.sort(key=lambda x: x[1], reverse=True)
+    vendas_maior_lucro = [venda for venda, lucro in vendas_com_lucro[:10]]
+    
+    # Listar todas as lojas para o filtro
+    lojas = Loja.objects.filter(ativo=True).order_by('nome')
+    
+    context = {
+        'resumo': resumo,
+        'alertas': resumo['alertas'],
+        'pagamentos_pendentes': pagamentos_pendentes,
+        'vendas_maior_lucro': vendas_maior_lucro,
+        'lojas': lojas,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'loja_selecionada': loja,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/dashboard_financeiro.html', context)
+
+@login_required
+def venda_financeira_list(request):
+    """Lista de vendas financeiras - Redireciona para lista de vendas normais"""
+    messages.info(request, 'Visualizando lista de vendas de motocicletas.')
+    return redirect('core:venda_list')
+
+@login_required
+def venda_financeira_create(request):
+    """Criar nova venda de moto - Redireciona para formulário de vendas"""
+    messages.info(request, 'Use o formulário de vendas de motocicletas para registrar vendas. O módulo financeiro é para análise e relatórios.')
+    return redirect('core:venda_create')
+
+@login_required
+def venda_financeira_detail(request, pk):
+    """Detalhes da venda financeira - Redireciona para detalhes da venda normal"""
+    messages.info(request, 'Visualizando detalhes da venda de motocicleta.')
+    return redirect('core:venda_detail', pk=pk)
+
+@login_required
+def despesa_list(request):
+    """Lista de despesas"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_despesa')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar despesas.'})
+    
+    despesas = Despesa.objects.all().order_by('-data')
+    
+    # Filtros
+    categoria = request.GET.get('categoria')
+    if categoria:
+        despesas = despesas.filter(categoria=categoria)
+    
+    data_inicio = request.GET.get('data_inicio')
+    if data_inicio:
+        despesas = despesas.filter(data__gte=data_inicio)
+    
+    data_fim = request.GET.get('data_fim')
+    if data_fim:
+        despesas = despesas.filter(data__lte=data_fim)
+    
+    # Cálculos
+    total_valor = despesas.aggregate(total=Sum('valor'))['total'] or 0
+    media_valor = total_valor / despesas.count() if despesas.count() > 0 else 0
+    
+    context = {
+        'despesas': despesas,
+        'total_valor': total_valor,
+        'media_valor': media_valor,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/despesa_list.html', context)
+
+@login_required
+def despesa_create(request):
+    """Criar nova despesa"""
+    if not (request.user.is_superuser or request.user.has_perm('core.add_despesa')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para criar despesas.'})
+    
+    from .forms import DespesaForm
+    
+    if request.method == 'POST':
+        form = DespesaForm(request.POST)
+        if form.is_valid():
+            despesa = form.save(commit=False)
+            despesa.responsavel = request.user.usuario_sistema
+            despesa.save()
+            messages.success(request, 'Despesa criada com sucesso!')
+            return redirect('core:despesa_detail', pk=despesa.pk)
+    else:
+        form = DespesaForm()
+    
+    context = {
+        'form': form,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/despesa_form.html', context)
+
+@login_required
+def despesa_detail(request, pk):
+    """Detalhes da despesa"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_despesa')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar despesas.'})
+    
+    despesa = get_object_or_404(Despesa, pk=pk)
+    
+    context = {
+        'despesa': despesa,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/despesa_detail.html', context)
+
+@login_required
+def despesa_update(request, pk):
+    """Editar despesa"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_despesa')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para editar despesas.'})
+    
+    despesa = get_object_or_404(Despesa, pk=pk)
+    from .forms import DespesaForm
+    
+    if request.method == 'POST':
+        form = DespesaForm(request.POST, instance=despesa)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Despesa atualizada com sucesso!')
+            return redirect('core:despesa_detail', pk=despesa.pk)
+    else:
+        form = DespesaForm(instance=despesa)
+    
+    context = {
+        'form': form,
+        'despesa': despesa,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/despesa_form.html', context)
+
+@login_required
+def despesa_delete(request, pk):
+    """Excluir despesa"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_despesa')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir despesas.'})
+    
+    despesa = get_object_or_404(Despesa, pk=pk)
+    
+    if request.method == 'POST':
+        despesa.delete()
+        messages.success(request, 'Despesa excluída com sucesso!')
+        return redirect('core:despesa_list')
+    
+    context = {
+        'despesa': despesa,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/despesa_confirm_delete.html', context)
+
+@login_required
+def receita_extra_list(request):
+    """Lista de receitas extras"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_receitaextra')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar receitas extras.'})
+    
+    receitas = ReceitaExtra.objects.all().order_by('-data')
+    
+    # Filtros
+    data_inicio = request.GET.get('data_inicio')
+    if data_inicio:
+        receitas = receitas.filter(data__gte=data_inicio)
+    
+    data_fim = request.GET.get('data_fim')
+    if data_fim:
+        receitas = receitas.filter(data__lte=data_fim)
+    
+    # Cálculos
+    total_receitas = receitas.aggregate(total=Sum('valor'))['total'] or 0
+    media_receitas = total_receitas / receitas.count() if receitas.count() > 0 else 0
+    
+    context = {
+        'receitas': receitas,
+        'total_receitas': total_receitas,
+        'media_receitas': media_receitas,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/receita_extra_list.html', context)
+
+@login_required
+def receita_extra_create(request):
+    """Criar nova receita extra"""
+    if not (request.user.is_superuser or request.user.has_perm('core.add_receitaextra')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para criar receitas extras.'})
+    
+    from .forms import ReceitaExtraForm
+    
+    if request.method == 'POST':
+        form = ReceitaExtraForm(request.POST)
+        if form.is_valid():
+            receita = form.save(commit=False)
+            receita.responsavel = request.user.usuario_sistema
+            receita.save()
+            messages.success(request, 'Receita extra criada com sucesso!')
+            return redirect('core:receita_extra_detail', pk=receita.pk)
+    else:
+        form = ReceitaExtraForm()
+    
+    context = {
+        'form': form,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/receita_extra_form.html', context)
+
+@login_required
+def receita_extra_detail(request, pk):
+    """Detalhes da receita extra"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_receitaextra')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar receitas extras.'})
+    
+    receita = get_object_or_404(ReceitaExtra, pk=pk)
+    
+    context = {
+        'receita': receita,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/receita_extra_detail.html', context)
+
+@login_required
+def receita_extra_update(request, pk):
+    """Editar receita extra"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_receitaextra')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para editar receitas extras.'})
+    
+    receita = get_object_or_404(ReceitaExtra, pk=pk)
+    from .forms import ReceitaExtraForm
+    
+    if request.method == 'POST':
+        form = ReceitaExtraForm(request.POST, instance=receita)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Receita extra atualizada com sucesso!')
+            return redirect('core:receita_extra_detail', pk=receita.pk)
+    else:
+        form = ReceitaExtraForm(instance=receita)
+    
+    context = {
+        'form': form,
+        'receita': receita,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/receita_extra_form.html', context)
+
+@login_required
+def receita_extra_delete(request, pk):
+    """Excluir receita extra"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_receitaextra')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir receitas extras.'})
+    
+    receita = get_object_or_404(ReceitaExtra, pk=pk)
+    
+    if request.method == 'POST':
+        receita.delete()
+        messages.success(request, 'Receita extra excluída com sucesso!')
+        return redirect('core:receita_extra_list')
+    
+    context = {
+        'receita': receita,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/receita_extra_confirm_delete.html', context)
+
+@login_required
+def pagamento_list(request):
+    """Lista de pagamentos"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_pagamento')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar pagamentos.'})
+    
+    from django.db.models import Sum
+    from django.utils import timezone
+    
+    pagamentos = Pagamento.objects.all().order_by('vencimento')
+    
+    # Filtros
+    tipo = request.GET.get('tipo')
+    if tipo:
+        pagamentos = pagamentos.filter(tipo=tipo)
+    
+    status = request.GET.get('status')
+    if status == 'pago':
+        pagamentos = pagamentos.filter(pago=True)
+    elif status == 'pendente':
+        pagamentos = pagamentos.filter(pago=False)
+    elif status == 'atrasado':
+        pagamentos = pagamentos.filter(pago=False, vencimento__lt=timezone.now().date())
+    
+    # Cálculos
+    total_pago = pagamentos.filter(pago=True).aggregate(total=Sum('valor'))['total'] or 0
+    total_pendente = pagamentos.filter(pago=False).aggregate(total=Sum('valor'))['total'] or 0
+    vencidos_count = pagamentos.filter(pago=False, vencimento__lt=timezone.now().date()).count()
+    
+    # Lojas para filtro
+    from .models import Loja
+    lojas = Loja.objects.all()
+    
+    context = {
+        'pagamentos': pagamentos,
+        'total_pago': total_pago,
+        'total_pendente': total_pendente,
+        'vencidos_count': vencidos_count,
+        'lojas': lojas,
+        'hoje': timezone.now().date(),
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/pagamento_list.html', context)
+
+@login_required
+def pagamento_create(request):
+    """Criar novo pagamento"""
+    if not (request.user.is_superuser or request.user.has_perm('core.add_pagamento')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para criar pagamentos.'})
+    
+    from .forms import PagamentoForm
+    
+    if request.method == 'POST':
+        form = PagamentoForm(request.POST)
+        if form.is_valid():
+            pagamento = form.save(commit=False)
+            pagamento.responsavel = request.user.usuario_sistema
+            pagamento.save()
+            messages.success(request, 'Pagamento criado com sucesso!')
+            return redirect('core:pagamento_detail', pk=pagamento.pk)
+    else:
+        form = PagamentoForm()
+    
+    context = {
+        'form': form,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/pagamento_form.html', context)
+
+@login_required
+def pagamento_detail(request, pk):
+    """Detalhes do pagamento"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_pagamento')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar pagamentos.'})
+    
+    pagamento = get_object_or_404(Pagamento, pk=pk)
+    
+    context = {
+        'pagamento': pagamento,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/pagamento_detail.html', context)
+
+@login_required
+def pagamento_update(request, pk):
+    """Editar pagamento"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_pagamento')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para editar pagamentos.'})
+    
+    pagamento = get_object_or_404(Pagamento, pk=pk)
+    from .forms import PagamentoForm
+    
+    if request.method == 'POST':
+        form = PagamentoForm(request.POST, instance=pagamento)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Pagamento atualizado com sucesso!')
+            return redirect('core:pagamento_detail', pk=pagamento.pk)
+    else:
+        form = PagamentoForm(instance=pagamento)
+    
+    context = {
+        'form': form,
+        'pagamento': pagamento,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/pagamento_form.html', context)
+
+@login_required
+def pagamento_delete(request, pk):
+    """Excluir pagamento"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_pagamento')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir pagamentos.'})
+    
+    pagamento = get_object_or_404(Pagamento, pk=pk)
+    
+    if request.method == 'POST':
+        pagamento.delete()
+        messages.success(request, 'Pagamento excluído com sucesso!')
+        return redirect('core:pagamento_list')
+    
+    context = {
+        'pagamento': pagamento,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/pagamento_confirm_delete.html', context)
+
+@login_required
+def exportar_dashboard_financeiro_xlsx(request):
+    """Exporta os dados do dashboard financeiro em formato XLSX"""
+    from .financeiro import CalculadoraFinanceira
+    from .models import Motocicleta, Venda, Despesa, Pagamento, ReceitaExtra
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+
+    def parse_data(data_str, default):
+        if not data_str:
+            return default
+        try:
+            # Tenta formato ISO
+            return datetime.strptime(data_str, '%Y-%m-%d').date()
+        except Exception:
+            pass
+        try:
+            # Tenta formato por extenso em português
+            meses = {'janeiro':1, 'fevereiro':2, 'março':3, 'marco':3, 'abril':4, 'maio':5, 'junho':6, 'julho':7, 'agosto':8, 'setembro':9, 'outubro':10, 'novembro':11, 'dezembro':12}
+            partes = data_str.lower().replace('de ', '').split()
+            if len(partes) == 3:
+                dia = int(partes[0])
+                mes = meses.get(partes[1], 1)
+                ano = int(partes[2])
+                return datetime(ano, mes, dia).date()
+        except Exception:
+            pass
+        return default
+
+    data_inicio = parse_data(request.GET.get('data_inicio'), timezone.now().date() - timedelta(days=30))
+    data_fim = parse_data(request.GET.get('data_fim'), timezone.now().date())
+    loja_id = request.GET.get('loja')
+
+    loja = None
+    if loja_id:
+        try:
+            from .models import Loja
+            loja = Loja.objects.get(id=loja_id)
+        except Loja.DoesNotExist:
+            pass
+
+    calc = CalculadoraFinanceira(loja=loja, data_inicio=data_inicio, data_fim=data_fim)
+    resumo = calc.get_resumo_financeiro()
+
+    # Workbook
+    wb = openpyxl.Workbook()
+    ws_resumo = wb.active
+    ws_resumo.title = 'Resumo'
+
+    # Resumo dos cards
+    ws_resumo.append(['Indicador', 'Valor'])
+    ws_resumo.append(['Receita Bruta', float(resumo['receita_bruta'])])
+    ws_resumo.append(['Lucro Líquido', float(resumo['lucro_total'])])
+    ws_resumo.append(['Margem de Lucro (%)', float(resumo['margem_lucro'])])
+    ws_resumo.append(['Projeção de Caixa', float(resumo['projecao_caixa'])])
+    ws_resumo.append(['Motos em Estoque', resumo['total_motos_estoque']])
+    ws_resumo.append(['0KM', resumo['total_0km']])
+    ws_resumo.append(['Usadas', resumo['total_usadas']])
+    ws_resumo.append(['Consignação', resumo['total_consignacao']])
+    ws_resumo.append(['Valor em Estoque', float(resumo['valor_estoque'])])
+    ws_resumo.append(['Total Gasto em Motos', float(resumo['valor_gasto_motos'])])
+
+    for cell in ws_resumo[1]:
+        cell.font = Font(bold=True)
+
+    # Motos em estoque
+    ws_motos = wb.create_sheet('Motos em Estoque')
+    ws_motos.append(['Marca', 'Modelo', 'Ano', 'Tipo', 'Status', 'Valor Atual', 'Valor Entrada', 'Data Entrada'])
+    for cell in ws_motos[1]:
+        cell.font = Font(bold=True)
+    motos_estoque = Motocicleta.objects.filter(status='estoque', ativo=True, **(calc.get_filtros_loja()))
+    for m in motos_estoque:
+        ws_motos.append([
+            m.marca, m.modelo, m.ano, m.get_tipo_entrada_display(), m.get_status_display(),
+            float(m.valor_atual or 0), float(m.valor_entrada or 0), m.data_entrada.strftime('%d/%m/%Y') if m.data_entrada else ''
+        ])
+
+    # Vendas do período
+    ws_vendas = wb.create_sheet('Vendas')
+    ws_vendas.append(['ID', 'Data', 'Cliente', 'Motocicleta', 'Valor Venda', 'Valor Entrada', 'Lucro'])
+    for cell in ws_vendas[1]:
+        cell.font = Font(bold=True)
+    vendas = Venda.objects.filter(data_venda__gte=data_inicio, data_venda__lte=data_fim)
+    if loja:
+        vendas = vendas.filter(loja=loja)
+    for v in vendas:
+        lucro = (v.valor_venda or 0) - (v.valor_entrada or 0)
+        ws_vendas.append([
+            v.id, v.data_venda.strftime('%d/%m/%Y') if v.data_venda else '',
+            v.comprador.nome if v.comprador else '',
+            f'{v.moto.marca} {v.moto.modelo}' if v.moto else '',
+            float(v.valor_venda or 0), float(v.valor_entrada or 0), float(lucro)
+        ])
+
+    # Despesas do período
+    ws_despesas = wb.create_sheet('Despesas')
+    ws_despesas.append(['ID', 'Data', 'Descrição', 'Categoria', 'Valor', 'Loja', 'Responsável'])
+    for cell in ws_despesas[1]:
+        cell.font = Font(bold=True)
+    despesas = Despesa.objects.filter(data__gte=data_inicio, data__lte=data_fim)
+    if loja:
+        despesas = despesas.filter(loja=loja)
+    for d in despesas:
+        ws_despesas.append([
+            d.id, d.data.strftime('%d/%m/%Y') if d.data else '', d.descricao, d.get_categoria_display(),
+            float(d.valor or 0), d.loja.nome if d.loja else '', d.responsavel.user.get_full_name() if d.responsavel else ''
+        ])
+
+    # Pagamentos pendentes
+    ws_pagamentos = wb.create_sheet('Pagamentos Pendentes')
+    ws_pagamentos.append(['ID', 'Tipo', 'Referente', 'Valor', 'Vencimento', 'Loja', 'Responsável'])
+    for cell in ws_pagamentos[1]:
+        cell.font = Font(bold=True)
+    pagamentos = Pagamento.objects.filter(pago=False, loja=loja if loja else None)
+    for p in pagamentos:
+        ws_pagamentos.append([
+            p.id, p.get_tipo_display(), p.get_referente_a_display(), float(p.valor or 0),
+            p.vencimento.strftime('%d/%m/%Y') if p.vencimento else '',
+            p.loja.nome if p.loja else '', p.responsavel.user.get_full_name() if p.responsavel else ''
+        ])
+
+    # Receitas extras
+    ws_receitas = wb.create_sheet('Receitas Extras')
+    ws_receitas.append(['ID', 'Data', 'Descrição', 'Valor', 'Loja', 'Responsável'])
+    for cell in ws_receitas[1]:
+        cell.font = Font(bold=True)
+    receitas = ReceitaExtra.objects.filter(data__gte=data_inicio, data__lte=data_fim)
+    if loja:
+        receitas = receitas.filter(loja=loja)
+    for r in receitas:
+        ws_receitas.append([
+            r.id, r.data.strftime('%d/%m/%Y') if r.data else '', r.descricao, float(r.valor or 0),
+            r.loja.nome if r.loja else '', r.responsavel.user.get_full_name() if r.responsavel else ''
+        ])
+
+    # Ajustar largura das colunas
+    for ws in wb.worksheets:
+        for col in ws.columns:
+            max_length = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            ws.column_dimensions[col_letter].width = max_length + 2
+
+    # Resposta HTTP
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=dashboard_financeiro.xlsx'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_vendas_xlsx(request):
+    """Exporta lista de vendas em formato XLSX"""
+    from .models import Venda
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    
+    # Filtros
+    status = request.GET.get('status', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    loja_id = request.GET.get('loja', '')
+    
+    vendas = Venda.objects.all()
+    
+    if status:
+        vendas = vendas.filter(status=status)
+    if data_inicio:
+        vendas = vendas.filter(data_venda__gte=data_inicio)
+    if data_fim:
+        vendas = vendas.filter(data_venda__lte=data_fim)
+    if loja_id:
+        vendas = vendas.filter(loja_id=loja_id)
+    
+    # Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Vendas'
+    
+    # Cabeçalhos
+    headers = ['ID', 'Data Venda', 'Comprador', 'Motocicleta', 'Vendedor', 'Loja', 'Valor Venda', 'Valor Entrada', 'Lucro', 'Status', 'Forma Pagamento']
+    ws.append(headers)
+    
+    # Estilo do cabeçalho
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    
+    # Dados
+    for venda in vendas:
+        lucro = (venda.valor_venda or 0) - (venda.valor_entrada or 0)
+        ws.append([
+            venda.id,
+            venda.data_venda.strftime('%d/%m/%Y') if venda.data_venda else '',
+            venda.comprador.nome if venda.comprador else '',
+            f'{venda.moto.marca} {venda.moto.modelo}' if venda.moto else '',
+            venda.vendedor.user.get_full_name() if venda.vendedor else '',
+            venda.loja.nome if venda.loja else '',
+            float(venda.valor_venda or 0),
+            float(venda.valor_entrada or 0),
+            float(lucro),
+            venda.get_status_display(),
+            venda.get_forma_pagamento_display()
+        ])
+    
+    # Ajustar largura das colunas
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = max_length + 2
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=vendas.xlsx'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_despesas_xlsx(request):
+    """Exporta lista de despesas em formato XLSX"""
+    from .models import Despesa
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    
+    # Filtros
+    categoria = request.GET.get('categoria', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    loja_id = request.GET.get('loja', '')
+    
+    despesas = Despesa.objects.all()
+    
+    if categoria:
+        despesas = despesas.filter(categoria=categoria)
+    if data_inicio:
+        despesas = despesas.filter(data__gte=data_inicio)
+    if data_fim:
+        despesas = despesas.filter(data__lte=data_fim)
+    if loja_id:
+        despesas = despesas.filter(loja_id=loja_id)
+    
+    # Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Despesas'
+    
+    # Cabeçalhos
+    headers = ['ID', 'Data', 'Descrição', 'Categoria', 'Valor', 'Tipo', 'Centro Custo', 'Loja', 'Responsável']
+    ws.append(headers)
+    
+    # Estilo do cabeçalho
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    
+    # Dados
+    for despesa in despesas:
+        ws.append([
+            despesa.id,
+            despesa.data.strftime('%d/%m/%Y') if despesa.data else '',
+            despesa.descricao,
+            despesa.get_categoria_display(),
+            float(despesa.valor or 0),
+            despesa.get_fixa_variavel_display(),
+            despesa.centro_custo or '',
+            despesa.loja.nome if despesa.loja else '',
+            despesa.responsavel.user.get_full_name() if despesa.responsavel else ''
+        ])
+    
+    # Ajustar largura das colunas
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = max_length + 2
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=despesas.xlsx'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_receitas_extras_xlsx(request):
+    """Exporta lista de receitas extras em formato XLSX"""
+    from .models import ReceitaExtra
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    
+    # Filtros
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    loja_id = request.GET.get('loja', '')
+    
+    receitas = ReceitaExtra.objects.all()
+    
+    if data_inicio:
+        receitas = receitas.filter(data__gte=data_inicio)
+    if data_fim:
+        receitas = receitas.filter(data__lte=data_fim)
+    if loja_id:
+        receitas = receitas.filter(loja_id=loja_id)
+    
+    # Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Receitas Extras'
+    
+    # Cabeçalhos
+    headers = ['ID', 'Data', 'Descrição', 'Valor', 'Loja', 'Responsável', 'Observações']
+    ws.append(headers)
+    
+    # Estilo do cabeçalho
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    
+    # Dados
+    for receita in receitas:
+        ws.append([
+            receita.id,
+            receita.data.strftime('%d/%m/%Y') if receita.data else '',
+            receita.descricao,
+            float(receita.valor or 0),
+            receita.loja.nome if receita.loja else '',
+            receita.responsavel.user.get_full_name() if receita.responsavel else '',
+            receita.observacoes or ''
+        ])
+    
+    # Ajustar largura das colunas
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = max_length + 2
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=receitas_extras.xlsx'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_pagamentos_xlsx(request):
+    """Exporta lista de pagamentos em formato XLSX"""
+    from .models import Pagamento
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    
+    # Filtros
+    tipo = request.GET.get('tipo', '')
+    pago = request.GET.get('pago', '')
+    loja_id = request.GET.get('loja', '')
+    
+    pagamentos = Pagamento.objects.all()
+    
+    if tipo:
+        pagamentos = pagamentos.filter(tipo=tipo)
+    if pago:
+        pagamentos = pagamentos.filter(pago=pago == 'true')
+    if loja_id:
+        pagamentos = pagamentos.filter(loja_id=loja_id)
+    
+    # Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Pagamentos'
+    
+    # Cabeçalhos
+    headers = ['ID', 'Tipo', 'Referente', 'Valor', 'Vencimento', 'Pago', 'Data Pagamento', 'Loja', 'Responsável']
+    ws.append(headers)
+    
+    # Estilo do cabeçalho
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    
+    # Dados
+    for pagamento in pagamentos:
+        ws.append([
+            pagamento.id,
+            pagamento.get_tipo_display(),
+            pagamento.get_referente_a_display(),
+            float(pagamento.valor or 0),
+            pagamento.vencimento.strftime('%d/%m/%Y') if pagamento.vencimento else '',
+            'Sim' if pagamento.pago else 'Não',
+            pagamento.data_pagamento.strftime('%d/%m/%Y') if pagamento.data_pagamento else '',
+            pagamento.loja.nome if pagamento.loja else '',
+            pagamento.responsavel.user.get_full_name() if pagamento.responsavel else ''
+        ])
+    
+    # Ajustar largura das colunas
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = max_length + 2
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=pagamentos.xlsx'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_motocicletas_xlsx(request):
+    """Exporta lista de motocicletas em formato XLSX"""
+    from .models import Motocicleta
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    
+    # Filtros
+    status = request.GET.get('status', '')
+    tipo_entrada = request.GET.get('tipo_entrada', '')
+    marca = request.GET.get('marca', '')
+    
+    motocicletas = Motocicleta.objects.filter(ativo=True)
+    
+    if status:
+        motocicletas = motocicletas.filter(status=status)
+    if tipo_entrada:
+        motocicletas = motocicletas.filter(tipo_entrada=tipo_entrada)
+    if marca:
+        motocicletas = motocicletas.filter(marca__icontains=marca)
+    
+    # Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Motocicletas'
+    
+    # Cabeçalhos
+    headers = ['ID', 'Chassi', 'Placa', 'Marca', 'Modelo', 'Ano', 'Cor', 'Tipo Entrada', 'Status', 'Valor Atual', 'Valor Entrada', 'Data Entrada', 'Proprietário']
+    ws.append(headers)
+    
+    # Estilo do cabeçalho
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    
+    # Dados
+    for moto in motocicletas:
+        ws.append([
+            moto.id,
+            moto.chassi,
+            moto.placa or '',
+            moto.marca,
+            moto.modelo,
+            moto.ano,
+            moto.cor,
+            moto.get_tipo_entrada_display(),
+            moto.get_status_display(),
+            float(moto.valor_atual or 0),
+            float(moto.valor_entrada or 0),
+            moto.data_entrada.strftime('%d/%m/%Y') if moto.data_entrada else '',
+            moto.proprietario.nome if moto.proprietario else ''
+        ])
+    
+    # Ajustar largura das colunas
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = max_length + 2
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=motocicletas.xlsx'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_clientes_xlsx(request):
+    """Exporta lista de clientes em formato XLSX"""
+    from .models import Cliente
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    
+    # Filtros
+    tipo = request.GET.get('tipo', '')
+    ativo = request.GET.get('ativo', '')
+    
+    clientes = Cliente.objects.all()
+    
+    if tipo:
+        clientes = clientes.filter(tipo=tipo)
+    if ativo:
+        clientes = clientes.filter(ativo=ativo == 'true')
+    
+    # Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Clientes'
+    
+    # Cabeçalhos
+    headers = ['ID', 'Nome', 'CPF/CNPJ', 'RG', 'Data Nascimento', 'Telefone', 'Email', 'Tipo', 'Cidade', 'Estado', 'Ativo', 'Data Cadastro']
+    ws.append(headers)
+    
+    # Estilo do cabeçalho
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    
+    # Dados
+    for cliente in clientes:
+        ws.append([
+            cliente.id,
+            cliente.nome,
+            cliente.cpf_cnpj,
+            cliente.rg or '',
+            cliente.data_nascimento.strftime('%d/%m/%Y') if cliente.data_nascimento else '',
+            cliente.telefone,
+            cliente.email or '',
+            cliente.get_tipo_display(),
+            cliente.cidade or '',
+            cliente.estado or '',
+            'Sim' if cliente.ativo else 'Não',
+            cliente.data_cadastro.strftime('%d/%m/%Y')
+        ])
+    
+    # Ajustar largura das colunas
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = max_length + 2
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=clientes.xlsx'
+    wb.save(response)
+    return response

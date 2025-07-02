@@ -38,6 +38,7 @@ class Perfil(models.Model):
         ('consultor', 'Consultor'),
         ('financeiro', 'Financeiro'),
         ('ti', 'TI'),
+        ('recepcionista', 'Recepcionista'),
     ]
     
     nome = models.CharField(max_length=50, choices=PERFIL_CHOICES, unique=True)
@@ -171,6 +172,10 @@ class Usuario(models.Model):
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                 'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
                 'seguradoras', 'bens', 'cotacoes', 'financeiro'
+            ],
+            'recepcionista': [
+                'clientes', 'motocicletas', 'vendas', 'consignacoes',
+                'seguradoras', 'bens', 'cotacoes', 'ocorrencias'
             ]
         }
         

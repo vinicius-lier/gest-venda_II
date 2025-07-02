@@ -587,12 +587,21 @@ def venda_create(request):
             
             venda.save()
             
+            # Tentar associar pré-venda
+            pre_venda_associada = venda.associar_pre_venda()
+            
             # Se o status foi alterado para 'vendido', criar comunicações obrigatórias
             if venda.status == 'vendido' and status_anterior != 'vendido':
                 venda.criar_comunicacoes_obrigatorias(request.user.usuario_sistema)
-                messages.success(request, 'Venda registrada com sucesso! Comunicações obrigatórias foram criadas automaticamente.')
+                if pre_venda_associada:
+                    messages.success(request, 'Venda registrada com sucesso! Pré-venda associada e comunicações obrigatórias foram criadas automaticamente.')
+                else:
+                    messages.success(request, 'Venda registrada com sucesso! Comunicações obrigatórias foram criadas automaticamente.')
             else:
-                messages.success(request, 'Venda registrada com sucesso!')
+                if pre_venda_associada:
+                    messages.success(request, 'Venda registrada com sucesso! Pré-venda associada automaticamente.')
+                else:
+                    messages.success(request, 'Venda registrada com sucesso!')
             
             # Notificar o setor administrativo sobre a nova venda
             from .models import Usuario, criar_notificacao
@@ -645,7 +654,15 @@ def venda_update(request, pk):
                 messages.success(request, 'Venda atualizada com sucesso! Comunicações obrigatórias foram criadas automaticamente.')
             else:
                 form.save()
-                messages.success(request, 'Venda atualizada com sucesso!')
+                # Tentar associar pré-venda se ainda não foi associada
+                if not hasattr(venda_atualizada, 'pre_venda_associada'):
+                    pre_venda_associada = venda_atualizada.associar_pre_venda()
+                    if pre_venda_associada:
+                        messages.success(request, 'Venda atualizada com sucesso! Pré-venda associada automaticamente.')
+                    else:
+                        messages.success(request, 'Venda atualizada com sucesso!')
+                else:
+                    messages.success(request, 'Venda atualizada com sucesso!')
             
             # Notificar o setor administrativo sobre a atualização da venda
             from .models import Usuario, criar_notificacao

@@ -1,0 +1,136 @@
+{% extends 'pre_venda/base_pre_venda.html' %}
+
+{% block pre_venda_content %}
+<div class="card shadow">
+    <div class="card-header py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-list me-2"></i>Lista de Pré-Vendas
+                </h6>
+                <p class="text-sm text-muted mb-0 mt-1">Gerencie todas as pré-vendas registradas</p>
+            </div>
+            <a href="{% url 'pre_venda:pre_venda_form' %}" 
+               class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i>Nova Pré-Venda
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="card-body border-bottom bg-light">
+        <form method="get" class="row g-3">
+            <!-- Busca -->
+            <div class="col-md-3">
+                <label for="search" class="form-label">Buscar</label>
+                <input type="text" name="search" id="search" value="{{ search }}" 
+                       class="form-control"
+                       placeholder="Nome, telefone ou moto...">
+            </div>
+            
+            <!-- Status -->
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="aberta" {% if status_filter == 'aberta' %}selected{% endif %}>Aberta</option>
+                    <option value="convertida" {% if status_filter == 'convertida' %}selected{% endif %}>Convertida</option>
+                    <option value="descartada" {% if status_filter == 'descartada' %}selected{% endif %}>Descartada</option>
+                </select>
+            </div>
+            
+            <!-- Vendedor -->
+            <div class="col-md-3">
+                <label for="vendedor" class="form-label">Vendedor</label>
+                <select name="vendedor" id="vendedor" class="form-select">
+                    <option value="">Todos</option>
+                    {% for vendedor in vendedores %}
+                        <option value="{{ vendedor.vendedor__id }}" {% if vendedor_filter == vendedor.vendedor__id|stringformat:"s" %}selected{% endif %}>
+                            {{ vendedor.vendedor__user__first_name|default:"Sem nome" }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Botões -->
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i>Filtrar
+                </button>
+                <a href="{% url 'pre_venda:lista_pre_vendas' %}" 
+                   class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Tabela -->
+    <div class="card-body">
+        {% if pre_vendas %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Moto Desejada</th>
+                            <th>Vendedor</th>
+                            <th>Status</th>
+                            <th>Data Atendimento</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pre_venda in pre_vendas %}
+                        <tr>
+                            <td>{{ pre_venda.nome_cliente }}</td>
+                            <td>{{ pre_venda.telefone }}</td>
+                            <td>{{ pre_venda.moto_desejada }}</td>
+                            <td>{{ pre_venda.vendedor.user.first_name }}</td>
+                            <td>
+                                {% if pre_venda.status == 'aberta' %}
+                                    <span class="badge bg-warning text-dark">Aberta</span>
+                                {% elif pre_venda.status == 'convertida' %}
+                                    <span class="badge bg-success">Convertida</span>
+                                {% elif pre_venda.status == 'descartada' %}
+                                    <span class="badge bg-danger">Descartada</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ pre_venda.data_atendimento|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'pre_venda:detalhes_pre_venda' pre_venda.id %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Ver detalhes
+                                    </a>
+                                    {% if pre_venda.status == 'aberta' %}
+                                        <a href="{% url 'core:venda_create' %}?telefone={{ pre_venda.telefone }}" 
+                                           class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-shopping-cart me-1"></i>Registrar venda
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center text-muted">
+                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                <h5>Nenhuma pré-venda encontrada</h5>
+                <p>
+                    {% if search or status_filter or vendedor_filter %}
+                        Tente ajustar os filtros ou
+                    {% endif %}
+                    <a href="{% url 'pre_venda:pre_venda_form' %}" class="text-primary">
+                        registre uma nova pré-venda
+                    </a>
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('controle-chaves/', include('administrativo.urls')),
+    path('pre-venda/', include('pre_venda.urls')),
 ]
 
 # Adiciona a configuração para servir arquivos de mídia em desenvolvimento

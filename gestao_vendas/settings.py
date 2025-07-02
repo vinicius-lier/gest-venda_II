@@ -29,7 +29,14 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-g6e%-z9*hk0qu*c%wg^51
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', '.herokuapp.com']
+ALLOWED_HOSTS = [
+    'www.pradomotorsangra.com',
+    'pradomotorsangra.com',
+    'localhost',
+    '127.0.0.1',
+    'testserver',
+    '.herokuapp.com'
+]
 
 # Detectar se está em produção (Heroku)
 IS_PRODUCTION = os.environ.get('IS_PRODUCTION', 'False').lower() == 'true' or '.herokuapp.com' in os.environ.get('ALLOWED_HOSTS', '')
@@ -76,6 +83,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'core',
     'administrativo',
+    'pre_venda',
 ]
 
 MIDDLEWARE = [

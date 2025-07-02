@@ -570,6 +570,33 @@ class Venda(models.Model):
     def todas_comunicacoes_enviadas(self):
         """Verifica se todas as comunicações obrigatórias foram enviadas"""
         return not self.verificar_comunicacoes_pendentes()
+    
+    def associar_pre_venda(self):
+        """Associa uma pré-venda existente baseada no telefone do comprador"""
+        try:
+            from pre_venda.models import PreVenda
+            import re
+            
+            # Remove caracteres não numéricos do telefone
+            telefone_limpo = re.sub(r'[^\d]', '', self.comprador.telefone)
+            
+            # Busca pré-vendas com telefone similar e status 'aberta'
+            pre_vendas = PreVenda.objects.filter(
+                status='aberta',
+                telefone__icontains=telefone_limpo
+            ).order_by('-data_atendimento')
+            
+            if pre_vendas.exists():
+                pre_venda = pre_vendas.first()
+                pre_venda.status = 'convertida'
+                pre_venda.save()
+                return pre_venda
+            
+        except ImportError:
+            # Módulo de pré-venda não está disponível
+            pass
+        
+        return None
 
 class ComunicacaoVenda(models.Model):
     """Modelo para controle de comunicações obrigatórias de vendas"""

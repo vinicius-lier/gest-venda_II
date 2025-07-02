@@ -1,0 +1,227 @@
+{% extends 'pre_venda/base_pre_venda.html' %}
+
+{% block pre_venda_content %}
+<!-- KPIs Principais -->
+<div class="row">
+    <!-- Total de Pré-Vendas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total de Pré-Vendas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_pre_vendas }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendas Convertidas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Vendas Convertidas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_vendas_convertidas }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pré-Vendas Abertas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Pré-Vendas Abertas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_vendas_abertas }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taxa de Conversão -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Taxa de Conversão
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ taxa_conversao }}%</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos e Tabelas -->
+<div class="row">
+    <!-- Pré-Vendas por Status -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-pie me-2"></i>Pré-Vendas por Status
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if pre_vendas_por_status %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Quantidade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in pre_vendas_por_status %}
+                                <tr>
+                                    <td>
+                                        {% if item.status == 'aberta' %}
+                                            <span class="badge bg-warning text-dark">Aberta</span>
+                                        {% elif item.status == 'convertida' %}
+                                            <span class="badge bg-success">Convertida</span>
+                                        {% elif item.status == 'descartada' %}
+                                            <span class="badge bg-danger">Descartada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.total }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-chart-pie fa-3x mb-3"></i>
+                        <p>Nenhuma pré-venda registrada</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Vendedores -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-trophy me-2"></i>Top Vendedores
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if pre_vendas_por_vendedor %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Vendedor</th>
+                                    <th>Pré-Vendas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in pre_vendas_por_vendedor %}
+                                <tr>
+                                    <td>{{ item.vendedor__user__first_name|default:"Sem nome" }}</td>
+                                    <td>{{ item.total }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-trophy fa-3x mb-3"></i>
+                        <p>Nenhum vendedor registrado</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pré-Vendas Abertas há mais de 7 dias -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Pré-Vendas Abertas há mais de 7 dias
+                </h6>
+                <p class="text-sm text-muted mb-0 mt-1">Acompanhe pré-vendas que precisam de atenção</p>
+            </div>
+            <div class="card-body">
+                {% if pre_vendas_atrasadas %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Telefone</th>
+                                    <th>Moto Desejada</th>
+                                    <th>Vendedor</th>
+                                    <th>Data Atendimento</th>
+                                    <th>Dias Aberta</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pre_venda in pre_vendas_atrasadas %}
+                                <tr>
+                                    <td>{{ pre_venda.nome_cliente }}</td>
+                                    <td>{{ pre_venda.telefone }}</td>
+                                    <td>{{ pre_venda.moto_desejada }}</td>
+                                    <td>{{ pre_venda.vendedor.user.first_name }}</td>
+                                    <td>{{ pre_venda.data_atendimento|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-danger">{{ pre_venda.dias_aberta }} dias</span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'pre_venda:detalhes_pre_venda' pre_venda.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>Ver detalhes
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                        <p>Nenhuma pré-venda aberta há mais de 7 dias</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

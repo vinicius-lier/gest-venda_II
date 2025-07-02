@@ -1,0 +1,126 @@
+{% extends 'pre_venda/base_pre_venda.html' %}
+
+{% block pre_venda_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-plus me-2"></i>Nova Pré-Venda
+                </h6>
+                <p class="text-sm text-muted mb-0 mt-1">Registre os dados do cliente que visitou a loja</p>
+            </div>
+            
+            <form method="post" class="card-body">
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Erro no formulário
+                        </h6>
+                        <ul class="mb-0">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                <!-- Nome do Cliente -->
+                <div class="mb-3">
+                    <label for="{{ form.nome_cliente.id_for_label }}" class="form-label">
+                        Nome do Cliente *
+                    </label>
+                    {{ form.nome_cliente }}
+                    {% if form.nome_cliente.help_text %}
+                        <div class="form-text">{{ form.nome_cliente.help_text }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Telefone -->
+                <div class="mb-3">
+                    <label for="{{ form.telefone.id_for_label }}" class="form-label">
+                        Telefone *
+                    </label>
+                    {{ form.telefone }}
+                    {% if form.telefone.help_text %}
+                        <div class="form-text">{{ form.telefone.help_text }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Moto Desejada -->
+                <div class="mb-3">
+                    <label for="{{ form.moto_desejada.id_for_label }}" class="form-label">
+                        Moto Desejada *
+                    </label>
+                    {{ form.moto_desejada }}
+                    {% if form.moto_desejada.help_text %}
+                        <div class="form-text">{{ form.moto_desejada.help_text }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Vendedor/Gerente Responsável -->
+                <div class="mb-3">
+                    <label for="{{ form.vendedor.id_for_label }}" class="form-label">
+                        Vendedor/Gerente responsável *
+                    </label>
+                    {{ form.vendedor }}
+                    {% if form.vendedor.help_text %}
+                        <div class="form-text">{{ form.vendedor.help_text }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Observações -->
+                <div class="mb-3">
+                    <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                        Observações
+                    </label>
+                    {{ form.observacoes }}
+                    {% if form.observacoes.help_text %}
+                        <div class="form-text">{{ form.observacoes.help_text }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Botões -->
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'pre_venda:dashboard_pre_venda' %}" 
+                       class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Registrar Pré-Venda
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Máscara para telefone
+document.addEventListener('DOMContentLoaded', function() {
+    const telefoneInput = document.getElementById('{{ form.telefone.id_for_label }}');
+    
+    telefoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        
+        if (value.length <= 11) {
+            if (value.length <= 2) {
+                value = `(${value}`;
+            } else if (value.length <= 6) {
+                value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+            } else if (value.length <= 10) {
+                value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+            } else {
+                value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+            }
+        }
+        
+        e.target.value = value;
+    });
+});
+</script>
+{% endblock %} 

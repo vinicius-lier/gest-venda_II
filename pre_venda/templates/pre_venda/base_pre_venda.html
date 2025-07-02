@@ -1,0 +1,50 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Pré-Venda{% endblock %}
+
+{% block page_title %}Pré-Venda{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho do módulo -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-clipboard-list me-2"></i>Módulo Pré-Venda
+    </h1>
+    <div class="d-flex">
+        <a href="{% url 'pre_venda:pre_venda_form' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus me-1"></i>Nova Pré-Venda
+        </a>
+    </div>
+</div>
+
+<!-- Navegação do módulo -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'pre_venda:dashboard_pre_venda' %}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'pre_venda:pre_venda_form' %}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="fas fa-plus me-2"></i>Nova Pré-Venda
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'pre_venda:lista_pre_vendas' %}" class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-list me-2"></i>Lista de Pré-Vendas
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conteúdo principal -->
+{% block pre_venda_content %}{% endblock %}
+{% endblock %} 

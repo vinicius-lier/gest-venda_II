@@ -2312,6 +2312,7 @@ def usuario_menu_manage(request, usuario_id):
             ('bens', 'Bens'),
             ('cotacoes', 'Cotações'),
             ('financeiro', 'Financeiro'),
+            ('pre_venda', 'Pré-Venda'),
         ]
         
         # Limpar configurações existentes do usuário
@@ -2344,6 +2345,7 @@ def usuario_menu_manage(request, usuario_id):
         ('bens', 'Bens'),
         ('cotacoes', 'Cotações'),
         ('financeiro', 'Financeiro'),
+        ('pre_venda', 'Pré-Venda'),
     ]
     
     # Verificar quais módulos estão ativos para o usuário

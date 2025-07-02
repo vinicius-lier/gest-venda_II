@@ -149,33 +149,33 @@ class Usuario(models.Model):
             'admin': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                 'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
-                'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro', 'pre_venda'
             ],
             'gerente': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                 'seguros', 'relatorios', 'ocorrencias',
-                'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro', 'pre_venda'
             ],
             'vendedor': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes',
-                'seguradoras', 'bens', 'cotacoes'
+                'seguradoras', 'bens', 'cotacoes', 'pre_venda'
             ],
             'consultor': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 'seguros',
-                'seguradoras', 'bens', 'cotacoes'
+                'seguradoras', 'bens', 'cotacoes', 'pre_venda'
             ],
             'financeiro': [
                 'clientes', 'vendas', 'consignacoes', 'seguros', 'relatorios',
-                'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro', 'pre_venda'
             ],
             'ti': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                 'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
-                'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                'seguradoras', 'bens', 'cotacoes', 'financeiro', 'pre_venda'
             ],
             'recepcionista': [
                 'clientes', 'motocicletas', 'vendas', 'consignacoes',
-                'seguradoras', 'bens', 'cotacoes', 'ocorrencias'
+                'seguradoras', 'bens', 'cotacoes', 'ocorrencias', 'pre_venda'
             ]
         }
         

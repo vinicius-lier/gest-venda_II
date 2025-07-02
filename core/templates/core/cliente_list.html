@@ -7,15 +7,15 @@
 {% block page_title %}Clientes{% endblock %}
 
 {% block content %}
-<!-- Header do Django Admin -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-users me-2"></i>Clientes
-        </h1>
-        <p class="text-muted mb-0">Selecione um cliente para alterar ou adicione um novo.</p>
-    </div>
-    
+            <div class="d-flex align-items-center gap-2">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-users me-2"></i>Clientes
+            </h1>
+            <button type="button" class="btn btn-info ms-3" onclick="showHelp('Ajuda - Clientes', '<p>Esta tela permite gerenciar todos os clientes cadastrados no sistema. Você pode:</p><ul><li>Visualizar, adicionar, editar e excluir clientes</li><li>Filtrar clientes por nome, CPF/CNPJ, tipo e status</li><li>Exportar a lista de clientes para XLSX</li></ul><p>O cadastro correto dos clientes é essencial para o controle de vendas e relacionamento.</p>')">
+                <i class="fas fa-info-circle me-1"></i>Ajuda
+            </button>
+        </div>
     <div>
         <a href="{% url 'core:exportar_clientes_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
             <i class="fas fa-file-excel me-1"></i>Exportar XLSX

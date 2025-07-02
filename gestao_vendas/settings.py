@@ -88,7 +88,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.RBACMiddleware',
-    'core.middleware.LoggingMiddleware',
+    # 'core.middleware.LoggingMiddleware',  # Removido para otimização
+    # 'core.middleware.VendasPendentesMiddleware',  # Removido para otimização
 ]
 
 ROOT_URLCONF = 'gestao_vendas.urls'
@@ -115,14 +116,7 @@ WSGI_APPLICATION = 'gestao_vendas.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Configuração do banco de dados para Heroku
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+# Configuração do banco de dados otimizada (definida acima)
 
 
 # Password validation
@@ -185,15 +179,36 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Configurações de sessão
 SESSION_COOKIE_AGE = 3600  # 1 hora
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_SAVE_EVERY_REQUEST = False  # Otimizado para performance
 
-# Configurações de logging
+# Configurações de cache para melhor performance
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,  # 5 minutos
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Configurações de banco de dados otimizadas
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
+
+# Configurações de logging otimizadas
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
         'simple': {

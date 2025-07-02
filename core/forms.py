@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia, VendaFinanceira, Despesa, ReceitaExtra, Pagamento
+from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia, VendaFinanceira, Despesa, ReceitaExtra, Pagamento, ComunicacaoVenda
 from django.utils import timezone
 from django.db import models
 
@@ -13,7 +13,7 @@ class MotocicletaForm(forms.ModelForm):
             'tipo_entrada', 'origem', 'status', 'proprietario', 'fornecedor', 'loja_origem',
             'valor_entrada', 'valor_atual', 'data_entrada', 'observacoes',
             'foto_principal', 'foto_frontal', 'foto_traseira', 'foto_lado_esquerdo', 'foto_lado_direito',
-            'seguro', 'data_venda'
+            'data_venda'
         ]
         widgets = {
             'data_entrada': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -96,6 +96,11 @@ class MotocicletaForm(forms.ModelForm):
         return cleaned_data
 
 class VendaForm(forms.ModelForm):
+    documento_intencao = forms.FileField(
+        required=False,
+        label='Documento de Intenção/Comunicação',
+        widget=forms.FileInput(attrs={'class': 'form-control'})
+    )
     class Meta:
         model = Venda
         fields = '__all__'
@@ -365,10 +370,10 @@ class SeguroForm(forms.ModelForm):
         self.fields['cliente'].label_from_instance = lambda obj: f"{obj.nome} - {obj.cpf_cnpj}"
         # Filtrar bens
         self.fields['bem'].queryset = Bem.objects.all().order_by('tipo', 'descricao')
-        # Filtrar motos disponíveis para seguro (não vinculadas a outro seguro)
+        # Filtrar motos disponíveis para seguro
         from .models import Motocicleta
         self.fields['motocicleta'] = forms.ModelChoiceField(
-            queryset=Motocicleta.objects.filter(seguro__isnull=True),
+            queryset=Motocicleta.objects.filter(ativo=True),
             required=False,
             label='Motocicleta (opcional)',
             widget=forms.Select(attrs={'class': 'form-select'})
@@ -689,4 +694,64 @@ class PagamentoForm(forms.ModelForm):
         # Filtrar receitas extras
         self.fields['receita_extra'].queryset = ReceitaExtra.objects.all().order_by('-data')
         self.fields['receita_extra'].label_from_instance = lambda obj: f"{obj.descricao} - R$ {obj.valor}"
+
+class ComunicacaoVendaForm(forms.ModelForm):
+    class Meta:
+        model = ComunicacaoVenda
+        fields = [
+            'tipo', 'titulo', 'mensagem', 'destinatario', 'telefone', 'email',
+            'obrigatoria', 'prazo_limite', 'observacoes', 'documento_anexo', 'comprovante_envio'
+        ]
+        widgets = {
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'titulo': forms.TextInput(attrs={'class': 'form-control'}),
+            'mensagem': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'destinatario': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'obrigatoria': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'prazo_limite': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-control'
+            }),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'documento_anexo': forms.FileInput(attrs={'class': 'form-control'}),
+            'comprovante_envio': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'tipo': 'Tipo de Comunicação',
+            'titulo': 'Título',
+            'mensagem': 'Mensagem',
+            'destinatario': 'Destinatário',
+            'telefone': 'Telefone',
+            'email': 'E-mail',
+            'obrigatoria': 'Comunicação Obrigatória',
+            'prazo_limite': 'Prazo Limite',
+            'observacoes': 'Observações',
+        }
+
+    def __init__(self, *args, **kwargs):
+        venda = kwargs.pop('venda', None)
+        super().__init__(*args, **kwargs)
+        
+        # Se uma venda foi fornecida, preencher automaticamente alguns campos
+        if venda:
+            self.fields['destinatario'].initial = venda.comprador.nome
+            self.fields['telefone'].initial = venda.comprador.telefone
+            self.fields['email'].initial = venda.comprador.email
+            
+            # Definir prazo padrão (24 horas a partir de agora)
+            from datetime import timedelta
+            prazo_padrao = timezone.now() + timedelta(hours=24)
+            self.fields['prazo_limite'].initial = prazo_padrao.strftime('%Y-%m-%dT%H:%M')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        prazo_limite = cleaned_data.get('prazo_limite')
+        
+        # Verificar se o prazo limite não é no passado
+        if prazo_limite and prazo_limite < timezone.now():
+            raise forms.ValidationError('O prazo limite não pode ser no passado.')
+        
+        return cleaned_data
 

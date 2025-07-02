@@ -92,6 +92,15 @@
                             </div>
                         </div>
                     </div>
+
+                    {# ALERTA DE DOCUMENTO DE INTENÇÃO/COMUNICAÇÃO FALTANDO #}
+                    {% if not venda.comunicacao_intencao_enviada and not venda.comunicacao_documentacao_enviada %}
+                    <div class="alert alert-danger mt-4" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>ATENÇÃO:</strong> Esta venda ainda não possui documento de intenção <u>nem</u> de comunicação anexado.<br>
+                        Regularize para evitar pendências administrativas.
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

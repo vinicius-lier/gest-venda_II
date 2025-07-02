@@ -15,7 +15,7 @@
                             Seguradoras
                         </h4>
                         <div>
-                            <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#infoModal">
+                            <button type="button" class="btn btn-info me-2" onclick="showHelp('Ajuda - Seguradoras', '<p>Esta tela permite gerenciar todas as seguradoras cadastradas no sistema. Você pode:</p><ul><li>Visualizar, adicionar, editar e excluir seguradoras</li><li>Ativar/desativar seguradoras</li><li>Gerenciar dados de contato</li></ul><p>As seguradoras são necessárias para criar planos de seguro e realizar cotações.</p>')">
                                 <i class="fas fa-info-circle me-1"></i>
                                 Ajuda
                             </button>
@@ -150,51 +150,7 @@
     </div>
 </div>
 
-<!-- Modal de Informações -->
-<div class="modal fade" id="infoModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-info-circle text-primary me-2"></i>
-                    Gerenciamento de Seguradoras
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-list me-2"></i>Funcionalidades</h6>
-                        <ul>
-                            <li>Visualizar todas as seguradoras cadastradas</li>
-                            <li>Cadastrar novas seguradoras</li>
-                            <li>Editar informações existentes</li>
-                            <li>Ativar/desativar seguradoras</li>
-                            <li>Excluir seguradoras (se não houver planos vinculados)</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-lightbulb me-2"></i>Dicas</h6>
-                        <ul>
-                            <li>Mantenha apenas seguradoras ativas no sistema</li>
-                            <li>Preencha todos os dados de contato</li>
-                            <li>Verifique se o CNPJ está correto</li>
-                            <li>Adicione o site para facilitar o acesso</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Importante:</strong> As seguradoras são necessárias para criar planos de seguro e realizar cotações.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
+
 {% endblock %}
 
 {% block extra_js %}

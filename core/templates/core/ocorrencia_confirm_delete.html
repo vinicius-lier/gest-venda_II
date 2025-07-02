@@ -1,0 +1,86 @@
+{% extends 'core/base.html' %}
+{% load core_extras %}
+
+{% block title %}Excluir Ocorrência - Gestão Operacional de Vendas{% endblock %}
+
+{% block page_title %}Excluir Ocorrência{% endblock %}
+
+{% block content %}
+{% if perms.core.delete_ocorrencia %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5>Tem certeza que deseja excluir esta ocorrência?</h5>
+                    <p class="text-muted">
+                        Esta ação não pode ser desfeita. A ocorrência será permanentemente removida do sistema.
+                    </p>
+                </div>
+                
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="font-weight-bold">{{ ocorrencia.titulo }}</h6>
+                        <p class="mb-1">
+                            <strong>Tipo:</strong> {{ ocorrencia.get_tipo_display }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>Status:</strong> 
+                            {% if ocorrencia.status == 'aberta' %}
+                                <span class="badge bg-warning">Aberta</span>
+                            {% elif ocorrencia.status == 'em_andamento' %}
+                                <span class="badge bg-info">Em Andamento</span>
+                            {% elif ocorrencia.status == 'resolvida' %}
+                                <span class="badge bg-success">Resolvida</span>
+                            {% elif ocorrencia.status == 'fechada' %}
+                                <span class="badge bg-secondary">Fechada</span>
+                            {% endif %}
+                        </p>
+                        <p class="mb-1">
+                            <strong>Prioridade:</strong> {{ ocorrencia.get_prioridade_display }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>Loja:</strong> {{ ocorrencia.loja.nome }}
+                        </p>
+                        <p class="mb-0">
+                            <strong>Data de Abertura:</strong> {{ ocorrencia.data_abertura|date:"d/m/Y H:i" }}
+                        </p>
+                    </div>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'core:ocorrencia_detail' ocorrencia.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Confirmar Exclusão
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Acesso Negado
+    </h4>
+    <p>Você não tem permissão para excluir ocorrências.</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{% url 'core:ocorrencia_list' %}" class="btn btn-outline-danger">
+            <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+        </a>
+    </p>
+</div>
+{% endif %}
+{% endblock %} 

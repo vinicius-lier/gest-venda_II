@@ -9,10 +9,14 @@
 {% block content %}
 {% if request.user.is_superuser or perms.core.view_motocicleta %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0 text-gray-800">
-        <i class="fas fa-motorcycle me-2"></i>Motocicletas
-    </h1>
-    
+            <div class="d-flex align-items-center gap-2">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-motorcycle me-2"></i>Motocicletas
+            </h1>
+            <button type="button" class="btn btn-info ms-3" onclick="showHelp('Ajuda - Motocicletas', '<p>Esta tela permite gerenciar todas as motocicletas cadastradas no sistema. Você pode:</p><ul><li>Visualizar, adicionar, editar e excluir motocicletas</li><li>Filtrar motocicletas por modelo, ano, status, etc.</li><li>Exportar a lista de motocicletas para XLSX</li></ul><p>O cadastro correto das motocicletas é essencial para o controle de estoque e vendas.</p>')">
+                <i class="fas fa-info-circle me-1"></i>Ajuda
+            </button>
+        </div>
     <div>
         <a href="{% url 'core:exportar_motocicletas_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
             <i class="fas fa-file-excel me-1"></i>Exportar XLSX
@@ -24,6 +28,8 @@
         {% endif %}
     </div>
 </div>
+
+
 
 <div class="row mb-4">
     <div class="col-12">

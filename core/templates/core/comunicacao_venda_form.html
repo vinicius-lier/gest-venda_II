@@ -1,0 +1,322 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if comunicacao %}Editar{% else %}Nova{% endif %} Comunicação de Venda
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Cabeçalho -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-envelope me-2"></i>
+                {% if comunicacao %}Editar{% else %}Nova{% endif %} Comunicação de Venda
+            </h2>
+            <p class="text-muted">
+                {% if comunicacao %}
+                    Editando comunicação #{{ comunicacao.id }}
+                {% else %}
+                    Crie uma nova comunicação para uma venda
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'core:comunicacao_venda_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulário -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-1"></i>Dados da Comunicação
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="comunicacaoForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Tipo -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag me-1"></i>Tipo de Comunicação
+                                </label>
+                                {{ form.tipo }}
+                                {% if form.tipo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.tipo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Selecione o tipo de comunicação</div>
+                            </div>
+
+                            <!-- Obrigatória -->
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    {{ form.obrigatoria }}
+                                    <label class="form-check-label" for="{{ form.obrigatoria.id_for_label }}">
+                                        Comunicação Obrigatória
+                                    </label>
+                                </div>
+                                <div class="form-text">Marque se esta comunicação é obrigatória para a venda</div>
+                            </div>
+                        </div>
+
+                        <!-- Título -->
+                        <div class="mb-3">
+                            <label for="{{ form.titulo.id_for_label }}" class="form-label">
+                                <i class="fas fa-heading me-1"></i>Título
+                            </label>
+                            {{ form.titulo }}
+                            {% if form.titulo.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.titulo.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Título da comunicação</div>
+                        </div>
+
+                        <!-- Mensagem -->
+                        <div class="mb-3">
+                            <label for="{{ form.mensagem.id_for_label }}" class="form-label">
+                                <i class="fas fa-comment me-1"></i>Mensagem
+                            </label>
+                            {{ form.mensagem }}
+                            {% if form.mensagem.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.mensagem.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Conteúdo da mensagem a ser enviada</div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Destinatário -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.destinatario.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Destinatário
+                                </label>
+                                {{ form.destinatario }}
+                                {% if form.destinatario.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.destinatario.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Nome do destinatário</div>
+                            </div>
+
+                            <!-- Telefone -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.telefone.id_for_label }}" class="form-label">
+                                    <i class="fas fa-phone me-1"></i>Telefone
+                                </label>
+                                {{ form.telefone }}
+                                {% if form.telefone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.telefone.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Telefone do destinatário</div>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                <i class="fas fa-envelope me-1"></i>E-mail
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.email.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">E-mail do destinatário</div>
+                        </div>
+
+                        <!-- Prazo Limite -->
+                        <div class="mb-3">
+                            <label for="{{ form.prazo_limite.id_for_label }}" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Prazo Limite
+                            </label>
+                            {{ form.prazo_limite }}
+                            {% if form.prazo_limite.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.prazo_limite.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Prazo limite para envio da comunicação</div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="mb-3">
+                            <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>Observações
+                            </label>
+                            {{ form.observacoes }}
+                            {% if form.observacoes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.observacoes.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Observações adicionais sobre a comunicação</div>
+                        </div>
+
+                        <!-- Documento Anexo -->
+                        <div class="mb-3">
+                            <label for="{{ form.documento_anexo.id_for_label }}" class="form-label">
+                                <i class="fas fa-paperclip me-1"></i>Documento da Comunicação (PDF, imagem, etc)
+                            </label>
+                            {{ form.documento_anexo }}
+                            {% if form.documento_anexo.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.documento_anexo.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Anexe o documento enviado ao destinatário</div>
+                            {% if comunicacao and comunicacao.documento_anexo %}
+                                <a href="{{ comunicacao.documento_anexo.url }}" target="_blank" class="btn btn-link btn-sm mt-1">
+                                    <i class="fas fa-download me-1"></i>Baixar documento atual
+                                </a>
+                            {% endif %}
+                        </div>
+
+                        <!-- Comprovante de Envio -->
+                        <div class="mb-3">
+                            <label for="{{ form.comprovante_envio.id_for_label }}" class="form-label">
+                                <i class="fas fa-file-signature me-1"></i>Comprovante de Envio
+                            </label>
+                            {{ form.comprovante_envio }}
+                            {% if form.comprovante_envio.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.comprovante_envio.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Anexe o comprovante de envio (e-mail, protocolo, etc)</div>
+                            {% if comunicacao and comunicacao.comprovante_envio %}
+                                <a href="{{ comunicacao.comprovante_envio.url }}" target="_blank" class="btn btn-link btn-sm mt-1">
+                                    <i class="fas fa-download me-1"></i>Baixar comprovante atual
+                                </a>
+                            {% endif %}
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'core:comunicacao_venda_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                {% if comunicacao %}Atualizar{% else %}Salvar{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informações da Venda (se aplicável) -->
+            {% if venda %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-shopping-cart me-1"></i>Venda Relacionada
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <h6>Venda #{{ venda.id }}</h6>
+                        <p class="mb-2">
+                            <strong>{{ venda.moto.marca }} {{ venda.moto.modelo }}</strong><br>
+                            <small class="text-muted">{{ venda.moto.ano }} - {{ venda.moto.placa|default:venda.moto.chassi }}</small>
+                        </p>
+                        <p class="mb-2">
+                            <strong>Comprador:</strong> {{ venda.comprador.nome }}<br>
+                            <strong>Valor:</strong> R$ {{ venda.valor_venda|floatformat:2 }}
+                        </p>
+                        <a href="{% url 'core:venda_detail' venda.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye me-1"></i>Ver Venda
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Dicas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-lightbulb me-1"></i>Dicas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <strong>Intenção de Venda:</strong> Enviada logo após a confirmação da venda
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <strong>Confirmação de Pagamento:</strong> Enviada após o recebimento do pagamento
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <strong>Documentação:</strong> Para solicitar documentos necessários
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <strong>Entrega:</strong> Para agendar a entrega da motocicleta
+                        </li>
+                        <li>
+                            <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                            <strong>Comunicações obrigatórias</strong> são criadas automaticamente quando uma venda é marcada como "vendido"
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-preenchimento do título baseado no tipo
+    const tipoSelect = document.getElementById('{{ form.tipo.id_for_label }}');
+    const tituloInput = document.getElementById('{{ form.titulo.id_for_label }}');
+    
+    tipoSelect.addEventListener('change', function() {
+        const tipo = this.value;
+        const venda = '{{ venda.id }}';
+        const moto = '{{ venda.moto.marca|default:"" }} {{ venda.moto.modelo|default:"" }}';
+        
+        if (tipo && venda) {
+            let titulo = '';
+            switch(tipo) {
+                case 'intencao':
+                    titulo = `Intenção de Venda - ${moto}`;
+                    break;
+                case 'confirmacao_pagamento':
+                    titulo = `Confirmação de Pagamento - ${moto}`;
+                    break;
+                case 'documentacao':
+                    titulo = `Documentação - ${moto}`;
+                    break;
+                case 'entrega':
+                    titulo = `Agendamento de Entrega - ${moto}`;
+                    break;
+                default:
+                    titulo = `Comunicação - ${moto}`;
+            }
+            tituloInput.value = titulo;
+        }
+    });
+});
+</script>
+{% endblock %} 

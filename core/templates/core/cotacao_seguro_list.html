@@ -1,20 +1,27 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
+{% block title %}Cotações de Seguro - Sistema de Gestão{% endblock %}
+
+{% block page_title %}Cotações de Seguro{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h4 class="mb-0">
-                <i class="fas fa-calculator text-primary me-2"></i>
-                Cotações de Seguro
-            </h4>
-            {% if perms.core.add_cotacaoseguro %}
-            <a href="{% url 'core:cotacao_seguro_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>
-                Nova Cotação
-            </a>
-            {% endif %}
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="fas fa-calculator me-2"></i>Cotações de Seguro
+                    </h1>
+                </div>
+                {% if perms.core.add_cotacaoseguro %}
+                <a href="{% url 'core:cotacao_seguro_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    Nova Cotação
+                </a>
+                {% endif %}
+            </div>
         </div>
         <div class="card-body">
             {% if cotacoes %}
@@ -24,7 +31,7 @@
                         <tr>
                             <th class="text-dark">Cliente</th>
                             <th class="text-dark">Bem</th>
-                            <th class="text-dark">Plano</th>
+                            <th class="text-dark">Seguradora</th>
                             <th class="text-dark">Valor</th>
                             <th class="text-dark">Status</th>
                             <th class="text-dark">Data</th>
@@ -36,8 +43,8 @@
                         <tr>
                             <td>{{ cotacao.cliente.nome }}</td>
                             <td>{{ cotacao.bem.descricao }}</td>
-                            <td>{{ cotacao.plano }}</td>
-                            <td>R$ {{ cotacao.valor_cotacao|floatformat:2 }}</td>
+                            <td>{{ cotacao.seguradora.nome }}</td>
+                            <td>R$ {{ cotacao.valor|floatformat:2 }}</td>
                             <td>
                                 {% if cotacao.status == 'pendente' %}
                                     <span class="badge bg-warning">Pendente</span>
@@ -45,8 +52,6 @@
                                     <span class="badge bg-success">Aprovada</span>
                                 {% elif cotacao.status == 'rejeitada' %}
                                     <span class="badge bg-danger">Rejeitada</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ cotacao.status|title }}</span>
                                 {% endif %}
                             </td>
                             <td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td>
@@ -82,4 +87,36 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Script específico para resolver piscamento na página de cotações
+document.addEventListener('DOMContentLoaded', function() {
+    // Estabilizar renderização da página
+    document.body.style.transform = 'translateZ(0)';
+    document.body.style.backfaceVisibility = 'hidden';
+    
+    // Prevenir eventos de mouse desnecessários
+    const table = document.querySelector('.table');
+    if (table) {
+        table.style.transform = 'translateZ(0)';
+        table.style.backfaceVisibility = 'hidden';
+    }
+    
+    // Estabilizar modal
+    const modal = document.getElementById('ajudaModalCotacoes');
+    if (modal) {
+        modal.style.transform = 'translateZ(0)';
+        modal.style.backfaceVisibility = 'hidden';
+    }
+    
+    // Prevenir piscamento em botões
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(btn => {
+        btn.style.transform = 'translateZ(0)';
+        btn.style.backfaceVisibility = 'hidden';
+    });
+});
+</script>
 {% endblock %} 

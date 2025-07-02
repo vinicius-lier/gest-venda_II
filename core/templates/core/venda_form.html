@@ -40,7 +40,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="vendaForm">
+                    <form method="post" enctype="multipart/form-data" id="vendaForm">
                         {% csrf_token %}
                         
                         <!-- Motocicleta -->
@@ -209,7 +209,7 @@
                         <div class="row">
                             <div class="col-12 mb-3">
                                 <label for="{{ form.observacoes.id_for_label }}" class="form-label">
-                                    <i class="fas fa-sticky-note me-1"></i>Observações
+                                    <i class="fas fa-book me-1"></i>Observações
                                 </label>
                                 {{ form.observacoes }}
                                 {% if form.observacoes.errors %}
@@ -217,6 +217,22 @@
                                         {{ form.observacoes.errors.0 }}
                                     </div>
                                 {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Documento de Intenção/Comunicação -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.documento_intencao.id_for_label }}" class="form-label">
+                                    <i class="fas fa-paperclip me-1"></i>Documento de Intenção/Comunicação (PDF, imagem, etc)
+                                </label>
+                                {{ form.documento_intencao }}
+                                {% if form.documento_intencao.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.documento_intencao.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Anexe o documento de intenção/comunicação, se já possuir</div>
                             </div>
                         </div>
 

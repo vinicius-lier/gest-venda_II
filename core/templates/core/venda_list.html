@@ -3,15 +3,19 @@
 
 {% block title %}Vendas - Sistema de Gestão{% endblock %}
 
+{% block page_title %}Vendas{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-    <!-- Cabeçalho da página -->
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
+                <div class="d-flex align-items-center gap-2">
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="fas fa-shopping-cart me-2"></i>Vendas
             </h1>
-            <p class="text-muted">Gerencie todas as vendas de motocicletas</p>
+            <button type="button" class="btn btn-info ms-3" onclick="showHelp('Ajuda - Vendas', '<p>Esta tela permite gerenciar todas as vendas cadastradas no sistema. Você pode:</p><ul><li>Visualizar, adicionar, editar e excluir vendas</li><li>Filtrar vendas por status, vendedor e datas</li><li>Exportar a lista de vendas para XLSX</li></ul><p>O cadastro correto das vendas é essencial para o controle financeiro e operacional do sistema.</p>')">
+                <i class="fas fa-info-circle me-1"></i>Ajuda
+            </button>
         </div>
         <div>
             <a href="{% url 'core:exportar_vendas_xlsx_geral' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
@@ -22,6 +26,8 @@
             </a>
         </div>
     </div>
+
+
 
     <!-- Filtros e busca -->
     <div class="card mb-4">

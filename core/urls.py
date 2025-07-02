@@ -41,7 +41,24 @@ urlpatterns = [
     path('vendas/<int:pk>/', views.venda_detail, name='venda_detail'),
     path('vendas/<int:pk>/excluir/', views.venda_delete, name='venda_delete'),
     path('vendas/<int:pk>/cancelar/', views.venda_cancel, name='venda_cancel'),
+    path('vendas/<int:venda_id>/comunicacoes/', views.venda_comunicacoes, name='venda_comunicacoes'),
+    path('vendas/<int:venda_id>/criar-comunicacoes/', views.venda_criar_comunicacoes_obrigatorias, name='venda_criar_comunicacoes_obrigatorias'),
     path('vendas/exportar/', views.exportar_vendas_xlsx, name='exportar_vendas_xlsx'),
+    
+    # Comunicações de Venda
+    path('comunicacoes-venda/', views.comunicacao_venda_list, name='comunicacao_venda_list'),
+    path('comunicacoes-venda/novo/', views.comunicacao_venda_create, name='comunicacao_venda_create'),
+    path('comunicacoes-venda/<int:pk>/', views.comunicacao_venda_detail, name='comunicacao_venda_detail'),
+    path('comunicacoes-venda/<int:pk>/editar/', views.comunicacao_venda_update, name='comunicacao_venda_update'),
+    path('comunicacoes-venda/<int:pk>/excluir/', views.comunicacao_venda_delete, name='comunicacao_venda_delete'),
+    path('comunicacoes-venda/<int:pk>/marcar-enviada/', views.comunicacao_venda_marcar_enviada, name='comunicacao_venda_marcar_enviada'),
+    path('comunicacoes-venda/<int:pk>/marcar-confirmada/', views.comunicacao_venda_marcar_confirmada, name='comunicacao_venda_marcar_confirmada'),
+    
+    # Notificações
+    path('notificacoes/', views.notificacao_list, name='notificacao_list'),
+    path('notificacoes/<int:pk>/marcar-lida/', views.notificacao_marcar_lida, name='notificacao_marcar_lida'),
+    path('notificacoes/<int:pk>/excluir/', views.notificacao_delete, name='notificacao_delete'),
+    path('notificacoes/count/', views.notificacao_count, name='notificacao_count'),
     
     # Consignações
     path('consignacoes/', views.consignacao_list, name='consignacao_list'),
@@ -104,6 +121,7 @@ urlpatterns = [
     path('ocorrencias/novo/', views.ocorrencia_create, name='ocorrencia_create'),
     path('ocorrencias/<int:pk>/editar/', views.ocorrencia_update, name='ocorrencia_update'),
     path('ocorrencias/<int:pk>/', views.ocorrencia_detail, name='ocorrencia_detail'),
+    path('ocorrencias/<int:pk>/excluir/', views.ocorrencia_delete, name='ocorrencia_delete'),
     
     # Importação de Dados
     path('importar/', views.import_data, name='import_data'),

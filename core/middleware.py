@@ -5,6 +5,8 @@ from django.utils.deprecation import MiddlewareMixin
 from django.utils import timezone
 import re
 import logging
+from datetime import timedelta
+
 logger = logging.getLogger('core')
 
 class RBACMiddleware:
@@ -46,6 +48,14 @@ class RBACMiddleware:
         else:
             request.usuario_sistema = None
             
+        # Notificar menções em ocorrências abertas para qualquer usuário autenticado
+        try:
+            if hasattr(request.user, 'usuario_sistema'):
+                from .models import notificar_mencoes_ocorrencias_pendentes
+                notificar_mencoes_ocorrencias_pendentes(request.user.usuario_sistema)
+        except Exception as e:
+            logger.error(f"Erro ao notificar menções em ocorrências: {str(e)}")
+        
         return self.get_response(request)
 
 class LoggingMiddleware:
@@ -68,3 +78,42 @@ class LoggingMiddleware:
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip 
+
+class VendasPendentesMiddleware(MiddlewareMixin):
+    """
+    Middleware para verificar vendas pendentes de comunicação
+    e notificar o administrativo automaticamente
+    """
+    
+    def process_request(self, request):
+        # Só executar para usuários autenticados
+        if not request.user.is_authenticated:
+            return None
+        
+        # Só executar uma vez por sessão por dia
+        session_key = 'vendas_pendentes_verificadas'
+        hoje = timezone.now().date()
+        
+        if session_key not in request.session or request.session[session_key] != str(hoje):
+            try:
+                # Verificar se o usuário é administrativo
+                if hasattr(request.user, 'usuario_sistema'):
+                    usuario = request.user.usuario_sistema
+                    if usuario.perfil.nome in ['admin', 'gerente']:
+                        # Importar a função de verificação
+                        from .models import verificar_vendas_pendentes_comunicacao
+                        
+                        # Executar verificação
+                        vendas_pendentes = verificar_vendas_pendentes_comunicacao()
+                        
+                        # Marcar como verificada hoje
+                        request.session[session_key] = str(hoje)
+                        
+                        # Log da verificação
+                        if vendas_pendentes > 0:
+                            logger.info(f"Middleware: {vendas_pendentes} vendas pendentes de comunicação verificadas para {request.user.username}")
+                        
+            except Exception as e:
+                logger.error(f"Erro no middleware de vendas pendentes: {str(e)}")
+        
+        return None 

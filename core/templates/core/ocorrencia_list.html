@@ -1,88 +1,61 @@
 {% extends 'core/base.html' %}
-{% load core_extras %}
+{% load static %}
 
-{% block title %}Ocorrências{% endblock %}
+{% block title %}Ocorrências - Sistema de Gestão{% endblock %}
+
+{% block page_title %}Ocorrências{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-exclamation-triangle"></i> Ocorrências
-        </h1>
-        <a href="{% url 'core:ocorrencia_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Nova Ocorrência
-        </a>
-    </div>
-
-    <!-- Dashboard de Estatísticas -->
-    <div class="row mb-4">
-        <!-- Cards de Resumo -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total de Ocorrências
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_ocorrencias }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+    <!-- Cards de Resumo -->
+    <div class="row mb-3">
+        <div class="col-md-3 mb-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-primary fa-lg"></i>
+                        <div>
+                            <div class="text-muted small">TOTAL DE OCORRÊNCIAS</div>
+                            <div class="fw-bold fs-5">{{ total_ocorrencias|default:0 }}</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Últimos 30 Dias
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ocorrencias_ultimos_30_dias }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+        <div class="col-md-3 mb-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-calendar-day text-warning fa-lg"></i>
+                        <div>
+                            <div class="text-muted small">ÚLTIMOS 30 DIAS</div>
+                            <div class="fw-bold fs-5">{{ ocorrencias_ultimos_30|default:0 }}</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Atrasadas
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ocorrencias_atrasadas }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+        <div class="col-md-3 mb-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-clock text-danger fa-lg"></i>
+                        <div>
+                            <div class="text-muted small">ATRASADAS</div>
+                            <div class="fw-bold fs-5">{{ ocorrencias_atrasadas|default:0 }}</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-dark shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
-                                Críticas
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ocorrencias_criticas }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-fire fa-2x text-gray-300"></i>
+        <div class="col-md-3 mb-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-fire text-danger fa-lg"></i>
+                        <div>
+                            <div class="text-muted small">CRÍTICAS</div>
+                            <div class="fw-bold fs-5">{{ ocorrencias_criticas|default:0 }}</div>
                         </div>
                     </div>
                 </div>
@@ -90,372 +63,248 @@
         </div>
     </div>
 
-    <!-- Gráficos e Estatísticas -->
-    <div class="row mb-4">
+    <div class="row mb-3">
         <!-- Top Solicitantes -->
-        <div class="col-xl-6 col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-user-plus"></i> Top Solicitantes (Pessoas que mais abrem ocorrências)
-                    </h6>
+        <div class="col-md-6 mb-2">
+            <div class="card h-100">
+                <div class="card-header py-2 small fw-bold text-primary">
+                    <i class="fas fa-user"></i> Top Solicitantes (Pessoas que mais abrem ocorrências)
                 </div>
-                <div class="card-body">
-                    {% if top_solicitantes %}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="text-dark">#</th>
-                                        <th class="text-dark">Nome</th>
-                                        <th class="text-dark">Loja</th>
-                                        <th class="text-dark">Ocorrências</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for solicitante in top_solicitantes %}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>
-                                            <strong>
-                                                {% if solicitante.solicitante__user__first_name %}
-                                                    {{ solicitante.solicitante__user__first_name }} {{ solicitante.solicitante__user__last_name }}
-                                                {% else %}
-                                                    {{ solicitante.solicitante__user__last_name }}
-                                                {% endif %}
-                                            </strong>
-                                        </td>
-                                        <td>{{ solicitante.solicitante__loja__nome }}</td>
-                                        <td>
-                                            <span class="badge bg-primary">{{ solicitante.count }}</span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
-                    {% endif %}
+                <div class="card-body p-2">
+                    <table class="table table-sm table-borderless mb-0">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th>#</th>
+                                <th>Nome</th>
+                                <th>Loja</th>
+                                <th>Ocorrências</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for s in top_solicitantes %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ s.nome }}</td>
+                                <td>{{ s.loja }}</td>
+                                <td><span class="badge bg-primary">{{ s.qtd }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted">Nenhum dado</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-
         <!-- Top Responsáveis -->
-        <div class="col-xl-6 col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-success">
-                        <i class="fas fa-user-check"></i> Top Responsáveis (Pessoas que mais resolvem)
-                    </h6>
+        <div class="col-md-6 mb-2">
+            <div class="card h-100">
+                <div class="card-header py-2 small fw-bold text-success">
+                    <i class="fas fa-user-check"></i> Top Responsáveis (Pessoas que mais resolvem)
                 </div>
-                <div class="card-body">
-                    {% if top_responsaveis %}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="text-dark">#</th>
-                                        <th class="text-dark">Nome</th>
-                                        <th class="text-dark">Loja</th>
-                                        <th class="text-dark">Resolvidas</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for responsavel in top_responsaveis %}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>
-                                            <strong>
-                                                {% if responsavel.responsavel__user__first_name %}
-                                                    {{ responsavel.responsavel__user__first_name }} {{ responsavel.responsavel__user__last_name }}
-                                                {% else %}
-                                                    {{ responsavel.responsavel__user__last_name }}
-                                                {% endif %}
-                                            </strong>
-                                        </td>
-                                        <td>{{ responsavel.responsavel__loja__nome }}</td>
-                                        <td>
-                                            <span class="badge bg-success">{{ responsavel.count }}</span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">Nenhuma ocorrência com responsável atribuído.</p>
-                    {% endif %}
+                <div class="card-body p-2">
+                    <table class="table table-sm table-borderless mb-0">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th>#</th>
+                                <th>Nome</th>
+                                <th>Loja</th>
+                                <th>Resolvidas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for r in top_responsaveis %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ r.nome }}</td>
+                                <td>{{ r.loja }}</td>
+                                <td><span class="badge bg-success">{{ r.qtd }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted">Nenhum dado</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Estatísticas por Categoria -->
-    <div class="row mb-4">
-        <!-- Ocorrências por Status -->
-        <div class="col-xl-4 col-lg-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-chart-pie"></i> Por Status
-                    </h6>
+    <div class="row mb-3">
+        <div class="col-md-4 mb-2">
+            <div class="card h-100">
+                <div class="card-header py-2 small fw-bold text-info">
+                    <i class="fas fa-filter"></i> Por Status
                 </div>
-                <div class="card-body">
-                    {% if ocorrencias_por_status %}
-                        {% for item in ocorrencias_por_status %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-sm">
-                                {% if item.status == 'aberta' %}
-                                    <span class="badge bg-primary">Aberta</span>
-                                {% elif item.status == 'em_analise' %}
-                                    <span class="badge bg-info">Em Análise</span>
-                                {% elif item.status == 'em_andamento' %}
-                                    <span class="badge bg-warning">Em Andamento</span>
-                                {% elif item.status == 'resolvida' %}
-                                    <span class="badge bg-success">Resolvida</span>
-                                {% elif item.status == 'fechada' %}
-                                    <span class="badge bg-secondary">Fechada</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Cancelada</span>
-                                {% endif %}
-                            </span>
-                            <span class="font-weight-bold">{{ item.count }}</span>
-                        </div>
+                <div class="card-body p-2">
+                    <ul class="list-group list-group-flush">
+                        {% for status, qtd in agrupado_status.items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ status }}</span>
+                            <span class="badge bg-success">{{ qtd }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">Nenhum dado</li>
                         {% endfor %}
-                    {% else %}
-                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
-                    {% endif %}
+                    </ul>
                 </div>
             </div>
         </div>
-
-        <!-- Ocorrências por Tipo -->
-        <div class="col-xl-4 col-lg-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-warning">
-                        <i class="fas fa-tags"></i> Por Tipo
-                    </h6>
+        <div class="col-md-4 mb-2">
+            <div class="card h-100">
+                <div class="card-header py-2 small fw-bold text-warning">
+                    <i class="fas fa-filter"></i> Por Tipo
                 </div>
-                <div class="card-body">
-                    {% if ocorrencias_por_tipo %}
-                        {% for item in ocorrencias_por_tipo %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-sm">{{ item.get_tipo_display|default:item.tipo }}</span>
-                            <span class="font-weight-bold">{{ item.count }}</span>
-                        </div>
+                <div class="card-body p-2">
+                    <ul class="list-group list-group-flush">
+                        {% for tipo, qtd in agrupado_tipo.items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ tipo }}</span>
+                            <span class="badge bg-primary">{{ qtd }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">Nenhum dado</li>
                         {% endfor %}
-                    {% else %}
-                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
-                    {% endif %}
+                    </ul>
                 </div>
             </div>
         </div>
-
-        <!-- Ocorrências por Loja -->
-        <div class="col-xl-4 col-lg-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-info">
-                        <i class="fas fa-store"></i> Por Loja
-                    </h6>
+        <div class="col-md-4 mb-2">
+            <div class="card h-100">
+                <div class="card-header py-2 small fw-bold text-secondary">
+                    <i class="fas fa-filter"></i> Por Loja
                 </div>
-                <div class="card-body">
-                    {% if ocorrencias_por_loja %}
-                        {% for item in ocorrencias_por_loja %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-sm">{{ item.loja__nome }}</span>
-                            <span class="font-weight-bold">{{ item.count }}</span>
-                        </div>
+                <div class="card-body p-2">
+                    <ul class="list-group list-group-flush">
+                        {% for loja, qtd in agrupado_loja.items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ loja }}</span>
+                            <span class="badge bg-secondary">{{ qtd }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">Nenhum dado</li>
                         {% endfor %}
-                    {% else %}
-                        <p class="text-muted">Nenhuma ocorrência registrada.</p>
-                    {% endif %}
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Filtros -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
-        </div>
+    <div class="card mb-3">
         <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label for="search" class="form-label">Buscar</label>
-                    <input type="text" class="form-control" id="search" name="search" 
-                           value="{{ request.GET.search }}" placeholder="Título ou descrição">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label mb-0">Buscar</label>
+                    <input type="text" name="q" class="form-control" placeholder="Título ou descrição" value="{{ request.GET.q }}">
                 </div>
                 <div class="col-md-2">
-                    <label for="tipo" class="form-label">Tipo</label>
-                    <select class="form-select" id="tipo" name="tipo">
+                    <label class="form-label mb-0">Tipo</label>
+                    <select name="tipo" class="form-select">
                         <option value="">Todos</option>
-                        <option value="incidente" {% if request.GET.tipo == 'incidente' %}selected{% endif %}>Incidente</option>
-                        <option value="problema_tecnico" {% if request.GET.tipo == 'problema_tecnico' %}selected{% endif %}>Problema Técnico</option>
-                        <option value="solicitacao" {% if request.GET.tipo == 'solicitacao' %}selected{% endif %}>Solicitação</option>
-                        <option value="reclamacao" {% if request.GET.tipo == 'reclamacao' %}selected{% endif %}>Reclamação</option>
-                        <option value="sugestao" {% if request.GET.tipo == 'sugestao' %}selected{% endif %}>Sugestão</option>
-                        <option value="manutencao" {% if request.GET.tipo == 'manutencao' %}selected{% endif %}>Manutenção</option>
-                        <option value="seguranca" {% if request.GET.tipo == 'seguranca' %}selected{% endif %}>Segurança</option>
-                        <option value="outros" {% if request.GET.tipo == 'outros' %}selected{% endif %}>Outros</option>
+                        {% for key, val in tipos.items %}
+                            <option value="{{ key }}" {% if request.GET.tipo == key %}selected{% endif %}>{{ val }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="prioridade" class="form-label">Prioridade</label>
-                    <select class="form-select" id="prioridade" name="prioridade">
+                    <label class="form-label mb-0">Prioridade</label>
+                    <select name="prioridade" class="form-select">
                         <option value="">Todas</option>
-                        <option value="baixa" {% if request.GET.prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
-                        <option value="media" {% if request.GET.prioridade == 'media' %}selected{% endif %}>Média</option>
-                        <option value="alta" {% if request.GET.prioridade == 'alta' %}selected{% endif %}>Alta</option>
-                        <option value="critica" {% if request.GET.prioridade == 'critica' %}selected{% endif %}>Crítica</option>
+                        {% for key, val in prioridades.items %}
+                            <option value="{{ key }}" {% if request.GET.prioridade == key %}selected{% endif %}>{{ val }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="status" class="form-label">Status</label>
-                    <select class="form-select" id="status" name="status">
+                    <label class="form-label mb-0">Status</label>
+                    <select name="status" class="form-select">
                         <option value="">Todos</option>
-                        <option value="aberta" {% if request.GET.status == 'aberta' %}selected{% endif %}>Aberta</option>
-                        <option value="em_analise" {% if request.GET.status == 'em_analise' %}selected{% endif %}>Em Análise</option>
-                        <option value="em_andamento" {% if request.GET.status == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
-                        <option value="resolvida" {% if request.GET.status == 'resolvida' %}selected{% endif %}>Resolvida</option>
-                        <option value="fechada" {% if request.GET.status == 'fechada' %}selected{% endif %}>Fechada</option>
-                        <option value="cancelada" {% if request.GET.status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                        {% for key, val in status_list.items %}
+                            <option value="{{ key }}" {% if request.GET.status == key %}selected{% endif %}>{{ val }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-search"></i> Filtrar
-                    </button>
-                    <a href="{% url 'core:ocorrencia_list' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Limpar
-                    </a>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-search me-1"></i>Filtrar</button>
+                    <a href="?" class="btn btn-secondary"><i class="fas fa-times me-1"></i>Limpar</a>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Lista de Ocorrências -->
-    <div class="card shadow">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">Ocorrências ({{ ocorrencias.count }})</h6>
-        </div>
+    <!-- Tabela de Ocorrências -->
+    <div class="card">
         <div class="card-body">
-            {% if ocorrencias %}
             <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                <table class="table table-striped table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-dark">#</th>
-                            <th class="text-dark">Título</th>
-                            <th class="text-dark">Loja</th>
-                            <th class="text-dark">Tipo</th>
-                            <th class="text-dark">Prioridade</th>
-                            <th class="text-dark">Status</th>
-                            <th class="text-dark">Solicitante</th>
-                            <th class="text-dark">Responsável</th>
-                            <th class="text-dark">Data Abertura</th>
-                            <th class="text-dark">Dias</th>
-                            <th class="text-dark">Ações</th>
+                            <th>#</th>
+                            <th>Título</th>
+                            <th>Loja</th>
+                            <th>Tipo</th>
+                            <th>Prioridade</th>
+                            <th>Status</th>
+                            <th>Solicitante</th>
+                            <th>Responsável</th>
+                            <th>Data Abertura</th>
+                            <th>Dias</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ocorrencia in ocorrencias %}
-                        <tr {% if ocorrencia.atrasada %}class="table-danger"{% endif %}>
-                            <td>#{{ ocorrencia.id }}</td>
-                            <td>
-                                <strong>{{ ocorrencia.titulo }}</strong>
-                                {% if ocorrencia.atrasada %}
-                                    <span class="badge bg-danger ms-1">ATRASADA</span>
-                                {% endif %}
-                            </td>
+                        <tr>
+                            <td>#{{ ocorrencia.pk }}</td>
+                            <td>{{ ocorrencia.titulo }}</td>
                             <td>{{ ocorrencia.loja.nome }}</td>
-                            <td>
-                                <span class="badge bg-secondary">{{ ocorrencia.get_tipo_display }}</span>
-                            </td>
-                            <td>
-                                {% if ocorrencia.prioridade == 'baixa' %}
-                                    <span class="badge bg-success">Baixa</span>
-                                {% elif ocorrencia.prioridade == 'media' %}
-                                    <span class="badge bg-warning">Média</span>
-                                {% elif ocorrencia.prioridade == 'alta' %}
-                                    <span class="badge bg-danger">Alta</span>
-                                {% else %}
-                                    <span class="badge bg-dark">Crítica</span>
-                                {% endif %}
-                            </td>
+                            <td><span class="badge bg-secondary small">{{ ocorrencia.get_tipo_display }}</span></td>
+                            <td><span class="badge bg-success small">{{ ocorrencia.get_prioridade_display }}</span></td>
                             <td>
                                 {% if ocorrencia.status == 'aberta' %}
-                                    <span class="badge bg-primary">Aberta</span>
-                                {% elif ocorrencia.status == 'em_analise' %}
-                                    <span class="badge bg-info">Em Análise</span>
+                                    <span class="badge bg-warning">Aberta</span>
                                 {% elif ocorrencia.status == 'em_andamento' %}
-                                    <span class="badge bg-warning">Em Andamento</span>
+                                    <span class="badge bg-info">Em Andamento</span>
                                 {% elif ocorrencia.status == 'resolvida' %}
                                     <span class="badge bg-success">Resolvida</span>
                                 {% elif ocorrencia.status == 'fechada' %}
                                     <span class="badge bg-secondary">Fechada</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Cancelada</span>
                                 {% endif %}
                             </td>
                             <td>{{ ocorrencia.solicitante.user.get_full_name }}</td>
-                            <td>
-                                {% if ocorrencia.responsavel %}
-                                    {{ ocorrencia.responsavel.user.get_full_name }}
-                                {% else %}
-                                    <span class="text-muted">Não atribuído</span>
-                                {% endif %}
-                            </td>
+                            <td>{{ ocorrencia.responsavel.user.get_full_name }}</td>
                             <td>{{ ocorrencia.data_abertura|date:"d/m/Y H:i" }}</td>
                             <td>
-                                <span class="badge bg-info">{{ ocorrencia.dias_aberta }} dias</span>
+                                <span class="badge bg-info small">{{ ocorrencia.dias_aberta }} dias</span>
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'core:ocorrencia_detail' ocorrencia.pk %}" 
-                                       class="btn btn-sm btn-info" title="Visualizar">
+                                    {% if perms.core.view_ocorrencia %}
+                                    <a href="{% url 'core:ocorrencia_detail' ocorrencia.pk %}" class="btn btn-sm btn-outline-primary" title="Visualizar">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{% url 'core:ocorrencia_update' ocorrencia.pk %}" 
-                                       class="btn btn-sm btn-warning" title="Editar">
+                                    {% endif %}
+                                    {% if perms.core.change_ocorrencia %}
+                                    <a href="{% url 'core:ocorrencia_update' ocorrencia.pk %}" class="btn btn-sm btn-outline-warning" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
+                                    {% endif %}
+                                    {% if perms.core.delete_ocorrencia %}
+                                    <a href="{% url 'core:ocorrencia_delete' ocorrencia.pk %}" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
+                        {% empty %}
+                        <tr><td colspan="11" class="text-center text-muted">Nenhuma ocorrência cadastrada.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="text-center py-4">
-                <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">Nenhuma ocorrência encontrada</h5>
-                <p class="text-muted">Não há ocorrências registradas no sistema.</p>
-                <a href="{% url 'core:ocorrencia_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Registrar Primeira Ocorrência
-                </a>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
-
-<!-- Scripts -->
-<script>
-$(document).ready(function() {
-    // DataTable
-    $('#dataTable').DataTable({
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
-        },
-        order: [[8, 'desc']], // Ordenar por data de abertura
-        pageLength: 25,
-        responsive: true
-    });
-});
-</script>
 {% endblock %} 

@@ -7,8 +7,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia, MenuPerfil, Perfil, MenuUsuario, VendaFinanceira, Despesa, ReceitaExtra, Pagamento
-from .forms import MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, ClienteForm
+from .models import (
+    Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, 
+    Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia, 
+    MenuPerfil, Perfil, MenuUsuario, VendaFinanceira, Despesa, 
+    ReceitaExtra, Pagamento, ComunicacaoVenda, Notificacao
+)
+from .forms import (
+    MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, 
+    CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, 
+    UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, 
+    ClienteForm, ComunicacaoVendaForm
+)
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
@@ -16,8 +26,6 @@ from datetime import datetime, timedelta
 from .importers import DataImporter
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-import csv
-import io
 from decimal import Decimal
 import logging
 from django.http import JsonResponse, HttpResponse
@@ -79,27 +87,45 @@ def logout_view(request):
 
 @login_required
 def dashboard(request):
-    """Dashboard principal do sistema"""
+    """Dashboard principal do sistema - Otimizado"""
     logger.info(f"Dashboard acessado por: {request.user.username}")
     
     try:
-        hoje = timezone.now().date()
-        primeiro_dia_mes = hoje.replace(day=1)
+        # Usar cache para estatísticas que não mudam frequentemente
+        from django.core.cache import cache
+        
+        cache_key = f'dashboard_stats_{request.user.id}'
+        stats = cache.get(cache_key)
+        
+        if not stats:
+            hoje = timezone.now().date()
+            primeiro_dia_mes = hoje.replace(day=1)
 
-        total_clientes = Cliente.objects.filter(ativo=True).count()
-        total_motos = Motocicleta.objects.filter(ativo=True).count()
-        motos_estoque = Motocicleta.objects.filter(status='estoque', ativo=True).count()
-        vendas_mes = Venda.objects.filter(data_venda__gte=primeiro_dia_mes, status='vendido').count()
-        consignacoes = Consignacao.objects.filter(status='disponivel', moto__ativo=True).count()
+            total_clientes = Cliente.objects.filter(ativo=True).count()
+            total_motos = Motocicleta.objects.filter(ativo=True).count()
+            motos_estoque = Motocicleta.objects.filter(status='estoque', ativo=True).count()
+            vendas_mes = Venda.objects.filter(data_venda__gte=primeiro_dia_mes, status='vendido').count()
+            consignacoes = Consignacao.objects.filter(status='disponivel', moto__ativo=True).count()
 
-        # Dados para gráfico de ranking de vendedores
+            stats = {
+                'total_clientes': total_clientes,
+                'total_motos': total_motos,
+                'motos_estoque': motos_estoque,
+                'vendas_mes': vendas_mes,
+                'consignacoes': consignacoes,
+            }
+            
+            # Cache por 5 minutos
+            cache.set(cache_key, stats, 300)
+
+        # Dados para gráfico de ranking de vendedores (otimizado)
         ranking_vendedores = Usuario.objects.filter(
             vendas_realizadas__status='vendido'
         ).annotate(
             total_vendas=Count('vendas_realizadas', filter=Q(vendas_realizadas__status='vendido'))
         ).filter(total_vendas__gt=0).order_by('-total_vendas')[:10]
 
-        # Dados para gráfico de motos mais vendidas
+        # Dados para gráfico de motos mais vendidas (otimizado)
         ranking_motos = Motocicleta.objects.filter(
             vendas__status='vendido'
         ).annotate(
@@ -125,11 +151,6 @@ def dashboard(request):
         ])
 
         context = {
-            'total_clientes': total_clientes,
-            'total_motos': total_motos,
-            'motos_estoque': motos_estoque,
-            'vendas_mes': vendas_mes,
-            'consignacoes': consignacoes,
             'ranking_vendedores': ranking_vendedores,
             'ranking_motos': ranking_motos,
             'ranking_vendedores_labels': ranking_vendedores_labels,
@@ -137,6 +158,7 @@ def dashboard(request):
             'ranking_motos_labels': ranking_motos_labels,
             'ranking_motos_data': ranking_motos_data,
             'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+            **stats
         }
         
         logger.info(f"Dashboard carregado com sucesso para: {request.user.username}")
@@ -553,8 +575,39 @@ def venda_create(request):
             # Definir o vendedor como o usuário logado se não foi especificado
             if not venda.vendedor:
                 venda.vendedor = request.user
+            
+            # Verificar se o status está sendo alterado para 'vendido'
+            status_anterior = None
+            if venda.pk:
+                try:
+                    venda_anterior = Venda.objects.get(pk=venda.pk)
+                    status_anterior = venda_anterior.status
+                except Venda.DoesNotExist:
+                    pass
+            
             venda.save()
-            messages.success(request, 'Venda registrada com sucesso!')
+            
+            # Se o status foi alterado para 'vendido', criar comunicações obrigatórias
+            if venda.status == 'vendido' and status_anterior != 'vendido':
+                venda.criar_comunicacoes_obrigatorias(request.user.usuario_sistema)
+                messages.success(request, 'Venda registrada com sucesso! Comunicações obrigatórias foram criadas automaticamente.')
+            else:
+                messages.success(request, 'Venda registrada com sucesso!')
+            
+            # Notificar o setor administrativo sobre a nova venda
+            from .models import Usuario, criar_notificacao
+            admins = Usuario.objects.filter(
+                status='ativo',
+                perfil__nome__in=['admin', 'gerente']
+            )
+            for admin in admins:
+                criar_notificacao(
+                    usuario=admin,
+                    mensagem=f'Nova venda registrada: {venda.moto.marca} {venda.moto.modelo} para {venda.comprador.nome}',
+                    link=f'/vendas/{venda.id}/',
+                    tipo='venda'
+                )
+            
             return redirect('core:venda_list')
     else:
         moto_id = request.GET.get('moto')
@@ -581,8 +634,33 @@ def venda_update(request, pk):
     if request.method == 'POST':
         form = VendaForm(request.POST, instance=venda)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Venda atualizada com sucesso!')
+            # Verificar se o status está sendo alterado para 'vendido'
+            status_anterior = venda.status
+            venda_atualizada = form.save(commit=False)
+            
+            # Se o status foi alterado para 'vendido', criar comunicações obrigatórias
+            if venda_atualizada.status == 'vendido' and status_anterior != 'vendido':
+                venda_atualizada.save()
+                venda_atualizada.criar_comunicacoes_obrigatorias(request.user.usuario_sistema)
+                messages.success(request, 'Venda atualizada com sucesso! Comunicações obrigatórias foram criadas automaticamente.')
+            else:
+                form.save()
+                messages.success(request, 'Venda atualizada com sucesso!')
+            
+            # Notificar o setor administrativo sobre a atualização da venda
+            from .models import Usuario, criar_notificacao
+            admins = Usuario.objects.filter(
+                status='ativo',
+                perfil__nome__in=['admin', 'gerente']
+            )
+            for admin in admins:
+                criar_notificacao(
+                    usuario=admin,
+                    mensagem=f'Venda atualizada: {venda.moto.marca} {venda.moto.modelo} para {venda.comprador.nome}',
+                    link=f'/vendas/{venda.id}/',
+                    tipo='venda'
+                )
+            
             return redirect('core:venda_list')
     else:
         form = VendaForm(instance=venda)
@@ -1407,114 +1485,82 @@ def loja_delete(request, pk):
 # Views de ocorrências
 @login_required
 def ocorrencia_list(request):
-    """Lista de ocorrências com filtros"""
+    """Lista de ocorrências com filtros e dashboard"""
+    from django.utils import timezone
+    from datetime import timedelta
     if not (request.user.is_superuser or request.user.has_perm('core.view_ocorrencia')):
         return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar ocorrências.'})
     
-    # Obter parâmetros de filtro
-    search = request.GET.get('search', '')
+    # Filtros
+    q = request.GET.get('q', '')
     tipo = request.GET.get('tipo', '')
     prioridade = request.GET.get('prioridade', '')
     status = request.GET.get('status', '')
-    
-    # Query base
+
     ocorrencias = Ocorrencia.objects.all().order_by('-data_abertura')
-    
-    # Aplicar filtros
-    if search:
-        ocorrencias = ocorrencias.filter(
-            Q(titulo__icontains=search) |
-            Q(descricao__icontains=search)
-        )
-    
+    if q:
+        ocorrencias = ocorrencias.filter(Q(titulo__icontains=q) | Q(descricao__icontains=q))
     if tipo:
         ocorrencias = ocorrencias.filter(tipo=tipo)
-    
     if prioridade:
         ocorrencias = ocorrencias.filter(prioridade=prioridade)
-    
     if status:
         ocorrencias = ocorrencias.filter(status=status)
-    
-    # Estatísticas para o dashboard
+
+    # Cards de resumo
     total_ocorrencias = Ocorrencia.objects.count()
-    
-    # Ocorrências por status
-    ocorrencias_por_status = Ocorrencia.objects.values('status').annotate(
-        count=Count('id')
-    ).order_by('-count')
-    
-    # Ocorrências por tipo
-    ocorrencias_por_tipo = Ocorrencia.objects.values('tipo').annotate(
-        count=Count('id')
-    ).order_by('-count')
-    
-    # Ocorrências por prioridade
-    ocorrencias_por_prioridade = Ocorrencia.objects.values('prioridade').annotate(
-        count=Count('id')
-    ).order_by('-count')
-    
-    # Top solicitantes (pessoas que mais abrem ocorrências)
-    top_solicitantes = Ocorrencia.objects.values(
-        'solicitante__user__first_name', 
-        'solicitante__user__last_name',
-        'solicitante__loja__nome'
-    ).annotate(
-        count=Count('id')
-    ).order_by('-count')[:10]
-    
-    # Top responsáveis (pessoas que mais resolvem ocorrências)
-    top_responsaveis = Ocorrencia.objects.exclude(
-        responsavel__isnull=True
-    ).values(
-        'responsavel__user__first_name', 
-        'responsavel__user__last_name',
-        'responsavel__loja__nome'
-    ).annotate(
-        count=Count('id')
-    ).order_by('-count')[:10]
-    
-    # Ocorrências por loja
-    ocorrencias_por_loja = Ocorrencia.objects.values('loja__nome').annotate(
-        count=Count('id')
-    ).order_by('-count')
-    
-    # Ocorrências dos últimos 30 dias
-    data_30_dias_atras = datetime.now() - timedelta(days=30)
-    ocorrencias_ultimos_30_dias = Ocorrencia.objects.filter(
-        data_abertura__gte=data_30_dias_atras
-    ).count()
-    
-    # Ocorrências atrasadas
-    ocorrencias_atrasadas = Ocorrencia.objects.filter(
-        Q(data_limite__lt=datetime.now()) & 
-        ~Q(status__in=['resolvida', 'fechada'])
-    ).count()
-    
-    # Ocorrências críticas
-    ocorrencias_criticas = Ocorrencia.objects.filter(
-        prioridade='critica',
-        status__in=['aberta', 'em_analise', 'em_andamento']
-    ).count()
-    
+    ocorrencias_ultimos_30 = Ocorrencia.objects.filter(data_abertura__gte=timezone.now()-timedelta(days=30)).count()
+    ocorrencias_atrasadas = Ocorrencia.objects.filter(data_limite__lt=timezone.now(), status__in=['aberta', 'em_andamento']).count()
+    ocorrencias_criticas = Ocorrencia.objects.filter(prioridade='critica').count()
+
+    # Top solicitantes
+    top_solicitantes_qs = (
+        Ocorrencia.objects.values('solicitante__user__first_name', 'solicitante__user__last_name', 'loja__nome')
+        .annotate(qtd=Count('id'))
+        .order_by('-qtd')[:5]
+    )
+    top_solicitantes = [
+        {'nome': f"{s['solicitante__user__first_name']} {s['solicitante__user__last_name']}", 'loja': s['loja__nome'], 'qtd': s['qtd']}
+        for s in top_solicitantes_qs
+    ]
+
+    # Top responsáveis
+    top_responsaveis_qs = (
+        Ocorrencia.objects.filter(status='resolvida')
+        .values('responsavel__user__first_name', 'responsavel__user__last_name', 'loja__nome')
+        .annotate(qtd=Count('id'))
+        .order_by('-qtd')[:5]
+    )
+    top_responsaveis = [
+        {'nome': f"{r['responsavel__user__first_name']} {r['responsavel__user__last_name']}", 'loja': r['loja__nome'], 'qtd': r['qtd']}
+        for r in top_responsaveis_qs
+    ]
+
+    # Agrupamentos
+    agrupado_status = {dict(Ocorrencia.STATUS_CHOICES).get(s['status'], s['status']): s['qtd'] for s in Ocorrencia.objects.values('status').annotate(qtd=Count('id'))}
+    agrupado_tipo = {dict(Ocorrencia.TIPO_CHOICES).get(s['tipo'], s['tipo']): s['qtd'] for s in Ocorrencia.objects.values('tipo').annotate(qtd=Count('id'))}
+    agrupado_loja = {s['loja__nome']: s['qtd'] for s in Ocorrencia.objects.values('loja__nome').annotate(qtd=Count('id'))}
+
+    # Choices para filtros
+    tipos = dict(Ocorrencia.TIPO_CHOICES)
+    prioridades = dict(Ocorrencia.PRIORIDADE_CHOICES)
+    status_list = dict(Ocorrencia.STATUS_CHOICES)
+
     context = {
         'ocorrencias': ocorrencias,
-        'search': search,
-        'tipo': tipo,
-        'prioridade': prioridade,
-        'status': status,
-        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
-        # Estatísticas
         'total_ocorrencias': total_ocorrencias,
-        'ocorrencias_por_status': ocorrencias_por_status,
-        'ocorrencias_por_tipo': ocorrencias_por_tipo,
-        'ocorrencias_por_prioridade': ocorrencias_por_prioridade,
-        'top_solicitantes': top_solicitantes,
-        'top_responsaveis': top_responsaveis,
-        'ocorrencias_por_loja': ocorrencias_por_loja,
-        'ocorrencias_ultimos_30_dias': ocorrencias_ultimos_30_dias,
+        'ocorrencias_ultimos_30': ocorrencias_ultimos_30,
         'ocorrencias_atrasadas': ocorrencias_atrasadas,
         'ocorrencias_criticas': ocorrencias_criticas,
+        'top_solicitantes': top_solicitantes,
+        'top_responsaveis': top_responsaveis,
+        'agrupado_status': agrupado_status,
+        'agrupado_tipo': agrupado_tipo,
+        'agrupado_loja': agrupado_loja,
+        'tipos': tipos,
+        'prioridades': prioridades,
+        'status_list': status_list,
+        'request': request,
     }
     return render(request, 'core/ocorrencia_list.html', context)
 
@@ -1544,6 +1590,29 @@ def ocorrencia_create(request):
                 ocorrencia = form.save(commit=False)
                 ocorrencia.solicitante = request.user.usuario_sistema
                 ocorrencia.save()
+                
+                # Detectar menções (@usuario) na descrição e observações
+                from .models import Usuario, criar_notificacao
+                import re
+                
+                texto_completo = f"{ocorrencia.descricao} {ocorrencia.observacoes or ''}"
+                mencoes = re.findall(r'@(\w+)', texto_completo)
+                
+                for username in mencoes:
+                    try:
+                        usuario_mencoes = Usuario.objects.get(
+                            user__username=username,
+                            status='ativo'
+                        )
+                        criar_notificacao(
+                            usuario=usuario_mencoes,
+                            mensagem=f'Você foi mencionado na ocorrência "{ocorrencia.titulo}" por {request.user.get_full_name()}',
+                            link=f'/ocorrencias/{ocorrencia.id}/',
+                            tipo='menção'
+                        )
+                    except Usuario.DoesNotExist:
+                        pass
+                
                 logger.info(f"ocorrencia_create: Ocorrência criada com sucesso por {request.user.username}")
                 messages.success(request, 'Ocorrência registrada com sucesso!')
                 return redirect('core:ocorrencia_list')
@@ -1575,6 +1644,30 @@ def ocorrencia_update(request, pk):
     if request.method == 'POST':
         form = OcorrenciaForm(request.POST, request.FILES, instance=ocorrencia)
         if form.is_valid():
+            ocorrencia_atualizada = form.save(commit=False)
+            
+            # Detectar menções (@usuario) na descrição e observações
+            from .models import Usuario, criar_notificacao
+            import re
+            
+            texto_completo = f"{ocorrencia_atualizada.descricao} {ocorrencia_atualizada.observacoes or ''}"
+            mencoes = re.findall(r'@(\w+)', texto_completo)
+            
+            for username in mencoes:
+                try:
+                    usuario_mencoes = Usuario.objects.get(
+                        user__username=username,
+                        status='ativo'
+                    )
+                    criar_notificacao(
+                        usuario=usuario_mencoes,
+                        mensagem=f'Você foi mencionado na ocorrência "{ocorrencia_atualizada.titulo}" por {request.user.get_full_name()}',
+                        link=f'/ocorrencias/{ocorrencia_atualizada.id}/',
+                        tipo='menção'
+                    )
+                except Usuario.DoesNotExist:
+                    pass
+            
             form.save()
             messages.success(request, 'Ocorrência atualizada com sucesso!')
             return redirect('core:ocorrencia_list')
@@ -1609,6 +1702,25 @@ def ocorrencia_detail(request, pk):
         'ocorrencia': ocorrencia,
         'comentarios': comentarios,
         'comentario_form': comentario_form,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def ocorrencia_delete(request, pk):
+    """Excluir ocorrência"""
+    ocorrencia = get_object_or_404(Ocorrencia, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            ocorrencia.delete()
+            messages.success(request, 'Ocorrência excluída com sucesso!')
+            return redirect('core:ocorrencia_list')
+        except Exception as e:
+            messages.error(request, f'Erro ao excluir ocorrência: {str(e)}')
+            return redirect('core:ocorrencia_detail', pk=pk)
+    
+    return render(request, 'core/ocorrencia_confirm_delete.html', {
+        'ocorrencia': ocorrencia,
         'usuario_sistema': request.user
     })
 
@@ -3572,3 +3684,260 @@ def exportar_clientes_xlsx(request):
     response['Content-Disposition'] = 'attachment; filename=clientes.xlsx'
     wb.save(response)
     return response
+
+# ============================================================================
+# VIEWS DE COMUNICAÇÃO DE VENDA
+# ============================================================================
+
+@login_required
+def comunicacao_venda_list(request):
+    """Lista de comunicações de venda com filtros"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar comunicações de venda.'})
+    
+    # Obter parâmetros de filtro
+    status = request.GET.get('status', '')
+    tipo = request.GET.get('tipo', '')
+    venda_id = request.GET.get('venda', '')
+    atrasadas = request.GET.get('atrasadas', '')
+    
+    # Query base
+    comunicacoes = ComunicacaoVenda.objects.all().order_by('-data_criacao')
+    
+    # Aplicar filtros
+    if status:
+        comunicacoes = comunicacoes.filter(status=status)
+    
+    if tipo:
+        comunicacoes = comunicacoes.filter(tipo=tipo)
+    
+    if venda_id:
+        comunicacoes = comunicacoes.filter(venda_id=venda_id)
+    
+    if atrasadas == 'true':
+        comunicacoes = [com for com in comunicacoes if com.atrasada]
+    
+    context = {
+        'comunicacoes': comunicacoes,
+        'status': status,
+        'tipo': tipo,
+        'venda_id': venda_id,
+        'atrasadas': atrasadas,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    return render(request, 'core/comunicacao_venda_list.html', context)
+
+@login_required
+def comunicacao_venda_create(request, venda_id=None):
+    """Criação de nova comunicação de venda"""
+    if not (request.user.is_superuser or request.user.has_perm('core.add_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para criar comunicações de venda.'})
+    
+    venda = None
+    if venda_id:
+        venda = get_object_or_404(Venda, pk=venda_id)
+    
+    if request.method == 'POST':
+        form = ComunicacaoVendaForm(request.POST, venda=venda)
+        if form.is_valid():
+            comunicacao = form.save(commit=False)
+            comunicacao.venda = venda
+            comunicacao.responsavel = request.user.usuario_sistema
+            comunicacao.save()
+            messages.success(request, 'Comunicação de venda registrada com sucesso!')
+            return redirect('core:comunicacao_venda_list')
+    else:
+        form = ComunicacaoVendaForm(venda=venda)
+    
+    return render(request, 'core/comunicacao_venda_form.html', {
+        'form': form,
+        'venda': venda,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def comunicacao_venda_update(request, pk):
+    """Atualização de comunicação de venda"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para editar comunicações de venda.'})
+    
+    comunicacao = get_object_or_404(ComunicacaoVenda, pk=pk)
+    if request.method == 'POST':
+        form = ComunicacaoVendaForm(request.POST, instance=comunicacao, venda=comunicacao.venda)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Comunicação de venda atualizada com sucesso!')
+            return redirect('core:comunicacao_venda_list')
+    else:
+        form = ComunicacaoVendaForm(instance=comunicacao, venda=comunicacao.venda)
+    
+    return render(request, 'core/comunicacao_venda_form.html', {
+        'form': form,
+        'comunicacao': comunicacao,
+        'venda': comunicacao.venda,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def comunicacao_venda_detail(request, pk):
+    """Detalhes da comunicação de venda"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar comunicações de venda.'})
+    
+    comunicacao = get_object_or_404(ComunicacaoVenda, pk=pk)
+    return render(request, 'core/comunicacao_venda_detail.html', {
+        'comunicacao': comunicacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def comunicacao_venda_delete(request, pk):
+    """Exclusão de comunicação de venda"""
+    if not (request.user.is_superuser or request.user.has_perm('core.delete_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para excluir comunicações de venda.'})
+    
+    comunicacao = get_object_or_404(ComunicacaoVenda, pk=pk)
+    if request.method == 'POST':
+        comunicacao.delete()
+        messages.success(request, 'Comunicação de venda excluída com sucesso!')
+        return redirect('core:comunicacao_venda_list')
+    
+    return render(request, 'core/comunicacao_venda_confirm_delete.html', {
+        'comunicacao': comunicacao,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def comunicacao_venda_marcar_enviada(request, pk):
+    """Marca uma comunicação como enviada"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para marcar comunicações como enviadas.'})
+    
+    comunicacao = get_object_or_404(ComunicacaoVenda, pk=pk)
+    if request.method == 'POST':
+        comunicacao.marcar_como_enviada()
+        messages.success(request, 'Comunicação marcada como enviada com sucesso!')
+        return redirect('core:comunicacao_venda_detail', pk=pk)
+    
+    return render(request, 'core/comunicacao_venda_confirm_enviada.html', {
+        'comunicacao': comunicacao,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def comunicacao_venda_marcar_confirmada(request, pk):
+    """Marca uma comunicação como confirmada"""
+    if not (request.user.is_superuser or request.user.has_perm('core.change_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para marcar comunicações como confirmadas.'})
+    
+    comunicacao = get_object_or_404(ComunicacaoVenda, pk=pk)
+    if request.method == 'POST':
+        comunicacao.marcar_como_confirmada()
+        messages.success(request, 'Comunicação marcada como confirmada com sucesso!')
+        return redirect('core:comunicacao_venda_detail', pk=pk)
+    
+    return render(request, 'core/comunicacao_venda_confirm_confirmada.html', {
+        'comunicacao': comunicacao,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    })
+
+@login_required
+def venda_comunicacoes(request, venda_id):
+    """Exibe as comunicações de uma venda específica"""
+    if not (request.user.is_superuser or request.user.has_perm('core.view_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para visualizar comunicações de venda.'})
+    
+    venda = get_object_or_404(Venda, pk=venda_id)
+    comunicacoes = venda.comunicacoes.all().order_by('-data_criacao')
+    
+    return render(request, 'core/venda_comunicacoes.html', {
+        'venda': venda,
+        'comunicacoes': comunicacoes,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def venda_criar_comunicacoes_obrigatorias(request, venda_id):
+    """Cria as comunicações obrigatórias para uma venda"""
+    if not (request.user.is_superuser or request.user.has_perm('core.add_comunicacaovenda')):
+        return render(request, 'core/acesso_negado.html', {'mensagem': 'Você não tem permissão para criar comunicações de venda.'})
+    
+    venda = get_object_or_404(Venda, pk=venda_id)
+    
+    if request.method == 'POST':
+        venda.criar_comunicacoes_obrigatorias(request.user.usuario_sistema)
+        messages.success(request, 'Comunicações obrigatórias criadas com sucesso!')
+        return redirect('core:venda_comunicacoes', venda_id=venda_id)
+    
+    return render(request, 'core/venda_criar_comunicacoes_obrigatorias.html', {
+        'venda': venda,
+        'usuario_sistema': request.user
+    })
+
+# ============================================================================
+# VIEWS DE NOTIFICAÇÕES
+# ============================================================================
+
+@login_required
+def notificacao_list(request):
+    """Lista de notificações do usuário"""
+    notificacoes = request.user.usuario_sistema.notificacoes.all()
+    
+    # Marcar como lidas se solicitado
+    if request.GET.get('marcar_lidas'):
+        notificacoes.filter(lida=False).update(lida=True)
+        messages.success(request, 'Notificações marcadas como lidas!')
+        return redirect('core:notificacao_list')
+    
+    return render(request, 'core/notificacao_list.html', {
+        'notificacoes': notificacoes,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def notificacao_marcar_lida(request, pk):
+    """Marca uma notificação como lida"""
+    from .models import Notificacao
+    notificacao = get_object_or_404(Notificacao, pk=pk, usuario=request.user.usuario_sistema)
+    
+    if request.method == 'POST':
+        notificacao.lida = True
+        notificacao.save()
+        messages.success(request, 'Notificação marcada como lida!')
+        
+        # Redirecionar para o link da notificação se existir
+        if notificacao.link:
+            return redirect(notificacao.link)
+        return redirect('core:notificacao_list')
+    
+    return render(request, 'core/notificacao_confirm_lida.html', {
+        'notificacao': notificacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def notificacao_delete(request, pk):
+    """Exclui uma notificação"""
+    from .models import Notificacao
+    notificacao = get_object_or_404(Notificacao, pk=pk, usuario=request.user.usuario_sistema)
+    
+    if request.method == 'POST':
+        notificacao.delete()
+        messages.success(request, 'Notificação excluída!')
+        return redirect('core:notificacao_list')
+    
+    return render(request, 'core/notificacao_confirm_delete.html', {
+        'notificacao': notificacao,
+        'usuario_sistema': request.user
+    })
+
+@login_required
+def notificacao_count(request):
+    """Retorna o número de notificações não lidas (para AJAX)"""
+    from .models import Notificacao
+    count = Notificacao.objects.filter(
+        usuario=request.user.usuario_sistema,
+        lida=False
+    ).count()
+    
+    return JsonResponse({'count': count})

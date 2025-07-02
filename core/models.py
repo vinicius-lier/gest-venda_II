@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 import uuid
 from django.db.models import JSONField
+import re
 
 # ============================================================================
 # 1. CONTROLE DE USUÁRIOS (RBAC - Role Based Access Control)
@@ -340,8 +341,7 @@ class Motocicleta(models.Model):
     foto_lado_esquerdo = models.ImageField(upload_to='motos/', blank=True, null=True)
     foto_lado_direito = models.ImageField(upload_to='motos/', blank=True, null=True)
     
-    # Novo campo opcional de relacionamento direto entre Motocicleta e Seguro
-    seguro = models.OneToOneField('Seguro', on_delete=models.SET_NULL, null=True, blank=True, related_name='motocicleta')
+    # Campo removido para otimização - não estava sendo usado
     
     class Meta:
         verbose_name = 'Motocicleta'
@@ -451,6 +451,12 @@ class Venda(models.Model):
     # Metadados
     observacoes = models.TextField(blank=True, null=True)
     
+    # Controle de comunicações obrigatórias
+    comunicacao_intencao_enviada = models.BooleanField(default=False, help_text="Se a comunicação de intenção de venda foi enviada")
+    comunicacao_pagamento_enviada = models.BooleanField(default=False, help_text="Se a comunicação de confirmação de pagamento foi enviada")
+    comunicacao_documentacao_enviada = models.BooleanField(default=False, help_text="Se a comunicação de documentação foi enviada")
+    comunicacao_entrega_enviada = models.BooleanField(default=False, help_text="Se a comunicação de entrega foi enviada")
+    
     class Meta:
         verbose_name = 'Venda'
         verbose_name_plural = 'Vendas'
@@ -488,6 +494,198 @@ class Venda(models.Model):
             )
         
         super().save(*args, **kwargs)
+    
+    def criar_comunicacoes_obrigatorias(self, responsavel):
+        """Cria as comunicações obrigatórias para esta venda"""
+        from datetime import timedelta
+        
+        # Comunicação de Intenção de Venda
+        if not self.comunicacao_intencao_enviada:
+            ComunicacaoVenda.objects.create(
+                venda=self,
+                tipo='intencao',
+                titulo=f'Intenção de Venda - {self.moto.marca} {self.moto.modelo}',
+                mensagem=f'Confirmamos a intenção de venda da motocicleta {self.moto.marca} {self.moto.modelo} ({self.moto.ano}) para {self.comprador.nome} no valor de R$ {self.valor_venda:.2f}.',
+                destinatario=self.comprador.nome,
+                telefone=self.comprador.telefone,
+                email=self.comprador.email,
+                responsavel=responsavel,
+                prazo_limite=timezone.now() + timedelta(hours=24)
+            )
+        
+        # Comunicação de Confirmação de Pagamento
+        if not self.comunicacao_pagamento_enviada:
+            ComunicacaoVenda.objects.create(
+                venda=self,
+                tipo='confirmacao_pagamento',
+                titulo=f'Confirmação de Pagamento - {self.moto.marca} {self.moto.modelo}',
+                mensagem=f'Confirmamos o recebimento do pagamento da motocicleta {self.moto.marca} {self.moto.modelo} ({self.moto.ano}) no valor de R$ {self.valor_venda:.2f}.',
+                destinatario=self.comprador.nome,
+                telefone=self.comprador.telefone,
+                email=self.comprador.email,
+                responsavel=responsavel,
+                prazo_limite=timezone.now() + timedelta(hours=48)
+            )
+        
+        # Comunicação de Documentação
+        if not self.comunicacao_documentacao_enviada:
+            ComunicacaoVenda.objects.create(
+                venda=self,
+                tipo='documentacao',
+                titulo=f'Documentação - {self.moto.marca} {self.moto.modelo}',
+                mensagem=f'Solicitamos a documentação necessária para finalizar a venda da motocicleta {self.moto.marca} {self.moto.modelo} ({self.moto.ano}).',
+                destinatario=self.comprador.nome,
+                telefone=self.comprador.telefone,
+                email=self.comprador.email,
+                responsavel=responsavel,
+                prazo_limite=timezone.now() + timedelta(days=3)
+            )
+        
+        # Comunicação de Entrega
+        if not self.comunicacao_entrega_enviada:
+            ComunicacaoVenda.objects.create(
+                venda=self,
+                tipo='entrega',
+                titulo=f'Agendamento de Entrega - {self.moto.marca} {self.moto.modelo}',
+                mensagem=f'Vamos agendar a entrega da motocicleta {self.moto.marca} {self.moto.modelo} ({self.moto.ano}). Entre em contato para definir a data e horário.',
+                destinatario=self.comprador.nome,
+                telefone=self.comprador.telefone,
+                email=self.comprador.email,
+                responsavel=responsavel,
+                prazo_limite=timezone.now() + timedelta(days=5)
+            )
+    
+    def verificar_comunicacoes_pendentes(self):
+        """Verifica se há comunicações obrigatórias pendentes"""
+        return self.comunicacoes.filter(status='pendente', obrigatoria=True).exists()
+    
+    def get_comunicacoes_pendentes(self):
+        """Retorna as comunicações obrigatórias pendentes"""
+        return self.comunicacoes.filter(status='pendente', obrigatoria=True)
+    
+    def get_comunicacoes_atrasadas(self):
+        """Retorna as comunicações obrigatórias atrasadas"""
+        return [com for com in self.comunicacoes.filter(status='pendente', obrigatoria=True) if com.atrasada]
+    
+    def todas_comunicacoes_enviadas(self):
+        """Verifica se todas as comunicações obrigatórias foram enviadas"""
+        return not self.verificar_comunicacoes_pendentes()
+
+class ComunicacaoVenda(models.Model):
+    """Modelo para controle de comunicações obrigatórias de vendas"""
+    TIPO_CHOICES = [
+        ('intencao', 'Intenção de Venda'),
+        ('confirmacao_pagamento', 'Confirmação de Pagamento'),
+        ('documentacao', 'Documentação'),
+        ('entrega', 'Entrega'),
+        ('outros', 'Outros'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('enviada', 'Enviada'),
+        ('confirmada', 'Confirmada'),
+        ('cancelada', 'Cancelada'),
+    ]
+    
+    # Relacionamentos
+    venda = models.ForeignKey(Venda, on_delete=models.CASCADE, related_name='comunicacoes')
+    
+    # Dados da comunicação
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    obrigatoria = models.BooleanField(default=True, help_text="Se esta comunicação é obrigatória para a venda")
+    
+    # Conteúdo da comunicação
+    titulo = models.CharField(max_length=200)
+    mensagem = models.TextField()
+    destinatario = models.CharField(max_length=100, help_text="Nome do destinatário da comunicação")
+    telefone = models.CharField(max_length=15, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    
+    # Datas
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_envio = models.DateTimeField(blank=True, null=True)
+    data_confirmacao = models.DateTimeField(blank=True, null=True)
+    prazo_limite = models.DateTimeField(blank=True, null=True, help_text="Prazo limite para envio da comunicação")
+    
+    # Metadados
+    observacoes = models.TextField(blank=True, null=True)
+    responsavel = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='comunicacoes_venda')
+    
+    # Arquivos
+    documento_anexo = models.FileField(
+        upload_to='comunicacoes/documentos/', 
+        blank=True, 
+        null=True,
+        help_text="Documento da comunicação (PDF, imagem, etc.)"
+    )
+    comprovante_envio = models.FileField(
+        upload_to='comunicacoes/comprovantes/', 
+        blank=True, 
+        null=True,
+        help_text="Comprovante de envio da comunicação"
+    )
+    
+    class Meta:
+        verbose_name = 'Comunicação de Venda'
+        verbose_name_plural = 'Comunicações de Venda'
+        ordering = ['-data_criacao']
+    
+    def __str__(self):
+        return f"Comunicação #{self.id} - {self.tipo} - Venda #{self.venda.id}"
+    
+    def get_status_color(self):
+        """Retorna a cor CSS para o status da comunicação"""
+        colors = {
+            'pendente': 'warning',
+            'enviada': 'info',
+            'confirmada': 'success',
+            'cancelada': 'danger',
+        }
+        return colors.get(self.status, 'secondary')
+    
+    def get_tipo_color(self):
+        """Retorna a cor CSS para o tipo da comunicação"""
+        colors = {
+            'intencao': 'primary',
+            'confirmacao_pagamento': 'success',
+            'documentacao': 'info',
+            'entrega': 'warning',
+            'outros': 'secondary',
+        }
+        return colors.get(self.tipo, 'secondary')
+    
+    @property
+    def atrasada(self):
+        """Verifica se a comunicação está atrasada"""
+        if self.prazo_limite and self.status == 'pendente':
+            return timezone.now() > self.prazo_limite
+        return False
+    
+    @property
+    def dias_atraso(self):
+        """Retorna o número de dias de atraso"""
+        if self.atrasada and self.prazo_limite:
+            return (timezone.now() - self.prazo_limite).days
+        return 0
+    
+    def marcar_como_enviada(self):
+        """Marca a comunicação como enviada"""
+        self.status = 'enviada'
+        self.data_envio = timezone.now()
+        self.save()
+    
+    def marcar_como_confirmada(self):
+        """Marca a comunicação como confirmada"""
+        self.status = 'confirmada'
+        self.data_confirmacao = timezone.now()
+        self.save()
+    
+    def cancelar(self):
+        """Cancela a comunicação"""
+        self.status = 'cancelada'
+        self.save()
 
 # ============================================================================
 # 5. CONSIGNAÇÕES
@@ -1183,3 +1381,116 @@ class Pagamento(models.Model):
             from datetime import date
             return (date.today() - self.vencimento).days
         return 0
+
+class Notificacao(models.Model):
+    TIPO_CHOICES = [
+        ('venda', 'Venda'),
+        ('ocorrencia', 'Ocorrência'),
+        ('documento', 'Documento'),
+        ('menção', 'Menção'),
+        ('venda_pendente', 'Venda Pendente'),
+        ('outros', 'Outros'),
+    ]
+
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificacoes')
+    mensagem = models.TextField()
+    link = models.CharField(max_length=300, blank=True, null=True, help_text='URL para ação ou detalhe')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='outros')
+    lida = models.BooleanField(default=False)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Notificação'
+        verbose_name_plural = 'Notificações'
+        ordering = ['-data_criacao']
+
+    def __str__(self):
+        return f'Notificação para {self.usuario} - {self.tipo}'
+
+def criar_notificacao(usuario, mensagem, link=None, tipo='outros'):
+    from .models import Notificacao
+    Notificacao.objects.create(
+        usuario=usuario,
+        mensagem=mensagem,
+        link=link,
+        tipo=tipo
+    )
+
+def verificar_vendas_pendentes_comunicacao():
+    """
+    Verifica vendas com mais de 2 dias sem comunicação de intenção
+    e notifica o administrativo
+    """
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    
+    # Data limite: 2 dias atrás
+    data_limite = timezone.now() - timedelta(days=2)
+    
+    # Buscar vendas vendidas com mais de 2 dias sem comunicação de intenção
+    vendas_pendentes = Venda.objects.filter(
+        status='vendido',
+        data_venda__lt=data_limite,
+        comunicacoes__tipo='intencao',
+        comunicacoes__status='pendente'
+    ).distinct()
+    
+    # Buscar usuários administrativos
+    admins = Usuario.objects.filter(
+        status='ativo',
+        perfil__nome__in=['admin', 'gerente']
+    )
+    
+    # Criar notificações para cada venda pendente
+    for venda in vendas_pendentes:
+        for admin in admins:
+            # Verificar se já existe notificação recente (últimas 24h)
+            notificacao_recente = Notificacao.objects.filter(
+                usuario=admin,
+                tipo='venda_pendente',
+                mensagem__contains=f'Venda {venda.id}',
+                data_criacao__gte=timezone.now() - timedelta(hours=24)
+            ).exists()
+            
+            if not notificacao_recente:
+                criar_notificacao(
+                    usuario=admin,
+                    mensagem=f'Venda {venda.id} ({venda.moto.marca} {venda.moto.modelo} para {venda.comprador.nome}) ainda não recebeu comunicação de intenção após 2 dias',
+                    link=f'/vendas/{venda.id}/comunicacoes/',
+                    tipo='venda_pendente'
+                )
+    
+    return len(vendas_pendentes)
+
+def notificar_mencoes_ocorrencias_pendentes(usuario):
+    """
+    Notifica o usuário sobre ocorrências em que foi mencionado e que ainda estão abertas
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from .models import Ocorrencia, Notificacao
+    import re
+
+    # Buscar ocorrências abertas que mencionam o usuário
+    ocorrencias = Ocorrencia.objects.filter(
+        status__in=['aberta', 'em_analise', 'em_andamento'],
+    )
+    username = usuario.user.username
+    for ocorrencia in ocorrencias:
+        texto = f"{ocorrencia.descricao} {ocorrencia.observacoes or ''}"
+        mencoes = re.findall(r'@(\w+)', texto)
+        if username in mencoes:
+            # Verificar se já existe notificação recente (últimas 24h) para esta ocorrência
+            notificacao_recente = Notificacao.objects.filter(
+                usuario=usuario,
+                tipo='menção',
+                mensagem__contains=f'Ocorrência "{ocorrencia.titulo}"',
+                data_criacao__gte=timezone.now() - timedelta(hours=24)
+            ).exists()
+            if not notificacao_recente:
+                criar_notificacao(
+                    usuario=usuario,
+                    mensagem=f'Você foi mencionado na ocorrência "{ocorrencia.titulo}" e ela ainda está aberta.',
+                    link=f'/ocorrencias/{ocorrencia.id}/',
+                    tipo='menção'
+                )

@@ -1,367 +1,238 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Financeiro - Gestão Operacional de Vendas{% endblock %}
+{% block title %}Dashboard Financeiro - Sistema de Gestão{% endblock %}
 
 {% block page_title %}Dashboard Financeiro{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
-<style>
-    .kpi-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-    }
-    
-    .kpi-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .kpi-card.success {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    }
-    
-    .kpi-card.warning {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-    
-    .kpi-card.info {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-    
-    .kpi-value {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    
-    .kpi-label {
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
-    .chart-container {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .alert-card {
-        border-left: 4px solid;
-        background: white;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    .alert-card.danger {
-        border-left-color: #dc3545;
-        background-color: #f8d7da;
-    }
-    
-    .alert-card.warning {
-        border-left-color: #ffc107;
-        background-color: #fff3cd;
-    }
-    
-    .alert-card.info {
-        border-left-color: #17a2b8;
-        background-color: #d1ecf1;
-    }
-    
-    .table-responsive {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .filter-section {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<!-- Filtros -->
-<div class="filter-section">
-    <form method="get" class="row g-3">
-        <div class="col-md-3">
-            <label for="data_inicio" class="form-label">Data Início</label>
-            <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
-                   value="{{ request.GET.data_inicio|default:data_inicio }}">
-        </div>
-        <div class="col-md-3">
-            <label for="data_fim" class="form-label">Data Fim</label>
-            <input type="date" class="form-control" id="data_fim" name="data_fim" 
-                   value="{{ request.GET.data_fim|default:data_fim }}">
-        </div>
-        <div class="col-md-3">
-            <label for="loja" class="form-label">Loja</label>
-            <select class="form-select" id="loja" name="loja">
-                <option value="">Todas as Lojas</option>
-                {% for loja in lojas %}
-                <option value="{{ loja.id }}" {% if request.GET.loja == loja.id|stringformat:"s" %}selected{% endif %}>
-                    {{ loja.nome }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-3 d-flex align-items-end gap-2">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-filter me-1"></i>Filtrar
-            </button>
-            <a href="{% url 'core:dashboard_financeiro' %}" class="btn btn-secondary">
-                <i class="fas fa-times me-1"></i>Limpar
-            </a>
-            <a href="{% url 'core:exportar_dashboard_financeiro_xlsx' %}?data_inicio={{ request.GET.data_inicio|default:data_inicio }}&data_fim={{ request.GET.data_fim|default:data_fim }}&loja={{ request.GET.loja|default:'' }}" class="btn btn-success">
-                <i class="fas fa-file-excel me-1"></i>Exportar XLSX
-            </a>
-        </div>
-    </form>
-</div>
-
-<!-- Alertas Financeiros -->
-{% if alertas %}
-<div class="row">
-    <div class="col-12">
-        <h5><i class="fas fa-exclamation-triangle me-2"></i>Alertas Financeiros</h5>
-        {% for alerta in alertas %}
-        <div class="alert-card {{ alerta.severidade }}">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <strong>{{ alerta.titulo }}</strong>
-                    <p class="mb-0">{{ alerta.mensagem }}</p>
+<div class="container-fluid">
+    <!-- Cards de Resumo -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Receita Total
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">R$ {{ resumo.receita_bruta|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
 
-<!-- KPIs -->
-<div class="row">
-    <div class="col-lg-3 col-md-6">
-        <div class="kpi-card success">
-            <div class="kpi-value">R$ {{ resumo.receita_bruta|floatformat:2 }}</div>
-            <div class="kpi-label">Receita Bruta</div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Despesas Totais
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">R$ {{ resumo.despesas_totais|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-minus-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="kpi-card info">
-            <div class="kpi-value">R$ {{ resumo.lucro_total|floatformat:2 }}</div>
-            <div class="kpi-label">Lucro Líquido</div>
-        </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="kpi-card {% if resumo.margem_lucro < 20 %}warning{% else %}success{% endif %}">
-            <div class="kpi-value">{{ resumo.margem_lucro|floatformat:1 }}%</div>
-            <div class="kpi-label">Margem de Lucro</div>
-        </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="kpi-card {% if resumo.projecao_caixa < 0 %}warning{% else %}info{% endif %}">
-            <div class="kpi-value">R$ {{ resumo.projecao_caixa|floatformat:2 }}</div>
-            <div class="kpi-label">Projeção de Caixa</div>
-        </div>
-    </div>
-</div>
 
-<!-- Cards de Resumo de Motos -->
-<div class="row">
-    <div class="col-lg-2 col-md-4 col-6">
-        <div class="kpi-card info">
-            <div class="kpi-value">{{ resumo.total_motos_estoque }}</div>
-            <div class="kpi-label">Motos em Estoque</div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Lucro Líquido
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">R$ {{ resumo.lucro_total|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="col-lg-2 col-md-4 col-6">
-        <div class="kpi-card success">
-            <div class="kpi-value">{{ resumo.total_0km }}</div>
-            <div class="kpi-label">0KM</div>
-        </div>
-    </div>
-    <div class="col-lg-2 col-md-4 col-6">
-        <div class="kpi-card warning">
-            <div class="kpi-value">{{ resumo.total_usadas }}</div>
-            <div class="kpi-label">Usadas</div>
-        </div>
-    </div>
-    <div class="col-lg-2 col-md-4 col-6">
-        <div class="kpi-card info">
-            <div class="kpi-value">{{ resumo.total_consignacao }}</div>
-            <div class="kpi-label">Consignação</div>
-        </div>
-    </div>
-    <div class="col-lg-2 col-md-4 col-6">
-        <div class="kpi-card success">
-            <div class="kpi-value">R$ {{ resumo.valor_estoque|floatformat:2 }}</div>
-            <div class="kpi-label">Valor em Estoque</div>
-        </div>
-    </div>
-    <div class="col-lg-2 col-md-4 col-6">
-        <div class="kpi-card warning">
-            <div class="kpi-value">R$ {{ resumo.valor_gasto_motos|floatformat:2 }}</div>
-            <div class="kpi-label">Total Gasto em Motos</div>
-        </div>
-    </div>
-</div>
 
-<!-- Gráficos -->
-<div class="row">
-    <!-- Lucro por Canal de Venda -->
-    <div class="col-lg-6">
-        <div class="chart-container">
-            <h6><i class="fas fa-chart-bar me-2"></i>Lucro por Canal de Venda</h6>
-            <canvas id="chartLucroCanal" width="400" height="200"></canvas>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Vendas do Mês
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ vendas_mes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    
-    <!-- Distribuição de Despesas -->
-    <div class="col-lg-6">
-        <div class="chart-container">
-            <h6><i class="fas fa-chart-pie me-2"></i>Distribuição de Despesas por Categoria</h6>
-            <canvas id="chartDespesas" width="400" height="200"></canvas>
-        </div>
-    </div>
-</div>
 
-<div class="row">
-    <!-- Evolução do Lucro -->
-    <div class="col-lg-8">
-        <div class="chart-container">
-            <h6><i class="fas fa-chart-line me-2"></i>Evolução do Lucro Diário</h6>
-            <canvas id="chartEvolucaoLucro" width="400" height="200"></canvas>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-secondary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                Valor em Estoque
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">R$ {{ resumo.valor_estoque|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-warehouse fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    
-    <!-- Fluxo de Caixa -->
-    <div class="col-lg-4">
-        <div class="chart-container">
-            <h6><i class="fas fa-chart-area me-2"></i>Fluxo de Caixa</h6>
-            <canvas id="chartFluxoCaixa" width="400" height="200"></canvas>
-        </div>
-    </div>
-</div>
 
-<!-- Tabelas -->
-<div class="row">
-    <!-- Pagamentos Pendentes -->
-    <div class="col-lg-6">
-        <div class="table-responsive">
-            <h6><i class="fas fa-clock me-2"></i>Pagamentos Pendentes</h6>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Descrição</th>
-                            <th>Valor</th>
-                            <th>Vencimento</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for pagamento in pagamentos_pendentes %}
-                        <tr class="{% if pagamento.atrasado %}table-danger{% endif %}">
-                            <td>{{ pagamento.get_tipo_display }} - {{ pagamento.get_referente_a_display }}</td>
-                            <td>R$ {{ pagamento.valor|floatformat:2 }}</td>
-                            <td>{{ pagamento.vencimento|date:"d/m/Y" }}</td>
-                            <td>
-                                {% if pagamento.atrasado %}
-                                <span class="badge bg-danger">Atrasado {{ pagamento.dias_atraso }} dias</span>
-                                {% else %}
-                                <span class="badge bg-warning">Pendente</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center text-muted">Nenhum pagamento pendente</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-dark shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                Margem de Lucro
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ resumo.margem_lucro|floatformat:2 }}%</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
-    <!-- Vendas com Maior Lucro -->
-    <div class="col-lg-6">
-        <div class="table-responsive">
-            <h6><i class="fas fa-trophy me-2"></i>Vendas com Maior Lucro</h6>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Produto</th>
-                            <th>Canal</th>
-                            <th>Lucro</th>
-                            <th>Margem</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for venda in vendas_maior_lucro %}
-                        <tr>
-                            <td>{{ venda.produto }}</td>
-                            <td>{{ venda.get_canal_venda_display }}</td>
-                            <td>R$ {{ venda.lucro|floatformat:2 }}</td>
-                            <td>{{ venda.margem|floatformat:1 }}%</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center text-muted">Nenhuma venda registrada</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+    <!-- Gráficos e Tabelas -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Receitas vs Despesas (Últimos 6 meses)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartReceitasDespesas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Distribuição de Receitas</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartDistribuicao"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Ações Rápidas -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Ações Rápidas</h6>
+    <!-- Tabelas de Dados -->
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Últimas Vendas</h6>
+                </div>
+                <div class="card-body">
+                    {% if ultimas_vendas %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Cliente</th>
+                                    <th>Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for venda in ultimas_vendas %}
+                                <tr>
+                                    <td>{{ venda.data_venda|date:"d/m/Y" }}</td>
+                                    <td>{{ venda.comprador.nome }}</td>
+                                    <td>R$ {{ venda.valor_venda|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhuma venda registrada.</p>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <a href="{% url 'core:venda_financeira_create' %}" class="btn btn-primary w-100 mb-2">
-                            <i class="fas fa-plus me-1"></i>Nova Venda
-                        </a>
+        </div>
+
+        <div class="col-xl-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Últimas Despesas</h6>
+                </div>
+                <div class="card-body">
+                    {% if ultimas_despesas %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for despesa in ultimas_despesas %}
+                                <tr>
+                                    <td>{{ despesa.data|date:"d/m/Y" }}</td>
+                                    <td>{{ despesa.descricao }}</td>
+                                    <td>R$ {{ despesa.valor|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="col-md-3">
-                        <a href="{% url 'core:despesa_create' %}" class="btn btn-warning w-100 mb-2">
-                            <i class="fas fa-minus me-1"></i>Nova Despesa
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="{% url 'core:receita_extra_create' %}" class="btn btn-success w-100 mb-2">
-                            <i class="fas fa-plus-circle me-1"></i>Nova Receita
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="{% url 'core:pagamento_create' %}" class="btn btn-info w-100 mb-2">
-                            <i class="fas fa-calendar me-1"></i>Novo Pagamento
-                        </a>
-                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhuma despesa registrada.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adicionar gráficos de evolução de estoque e margem de lucro -->
+    <div class="row">
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Evolução do Estoque</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartEvolucaoEstoque"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Evolução da Margem de Lucro</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartEvolucaoMargemLucro"></canvas>
                 </div>
             </div>
         </div>
@@ -370,149 +241,73 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Dados dos gráficos
-const dadosLucroCanal = {{ resumo.lucro_por_canal|safe }};
-const dadosDespesas = {{ resumo.distribuicao_despesas|safe }};
-const dadosEvolucaoLucro = {{ resumo.evolucao_lucro|safe }};
-const dadosFluxoCaixa = {{ resumo.fluxo_tempo|safe }};
-
-// Cores para os gráficos
-const cores = [
-    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
-];
-
-// Gráfico de Lucro por Canal
-const ctxLucroCanal = document.getElementById('chartLucroCanal').getContext('2d');
-new Chart(ctxLucroCanal, {
-    type: 'bar',
-    data: {
-        labels: Object.keys(dadosLucroCanal),
+document.addEventListener('DOMContentLoaded', function() {
+    // Dados para os gráficos (substitua pelos dados reais do backend)
+    const dadosReceitasDespesas = {
+        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
         datasets: [{
-            label: 'Lucro (R$)',
-            data: Object.values(dadosLucroCanal),
-            backgroundColor: cores.slice(0, Object.keys(dadosLucroCanal).length),
-            borderWidth: 1
+            label: 'Receitas',
+            data: [12000, 19000, 15000, 25000, 22000, 30000],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }, {
+            label: 'Despesas',
+            data: [8000, 12000, 10000, 18000, 15000, 20000],
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            tension: 0.1
         }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: function(value) {
-                        return 'R$ ' + value.toLocaleString('pt-BR');
-                    }
+    };
+
+    const dadosDistribuicao = {
+        labels: ['Vendas', 'Serviços', 'Outros'],
+        datasets: [{
+            data: [70, 20, 10],
+            backgroundColor: [
+                'rgb(255, 99, 132)',
+                'rgb(54, 162, 235)',
+                'rgb(255, 205, 86)'
+            ]
+        }]
+    };
+
+    // Gráfico de linha - Receitas vs Despesas
+    const ctx1 = document.getElementById('chartReceitasDespesas').getContext('2d');
+    new Chart(ctx1, {
+        type: 'line',
+        data: dadosReceitasDespesas,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
         }
-    }
-});
+    });
 
-// Gráfico de Distribuição de Despesas
-const ctxDespesas = document.getElementById('chartDespesas').getContext('2d');
-new Chart(ctxDespesas, {
-    type: 'doughnut',
-    data: {
-        labels: Object.keys(dadosDespesas),
-        datasets: [{
-            data: Object.values(dadosDespesas),
-            backgroundColor: cores.slice(0, Object.keys(dadosDespesas).length),
-            borderWidth: 2,
-            borderColor: '#fff'
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
-        }
-    }
-});
-
-// Gráfico de Evolução do Lucro
-const ctxEvolucaoLucro = document.getElementById('chartEvolucaoLucro').getContext('2d');
-new Chart(ctxEvolucaoLucro, {
-    type: 'line',
-    data: {
-        labels: Object.keys(dadosEvolucaoLucro),
-        datasets: [{
-            label: 'Lucro Diário (R$)',
-            data: Object.values(dadosEvolucaoLucro),
-            borderColor: '#36A2EB',
-            backgroundColor: 'rgba(54, 162, 235, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: function(value) {
-                        return 'R$ ' + value.toLocaleString('pt-BR');
-                    }
+    // Gráfico de pizza - Distribuição
+    const ctx2 = document.getElementById('chartDistribuicao').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: dadosDistribuicao,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
                 }
             }
         }
-    }
-});
-
-// Gráfico de Fluxo de Caixa
-const ctxFluxoCaixa = document.getElementById('chartFluxoCaixa').getContext('2d');
-new Chart(ctxFluxoCaixa, {
-    type: 'line',
-    data: {
-        labels: Object.keys(dadosFluxoCaixa),
-        datasets: [{
-            label: 'Saldo (R$)',
-            data: Object.values(dadosFluxoCaixa),
-            borderColor: '#4BC0C0',
-            backgroundColor: 'rgba(75, 192, 192, 0.1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                ticks: {
-                    callback: function(value) {
-                        return 'R$ ' + value.toLocaleString('pt-BR');
-                    }
-                }
-            }
-        }
-    }
+    });
 });
 </script>
 {% endblock %} 

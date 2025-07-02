@@ -1,0 +1,54 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Marcar Notificação como Lida{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Marcar Notificação como Lida
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>Tem certeza que deseja marcar esta notificação como lida?</p>
+                    
+                    <div class="alert alert-info">
+                        <strong>Mensagem:</strong><br>
+                        {{ notificacao.mensagem }}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">
+                                <i class="fas fa-tag me-1"></i>{{ notificacao.get_tipo_display }}
+                            </small>
+                        </div>
+                        <div class="col-6 text-end">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>{{ notificacao.data_criacao|date:"d/m/Y H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'core:notificacao_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check me-1"></i>Marcar como Lida
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

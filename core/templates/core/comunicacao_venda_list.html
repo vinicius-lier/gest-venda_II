@@ -1,0 +1,171 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Comunicações de Venda{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Cabeçalho -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-envelope me-2"></i>Comunicações de Venda</h2>
+            <p class="text-muted">Gerencie as comunicações obrigatórias das vendas</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'core:comunicacao_venda_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nova Comunicação
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendente</option>
+                        <option value="enviada" {% if status == 'enviada' %}selected{% endif %}>Enviada</option>
+                        <option value="confirmada" {% if status == 'confirmada' %}selected{% endif %}>Confirmada</option>
+                        <option value="cancelada" {% if status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="tipo" class="form-label">Tipo</label>
+                    <select name="tipo" id="tipo" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="intencao" {% if tipo == 'intencao' %}selected{% endif %}>Intenção</option>
+                        <option value="confirmacao_pagamento" {% if tipo == 'confirmacao_pagamento' %}selected{% endif %}>Confirmação Pagamento</option>
+                        <option value="documentacao" {% if tipo == 'documentacao' %}selected{% endif %}>Documentação</option>
+                        <option value="entrega" {% if tipo == 'entrega' %}selected{% endif %}>Entrega</option>
+                        <option value="outros" {% if tipo == 'outros' %}selected{% endif %}>Outros</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="atrasadas" class="form-label">Atrasadas</label>
+                    <select name="atrasadas" id="atrasadas" class="form-select">
+                        <option value="">Todas</option>
+                        <option value="true" {% if atrasadas == 'true' %}selected{% endif %}>Sim</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="venda_id" class="form-label">Venda ID</label>
+                    <input type="number" name="venda" id="venda_id" class="form-control" value="{{ venda_id }}" placeholder="ID da venda">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-search me-1"></i>Filtrar
+                    </button>
+                    <a href="{% url 'core:comunicacao_venda_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Comunicações -->
+    <div class="card">
+        <div class="card-body">
+            {% if comunicacoes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Venda</th>
+                                <th>Tipo</th>
+                                <th>Destinatário</th>
+                                <th>Status</th>
+                                <th>Prazo</th>
+                                <th>Responsável</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comunicacao in comunicacoes %}
+                            <tr>
+                                <td>
+                                    <strong>#{{ comunicacao.id }}</strong>
+                                </td>
+                                <td>
+                                    <a href="{% url 'core:venda_detail' comunicacao.venda.pk %}" class="text-decoration-none">
+                                        <strong>Venda #{{ comunicacao.venda.id }}</strong><br>
+                                        <small class="text-muted">{{ comunicacao.venda.moto.marca }} {{ comunicacao.venda.moto.modelo }}</small>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ comunicacao.get_tipo_color }}">
+                                        {{ comunicacao.get_tipo_display }}
+                                    </span>
+                                    {% if comunicacao.obrigatoria %}
+                                        <br><small class="text-danger">Obrigatória</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ comunicacao.destinatario }}</strong><br>
+                                    <small class="text-muted">{{ comunicacao.telefone|default:comunicacao.email }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ comunicacao.get_status_color }}">
+                                        {{ comunicacao.get_status_display }}
+                                    </span>
+                                    {% if comunicacao.atrasada %}
+                                        <br><small class="text-danger">{{ comunicacao.dias_atraso }} dias atrasada</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if comunicacao.prazo_limite %}
+                                        <small>{{ comunicacao.prazo_limite|date:"d/m/Y H:i" }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Não definido</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ comunicacao.responsavel.user.get_full_name }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'core:comunicacao_venda_detail' comunicacao.pk %}" 
+                                           class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'core:comunicacao_venda_update' comunicacao.pk %}" 
+                                           class="btn btn-sm btn-outline-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if comunicacao.status == 'pendente' %}
+                                            <a href="{% url 'core:comunicacao_venda_marcar_enviada' comunicacao.pk %}" 
+                                               class="btn btn-sm btn-outline-info" title="Marcar como enviada">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </a>
+                                        {% endif %}
+                                        {% if comunicacao.status == 'enviada' %}
+                                            <a href="{% url 'core:comunicacao_venda_marcar_confirmada' comunicacao.pk %}" 
+                                               class="btn btn-sm btn-outline-success" title="Marcar como confirmada">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhuma comunicação encontrada</h5>
+                    <p class="text-muted">Não há comunicações de venda registradas com os filtros aplicados.</p>
+                    <a href="{% url 'core:comunicacao_venda_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Criar Primeira Comunicação
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

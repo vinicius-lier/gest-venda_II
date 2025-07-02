@@ -1,0 +1,214 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Comunicação de Venda #{{ comunicacao.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Cabeçalho -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-envelope me-2"></i>Comunicação de Venda #{{ comunicacao.id }}
+            </h2>
+            <p class="text-muted">{{ comunicacao.titulo }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'core:comunicacao_venda_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+            <a href="{% url 'core:comunicacao_venda_update' comunicacao.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informações Principais -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-1"></i>Informações da Comunicação
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Detalhes</h6>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Tipo:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{{ comunicacao.get_tipo_color }}">
+                                            {{ comunicacao.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{{ comunicacao.get_status_color }}">
+                                            {{ comunicacao.get_status_display }}
+                                        </span>
+                                        {% if comunicacao.atrasada %}
+                                            <br><small class="text-danger">{{ comunicacao.dias_atraso }} dias atrasada</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Obrigatória:</strong></td>
+                                    <td>
+                                        {% if comunicacao.obrigatoria %}
+                                            <span class="badge bg-danger">Sim</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Não</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Responsável:</strong></td>
+                                    <td>{{ comunicacao.responsavel.user.get_full_name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Destinatário</h6>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Nome:</strong></td>
+                                    <td>{{ comunicacao.destinatario }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Telefone:</strong></td>
+                                    <td>{{ comunicacao.telefone|default:"Não informado" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>E-mail:</strong></td>
+                                    <td>{{ comunicacao.email|default:"Não informado" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6>Mensagem</h6>
+                    <div class="alert alert-info">
+                        {{ comunicacao.mensagem|linebreaks }}
+                    </div>
+
+                    {% if comunicacao.observacoes %}
+                        <h6>Observações</h6>
+                        <div class="alert alert-light">
+                            {{ comunicacao.observacoes|linebreaks }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informações da Venda -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-shopping-cart me-1"></i>Venda Relacionada
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>Venda #{{ comunicacao.venda.id }}</h6>
+                    <p class="mb-2">
+                        <strong>{{ comunicacao.venda.moto.marca }} {{ comunicacao.venda.moto.modelo }}</strong><br>
+                        <small class="text-muted">{{ comunicacao.venda.moto.ano }} - {{ comunicacao.venda.moto.placa|default:comunicacao.venda.moto.chassi }}</small>
+                    </p>
+                    <p class="mb-2">
+                        <strong>Comprador:</strong> {{ comunicacao.venda.comprador.nome }}<br>
+                        <strong>Valor:</strong> R$ {{ comunicacao.venda.valor_venda|floatformat:2 }}
+                    </p>
+                    <a href="{% url 'core:venda_detail' comunicacao.venda.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>Ver Venda
+                    </a>
+                </div>
+            </div>
+
+            <!-- Datas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-calendar me-1"></i>Datas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Criação:</strong></td>
+                            <td>{{ comunicacao.data_criacao|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% if comunicacao.data_envio %}
+                            <tr>
+                                <td><strong>Envio:</strong></td>
+                                <td>{{ comunicacao.data_envio|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                        {% endif %}
+                        {% if comunicacao.data_confirmacao %}
+                            <tr>
+                                <td><strong>Confirmação:</strong></td>
+                                <td>{{ comunicacao.data_confirmacao|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                        {% endif %}
+                        {% if comunicacao.prazo_limite %}
+                            <tr>
+                                <td><strong>Prazo:</strong></td>
+                                <td>
+                                    {{ comunicacao.prazo_limite|date:"d/m/Y H:i" }}
+                                    {% if comunicacao.atrasada %}
+                                        <br><small class="text-danger">Atrasada</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-cogs me-1"></i>Ações
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if comunicacao.status == 'pendente' %}
+                            <a href="{% url 'core:comunicacao_venda_marcar_enviada' comunicacao.pk %}" 
+                               class="btn btn-info">
+                                <i class="fas fa-paper-plane me-1"></i>Marcar como Enviada
+                            </a>
+                        {% endif %}
+                        
+                        {% if comunicacao.status == 'enviada' %}
+                            <a href="{% url 'core:comunicacao_venda_marcar_confirmada' comunicacao.pk %}" 
+                               class="btn btn-success">
+                                <i class="fas fa-check me-1"></i>Marcar como Confirmada
+                            </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'core:comunicacao_venda_update' comunicacao.pk %}" 
+                           class="btn btn-warning">
+                            <i class="fas fa-edit me-1"></i>Editar Comunicação
+                        </a>
+                        
+                        <a href="{% url 'core:comunicacao_venda_delete' comunicacao.pk %}" 
+                           class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Excluir Comunicação
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

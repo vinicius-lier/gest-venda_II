@@ -2315,28 +2315,24 @@ def usuario_menu_manage(request, usuario_id):
             ('pre_venda', 'Pré-Venda'),
         ]
         
-        # Log dos dados recebidos
-        logger.info(f"Salvando menus para usuário {usuario.user.username}")
-        logger.info(f"Dados POST recebidos: {list(request.POST.keys())}")
-        
         # Limpar configurações existentes do usuário
-        menus_removidos = usuario.menus_usuario.all().delete()
-        logger.info(f"Menus removidos: {menus_removidos}")
+        usuario.menus_usuario.all().delete()
         
         # Criar novas configurações baseadas no formulário
-        menus_criados = []
         for cod, nome in modulos:
-            if request.POST.get(f'{usuario.pk}_{cod}'):
-                menu = MenuUsuario.objects.create(
+            checked = request.POST.get(f'{usuario.pk}_{cod}')
+            if checked:
+                MenuUsuario.objects.create(
                     usuario=usuario,
                     modulo=cod,
                     ativo=True
                 )
-                menus_criados.append(cod)
-                logger.info(f"Menu criado: {cod}")
-        
-        logger.info(f"Total de menus criados: {len(menus_criados)}")
-        logger.info(f"Menus criados: {menus_criados}")
+            else:
+                MenuUsuario.objects.create(
+                    usuario=usuario,
+                    modulo=cod,
+                    ativo=False
+                )
         
         messages.success(request, f'Menus do usuário {usuario.user.get_full_name()} atualizados com sucesso!')
         return redirect('core:usuario_list')
@@ -2363,9 +2359,6 @@ def usuario_menu_manage(request, usuario_id):
     menus_usuario = {}
     for cod, nome in modulos:
         menus_usuario[cod] = usuario.modulo_ativo(cod)
-    
-    # Log do estado atual dos menus
-    logger.info(f"Estado atual dos menus para {usuario.user.username}: {menus_usuario}")
     
     context = {
         'usuario': usuario,

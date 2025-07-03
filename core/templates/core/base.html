@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/responsive.css' %}">
     <link rel="icon" type="image/png" href="{% static 'core/images/logo.png' %}">
     <title>{% block title %}{% endblock %}</title>
     <style>
@@ -18,7 +19,9 @@
             padding: 2rem;
             padding-top: 80px;
             transition: margin-left 0.3s ease;
+            min-height: 100vh;
         }
+        
         .sidebar {
             width: 240px;
             position: fixed;
@@ -28,11 +31,152 @@
             z-index: 1000;
             overflow-y: auto;
             transition: transform 0.3s ease;
+            background: linear-gradient(135deg, #e74c3c 0%, #34495e 100%);
         }
+        
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            backdrop-filter: blur(2px);
+        }
+        
+        .sidebar-overlay.show {
+            display: block;
+        }
+        
+        /* Responsividade para telas médias */
+        @media (max-width: 1199px) {
+            .sidebar {
+                width: 220px;
+            }
+            .main-content {
+                margin-left: 220px;
+            }
+        }
+        
+        /* Responsividade para telas pequenas */
         @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 280px;
+                z-index: 1100;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
             .main-content {
                 margin-left: 0;
+                padding: 1rem;
+                padding-top: 70px;
             }
+            
+            .navbar {
+                padding: 0.5rem 0;
+            }
+            
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+        }
+        
+        /* Responsividade para telas muito pequenas */
+        @media (max-width: 576px) {
+            .sidebar {
+                width: 100%;
+                max-width: 320px;
+            }
+            
+            .main-content {
+                padding: 0.75rem;
+                padding-top: 60px;
+            }
+            
+            .navbar-brand {
+                font-size: 1rem;
+            }
+            
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+        
+        /* Melhorias para o botão toggle */
+        .navbar-toggler {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 0.375rem 0.75rem;
+            margin-right: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-toggler:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+        }
+        
+        /* Melhorias para o conteúdo da sidebar */
+        .sidebar .nav-link {
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin: 0.125rem 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #fff !important;
+        }
+        
+        /* Melhorias para o header da sidebar */
+        .sidebar h5 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .sidebar .text-white-50 {
+            font-size: 0.875rem;
+        }
+        
+        /* Melhorias para seções administrativas */
+        .admin-section h6 {
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Scrollbar personalizada para a sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -41,7 +185,7 @@
     <nav class="navbar navbar-expand-lg border-bottom mb-4">
         <div class="container-fluid">
             <div class="d-flex align-items-center">
-                <button class="navbar-toggler d-lg-none me-3" type="button" id="sidebarToggle">
+                <button class="navbar-toggler d-lg-none me-3" type="button" id="sidebarToggle" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <span class="navbar-brand mb-0">
@@ -51,11 +195,11 @@
             <div class="navbar-nav ms-auto">
                 {% if user.is_authenticated %}
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-user-circle me-1"></i>
-                        {{ user.get_full_name|default:user.username }}
+                        <span class="d-none d-sm-inline">{{ user.get_full_name|default:user.username }}</span>
                     </a>
-                    <ul class="dropdown-menu">
+                    <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{% url 'core:notificacao_list' %}"><i class="fas fa-bell me-2"></i>Notificações</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Sair</a></li>
@@ -65,55 +209,109 @@
             </div>
         </div>
     </nav>
+    
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <div class="sidebar">
         <div class="position-sticky pt-3">
             <div class="text-center mb-4">
                 <h5 class="text-white">
                     <img src="{% static 'core/images/logo.png' %}" alt="Logo" style="height: 32px; vertical-align: middle; margin-right: 8px;">
-                    Gestão Operacional                </h5>
+                    <span class="d-none d-sm-inline">Gestão Operacional</span>
+                    <span class="d-sm-none">GO</span>
+                </h5>
             </div>
             <div class="text-center mb-4">
                 <div class="text-white-50 small">
                     <i class="fas fa-user me-1"></i>
-                    {{ user.get_full_name|default:user.username }}
+                    <span class="d-none d-sm-inline">{{ user.get_full_name|default:user.username }}</span>
+                    <span class="d-sm-none">{{ user.get_full_name|default:user.username|truncatechars:15 }}</span>
                 </div>
                 <div class="text-white-50 small">
                     <i class="fas fa-store me-1"></i>
-                    {% if usuario_sistema %}{{ usuario_sistema.loja.nome }}{% endif %}
+                    {% if usuario_sistema %}
+                        <span class="d-none d-sm-inline">{{ usuario_sistema.loja.nome }}</span>
+                        <span class="d-sm-none">{{ usuario_sistema.loja.nome|truncatechars:15 }}</span>
+                    {% endif %}
                 </div>
                 <div class="badge bg-light text-dark">
                     {% if usuario_sistema %}{{ usuario_sistema.perfil.get_nome_display }}{% endif %}
                 </div>
             </div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i> <span class="d-none d-sm-inline">Dashboard</span><span class="d-sm-none">Dash</span></a></li>
+                
+                {% if user|modulo_ativo:'clientes' %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'core:cliente_list' %}"><i class="fas fa-users me-2"></i> Clientes</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:motocicleta_list' %}"><i class="fas fa-motorcycle me-2"></i> Motocicletas</a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'motocicletas' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:motocicleta_list' %}"><i class="fas fa-motorcycle me-2"></i> <span class="d-none d-sm-inline">Motocicletas</span><span class="d-sm-none">Motos</span></a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'vendas' %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'core:venda_list' %}"><i class="fas fa-shopping-cart me-2"></i> Vendas</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'pre_venda:dashboard_pre_venda' %}"><i class="fas fa-clipboard-list me-2"></i> Pré-Venda</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:consignacao_list' %}"><i class="fas fa-handshake me-2"></i> Consignações</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:seguradora_list' %}"><i class="fas fa-building me-2"></i> Seguradoras</a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'pre_venda' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'pre_venda:dashboard_pre_venda' %}"><i class="fas fa-clipboard-list me-2"></i> <span class="d-none d-sm-inline">Pré-Venda</span><span class="d-sm-none">Pré-V</span></a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'consignacoes' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:consignacao_list' %}"><i class="fas fa-handshake me-2"></i> <span class="d-none d-sm-inline">Consignações</span><span class="d-sm-none">Consig</span></a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'seguradoras' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:seguradora_list' %}"><i class="fas fa-building me-2"></i> <span class="d-none d-sm-inline">Seguradoras</span><span class="d-sm-none">Seguros</span></a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'bens' %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'core:bem_list' %}"><i class="fas fa-home me-2"></i> Bens</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:cotacao_seguro_list' %}"><i class="fas fa-calculator me-2"></i> Cotações</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:ocorrencia_list' %}"><i class="fas fa-exclamation-triangle me-2"></i> Ocorrências</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard_financeiro' %}"><i class="fas fa-chart-line me-2"></i> Financeiro</a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'cotacoes' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:cotacao_seguro_list' %}"><i class="fas fa-calculator me-2"></i> <span class="d-none d-sm-inline">Cotações</span><span class="d-sm-none">Cot</span></a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'ocorrencias' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:ocorrencia_list' %}"><i class="fas fa-exclamation-triangle me-2"></i> <span class="d-none d-sm-inline">Ocorrências</span><span class="d-sm-none">Ocor</span></a></li>
+                {% endif %}
+                
+                {% if user|modulo_ativo:'financeiro' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard_financeiro' %}"><i class="fas fa-chart-line me-2"></i> <span class="d-none d-sm-inline">Financeiro</span><span class="d-sm-none">Fin</span></a></li>
+                {% endif %}
             </ul>
+            
+            {% if user|modulo_ativo:'usuarios' or user|modulo_ativo:'lojas' or user|modulo_ativo:'controle_chaves' %}
             <div class="admin-section mt-4">
-                <h6 class="text-white-50 text-uppercase small mb-3"><i class="fas fa-cogs me-2"></i> Administrativo</h6>
+                <h6 class="text-white-50 text-uppercase small mb-3"><i class="fas fa-cogs me-2"></i> <span class="d-none d-sm-inline">Administrativo</span><span class="d-sm-none">Admin</span></h6>
                 <ul class="nav flex-column">
-                    <li class="nav-item"><a class="nav-link" href="{% url 'core:usuario_list' %}"><i class="fas fa-users-cog me-2"></i> Usuários</a></li>
+                    {% if user|modulo_ativo:'usuarios' %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'core:usuario_list' %}"><i class="fas fa-users-cog me-2"></i> <span class="d-none d-sm-inline">Usuários</span><span class="d-sm-none">Users</span></a></li>
+                    {% endif %}
+                    
+                    {% if user|modulo_ativo:'lojas' %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'core:loja_list' %}"><i class="fas fa-store me-2"></i> Lojas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'core:preview_import_motocicletas' %}"><i class="fas fa-upload me-2"></i> Importar Dados</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/controle-chaves/chaves/"><i class="fas fa-key me-2"></i> Controle de Chaves</a></li>
+                    {% endif %}
+                    
+                    {% if user|modulo_ativo:'importacao' %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'core:preview_import_motocicletas' %}"><i class="fas fa-upload me-2"></i> <span class="d-none d-sm-inline">Importar Dados</span><span class="d-sm-none">Import</span></a></li>
+                    {% endif %}
+                    
+                    {% if user|modulo_ativo:'controle_chaves' %}
+                    <li class="nav-item"><a class="nav-link" href="/controle-chaves/chaves/"><i class="fas fa-key me-2"></i> <span class="d-none d-sm-inline">Controle de Chaves</span><span class="d-sm-none">Chaves</span></a></li>
+                    {% endif %}
                 </ul>
             </div>
+            {% endif %}
+            
             <hr class="text-white-50">
             <ul class="nav flex-column">
                 <li class="nav-item"><a class="nav-link" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Sair</a></li>
             </ul>
         </div>
     </div>
+    
     <main class="main-content">
         <div class="container-fluid">
             {% block content %}{% endblock %}
@@ -143,6 +341,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{% static 'core/js/responsive.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const sidebarToggle = document.getElementById('sidebarToggle');
@@ -150,42 +349,65 @@
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             const body = document.body;
             
+            // Função para fechar o sidebar
+            function closeSidebar() {
+                sidebar.classList.remove('show');
+                sidebarOverlay.classList.remove('show');
+                body.classList.remove('sidebar-open');
+            }
+            
+            // Função para abrir o sidebar
+            function openSidebar() {
+                sidebar.classList.add('show');
+                sidebarOverlay.classList.add('show');
+                body.classList.add('sidebar-open');
+            }
+            
             // Toggle sidebar
             if (sidebarToggle) {
                 sidebarToggle.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    sidebar.classList.toggle('show');
-                    sidebarOverlay.classList.toggle('show');
-                    body.classList.toggle('sidebar-open', sidebar.classList.contains('show'));
+                    
+                    if (sidebar.classList.contains('show')) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
                 });
             }
+            
             // Close sidebar when clicking overlay
             if (sidebarOverlay) {
-                sidebarOverlay.addEventListener('click', function() {
-                    sidebar.classList.remove('show');
-                    sidebarOverlay.classList.remove('show');
-                    body.classList.remove('sidebar-open');
-                });
+                sidebarOverlay.addEventListener('click', closeSidebar);
             }
+            
             // Close sidebar when clicking on a link (mobile)
             const sidebarLinks = sidebar.querySelectorAll('.nav-link');
             sidebarLinks.forEach(link => {
                 link.addEventListener('click', function() {
                     if (window.innerWidth <= 991) {
-                        sidebar.classList.remove('show');
-                        sidebarOverlay.classList.remove('show');
-                        body.classList.remove('sidebar-open');
+                        closeSidebar();
                     }
                 });
             });
+            
             // Add keyboard support (ESC key)
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape' && window.innerWidth <= 991) {
-                    sidebar.classList.remove('show');
-                    sidebarOverlay.classList.remove('show');
-                    body.classList.remove('sidebar-open');
+                    closeSidebar();
                 }
+            });
+            
+            // Handle window resize
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 991) {
+                        closeSidebar();
+                    }
+                }, 250);
             });
             
             // Gerenciamento simples e limpo de modais
@@ -222,6 +444,21 @@
                 const bsModal = new bootstrap.Modal(modal);
                 bsModal.show();
             };
+            
+            // Marcar link ativo baseado na URL atual
+            function setActiveNavLink() {
+                const currentPath = window.location.pathname;
+                const navLinks = sidebar.querySelectorAll('.nav-link');
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === currentPath) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+            
+            setActiveNavLink();
         });
     </script>
 </body>

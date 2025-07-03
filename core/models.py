@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 import uuid
 from django.db.models import JSONField
 import re
+import logging
 
 # ============================================================================
 # 1. CONTROLE DE USUÁRIOS (RBAC - Role Based Access Control)
@@ -130,16 +131,22 @@ class Usuario(models.Model):
     
     def modulo_ativo(self, modulo):
         """Verifica se um módulo está ativo para o usuário"""
+        logger = logging.getLogger('core')
+        
         # Primeiro verifica se há configuração específica do usuário
         try:
             menu_usuario = self.menus_usuario.get(modulo=modulo)
+            logger.info(f"MenuUsuario encontrado para {self.user.username} - {modulo}: {menu_usuario.ativo}")
             return menu_usuario.ativo
         except MenuUsuario.DoesNotExist:
+            logger.info(f"MenuUsuario não encontrado para {self.user.username} - {modulo}, verificando perfil")
             # Se não há configuração específica, usa a do perfil
             try:
                 menu_perfil = self.perfil.menuperfil_set.get(modulo=modulo)
+                logger.info(f"MenuPerfil encontrado para {self.user.username} - {modulo}: {menu_perfil.ativo}")
                 return menu_perfil.ativo
             except MenuPerfil.DoesNotExist:
+                logger.info(f"MenuPerfil não encontrado para {self.user.username} - {modulo}, retornando False")
                 return False
 
     def configurar_menus_automaticamente(self):

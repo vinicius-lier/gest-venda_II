@@ -636,12 +636,22 @@ def venda_create(request):
     else:
         moto_id = request.GET.get('moto')
         initial = {}
+        moto_obj = None
         if moto_id:
             try:
-                initial['moto'] = int(moto_id)
+                from .models import Motocicleta
+                moto_obj = Motocicleta.objects.get(pk=int(moto_id))
+                initial['moto'] = moto_obj.pk
             except Exception:
                 pass
         form = VendaForm(initial=initial)
+        # Garante que a moto esteja no queryset do campo
+        if moto_obj:
+            qs = form.fields['moto'].queryset
+            ids = list(qs.values_list('pk', flat=True))
+            if moto_obj.pk not in ids:
+                ids.append(moto_obj.pk)
+            form.fields['moto'].queryset = qs.model.objects.filter(pk__in=ids)
         # Definir vendedor padrão como usuário logado
         form.fields['vendedor'].initial = request.user
     
@@ -832,10 +842,26 @@ def consignacao_create(request):
             messages.success(request, 'Consignação registrada com sucesso!')
             return redirect('core:consignacao_list')
     else:
-        form = ConsignacaoForm()
+        moto_id = request.GET.get('moto')
+        initial = {}
+        moto_obj = None
+        if moto_id:
+            try:
+                from .models import Motocicleta
+                moto_obj = Motocicleta.objects.get(pk=int(moto_id))
+                initial['moto'] = moto_obj.pk
+            except Exception:
+                pass
+        form = ConsignacaoForm(initial=initial)
+        # Garante que a moto esteja no queryset do campo
+        if moto_obj:
+            qs = form.fields['moto'].queryset
+            ids = list(qs.values_list('pk', flat=True))
+            if moto_obj.pk not in ids:
+                ids.append(moto_obj.pk)
+            form.fields['moto'].queryset = qs.model.objects.filter(pk__in=ids)
         # Definir vendedor responsável padrão como usuário logado
         form.fields['vendedor_responsavel'].initial = request.user
-    
     return render(request, 'core/consignacao_form.html', {
         'form': form,
         'consignacao': None,

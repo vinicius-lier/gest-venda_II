@@ -6,6 +6,11 @@ from django.utils import timezone
 from django.db import models
 
 class MotocicletaForm(forms.ModelForm):
+    documento_motocicleta = forms.FileField(
+        required=False,
+        label='Documento da Motocicleta',
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
     class Meta:
         model = Motocicleta
         fields = [
@@ -41,6 +46,10 @@ class MotocicletaForm(forms.ModelForm):
             'foto_traseira': forms.FileInput(attrs={'class': 'form-control'}),
             'foto_lado_esquerdo': forms.FileInput(attrs={'class': 'form-control'}),
             'foto_lado_direito': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'valor_entrada': 'Custo',
+            'valor_atual': 'Valor (valor de venda)',
         }
 
     def __init__(self, *args, **kwargs):
@@ -131,6 +140,10 @@ class VendaForm(forms.ModelForm):
             motos_disponiveis = Motocicleta.objects.filter(pk=instance.moto.pk) | motos_disponiveis
         self.fields['moto'].queryset = motos_disponiveis.distinct()
         self.fields['moto'].label_from_instance = lambda obj: f"{obj.marca} {obj.modelo} {obj.ano} - {obj.placa or obj.chassi}"
+        # Se vier inicializado, desabilita o campo
+        if self.initial.get('moto'):
+            self.fields['moto'].widget.attrs['readonly'] = True
+            self.fields['moto'].widget.attrs['disabled'] = True
         # Filtrar clientes ativos
         self.fields['comprador'].queryset = Cliente.objects.filter(ativo=True).order_by('nome')
         # Filtrar vendedores ativos - CORRIGIDO: usar objetos Usuario em vez de User
@@ -173,6 +186,10 @@ class ConsignacaoForm(forms.ModelForm):
         ).order_by('marca', 'modelo')
         self.fields['moto'].queryset = motos_disponiveis
         self.fields['moto'].label_from_instance = lambda obj: f"{obj.marca} {obj.modelo} {obj.ano} - {obj.placa or obj.chassi}"
+        # Se vier inicializado, desabilita o campo
+        if self.initial.get('moto'):
+            self.fields['moto'].widget.attrs['readonly'] = True
+            self.fields['moto'].widget.attrs['disabled'] = True
         # Filtrar clientes ativos
         from .models import Cliente
         self.fields['consignante'].queryset = Cliente.objects.filter(ativo=True).order_by('nome')

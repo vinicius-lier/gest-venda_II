@@ -24,6 +24,7 @@ urlpatterns = [
     path('', include('core.urls')),
     path('controle-chaves/', include('administrativo.urls')),
     path('pre-venda/', include('pre_venda.urls')),
+    path('administrativo/', include(('administrativo.urls', 'administrativo'), namespace='administrativo')),
 ]
 
 # Adiciona a configuração para servir arquivos de mídia em desenvolvimento

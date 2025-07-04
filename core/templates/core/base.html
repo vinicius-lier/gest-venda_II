@@ -47,51 +47,24 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="/dashboard/">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'clientes' in request.path %}active{% endif %}" href="/clientes/">Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'motocicleta' in request.path %}active{% endif %}" href="/motocicletas/">Motocicletas</a>
-                    </li>
-                    <!-- Vendas Dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if 'vendas' in request.path or 'pre_venda' in request.path or 'consignacao' in request.path %}active{% endif %}" href="#" id="vendasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Vendas
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="vendasDropdown">
-                            <li><a class="dropdown-item" href="/pre-venda/">Pré-Venda</a></li>
-                            <li><a class="dropdown-item" href="/vendas/">+Vendas</a></li>
-                            <li><a class="dropdown-item" href="/consignacoes/">Consignações</a></li>
-                        </ul>
-                    </li>
-                    <!-- Seguros Dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if 'seguradora' in request.path or 'bem' in request.path or 'cotacao' in request.path %}active{% endif %}" href="#" id="segurosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Seguros
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="segurosDropdown">
-                            <li><a class="dropdown-item" href="/seguradoras/">Seguradoras</a></li>
-                            <li><a class="dropdown-item" href="/bens/">Bens</a></li>
-                            <li><a class="dropdown-item" href="/cotacoes-seguro/">Cotações</a></li>
-                        </ul>
-                    </li>
-                    <!-- Administrativo Dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if 'financeiro' in request.path or 'administrativo' in request.path or 'usuarios' in request.path or 'lojas' in request.path or 'controle_chave' in request.path or 'importar' in request.path %}active{% endif %}" href="#" id="administrativoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Administrativo
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="administrativoDropdown">
-                            <li><a class="dropdown-item" href="/financeiro/"><i class="bi bi-cash-coin me-2"></i>Financeiro</a></li>
-                            <!-- <li><a class="dropdown-item" href="/administrativo/">Administrativo</a></li> -->
-                            <li><a class="dropdown-item" href="/usuarios/"><i class="bi bi-people me-2"></i>Usuários</a></li>
-                            <li><a class="dropdown-item" href="/lojas/"><i class="bi bi-shop me-2"></i>Lojas</a></li>
-                            <li><a class="dropdown-item" href="/controle-chaves/"><i class="bi bi-key me-2"></i>Controle de Chaves</a></li>
-                            <li><a class="dropdown-item" href="/importar/"><i class="bi bi-upload me-2"></i>Importar Dados</a></li>
-                        </ul>
-                    </li>
+                    {% for item in menu_dinamico %}
+                        {% if item.submenus %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="menuDropdown{{ forloop.counter }}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {% if item.icon %}<i class="bi {{ item.icon }} me-1"></i>{% endif %}{{ item.label }}
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="menuDropdown{{ forloop.counter }}">
+                                    {% for sub in item.submenus %}
+                                        <li><a class="dropdown-item" href="{{ sub.url_resolved }}">{% if sub.icon %}<i class="bi {{ sub.icon }} me-1"></i>{% endif %}{{ sub.label }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ item.url_resolved }}">{% if item.icon %}<i class="bi {{ item.icon }} me-1"></i>{% endif %}{{ item.label }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
                 </ul>
                 <form class="d-flex me-3" role="search">
                     <input class="form-control form-control-sm me-2" type="search" placeholder="Buscar..." aria-label="Buscar">

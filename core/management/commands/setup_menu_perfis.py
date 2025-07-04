@@ -18,29 +18,29 @@ class Command(BaseCommand):
                     'admin': [
                         'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                         'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
-                        'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                        'seguradoras', 'bens', 'cotacoes', 'financeiro', 'documentos_motocicleta'
                     ],
                     'gerente': [
                         'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                         'seguros', 'relatorios', 'ocorrencias',
-                        'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                        'seguradoras', 'bens', 'cotacoes', 'financeiro', 'documentos_motocicleta'
                     ],
                     'vendedor': [
                         'clientes', 'motocicletas', 'vendas', 'consignacoes',
-                        'seguradoras', 'bens', 'cotacoes'
+                        'seguradoras', 'bens', 'cotacoes', 'documentos_motocicleta'
                     ],
                     'consultor': [
                         'clientes', 'motocicletas', 'vendas', 'consignacoes', 'seguros',
-                        'seguradoras', 'bens', 'cotacoes'
+                        'seguradoras', 'bens', 'cotacoes', 'documentos_motocicleta'
                     ],
                     'financeiro': [
                         'clientes', 'vendas', 'consignacoes', 'seguros', 'relatorios',
-                        'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                        'seguradoras', 'bens', 'cotacoes', 'financeiro', 'documentos_motocicleta'
                     ],
                     'ti': [
                         'clientes', 'motocicletas', 'vendas', 'consignacoes', 
                         'seguros', 'usuarios', 'lojas', 'relatorios', 'ocorrencias',
-                        'seguradoras', 'bens', 'cotacoes', 'financeiro'
+                        'seguradoras', 'bens', 'cotacoes', 'financeiro', 'documentos_motocicleta'
                     ]
                 }
                 

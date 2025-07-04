@@ -34,6 +34,14 @@ urlpatterns = [
     path('motocicletas/<int:pk>/transferir-propriedade/', views.motocicleta_transferir_propriedade, name='motocicleta_transferir_propriedade'),
     path('motocicletas/exportar/', views.exportar_motocicletas_xlsx, name='exportar_motocicletas_xlsx'),
     
+    # Documentos de Motocicletas
+    path('documentos-motocicletas/', views.documento_motocicleta_list, name='documento_motocicleta_list'),
+    path('documentos-motocicletas/novo/', views.documento_motocicleta_create, name='documento_motocicleta_create'),
+    path('documentos-motocicletas/<int:pk>/', views.documento_motocicleta_detail, name='documento_motocicleta_detail'),
+    path('documentos-motocicletas/<int:pk>/editar/', views.documento_motocicleta_update, name='documento_motocicleta_update'),
+    path('documentos-motocicletas/<int:pk>/excluir/', views.documento_motocicleta_delete, name='documento_motocicleta_delete'),
+    path('motocicletas/<int:moto_id>/documentos/', views.motocicleta_documentos, name='motocicleta_documentos'),
+    
     # Vendas
     path('vendas/', views.venda_list, name='venda_list'),
     path('vendas/novo/', views.venda_create, name='venda_create'),
@@ -190,4 +198,7 @@ urlpatterns = [
     path('vendas/exportar/', views.exportar_vendas_xlsx, name='exportar_vendas_xlsx_geral'),
     path('motocicletas/exportar/', views.exportar_motocicletas_xlsx, name='exportar_motocicletas_xlsx'),
     path('clientes/exportar/', views.exportar_clientes_xlsx, name='exportar_clientes_xlsx'),
+    
+    # API para autocomplete de motocicletas
+    path('api/motocicletas/buscar/', views.buscar_motocicleta_api, name='buscar_motocicleta_api'),
 ] 

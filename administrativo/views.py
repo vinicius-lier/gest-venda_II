@@ -14,14 +14,44 @@ def controle_chave_list(request):
 
 @login_required
 def controle_chave_create(request):
+    motos = Motocicleta.objects.filter(ativo=True).order_by('-id')
+    motos_data = [
+        {
+            'id': str(m.id),
+            'placa': m.placa or '',
+            'chassi': m.chassi or '',
+            'descricao': f"ID: {m.id} | Placa: {m.placa or '-'} | Chassi: {m.chassi} | {m.marca} {m.modelo} {m.ano}"
+        }
+        for m in motos
+    ]
+    moto_selecionada = None
     if request.method == 'POST':
         form = ControleChaveForm(request.POST)
-        if form.is_valid():
-            form.save()
+        id_moto = request.POST.get('id_id_moto')
+        placa_moto = request.POST.get('id_placa_moto')
+        chassi_moto = request.POST.get('id_chassi_moto')
+        moto = None
+        if id_moto:
+            moto = Motocicleta.objects.filter(id=id_moto, ativo=True).first()
+        elif placa_moto:
+            moto = Motocicleta.objects.filter(placa=placa_moto, ativo=True).first()
+        elif chassi_moto:
+            moto = Motocicleta.objects.filter(chassi=chassi_moto, ativo=True).first()
+        if form.is_valid() and moto:
+            chave = form.save(commit=False)
+            chave.motocicleta = moto
+            chave.save()
             return redirect('controle_chave_list')
+        if moto:
+            moto_selecionada = {
+                'id': str(moto.id),
+                'placa': moto.placa or '',
+                'chassi': moto.chassi or '',
+                'descricao': f"ID: {moto.id} | Placa: {moto.placa or '-'} | Chassi: {moto.chassi} | {moto.marca} {moto.modelo} {moto.ano}"
+            }
     else:
         form = ControleChaveForm()
-    return render(request, 'administrativo/controle_chave_form.html', {'form': form})
+    return render(request, 'administrativo/controle_chave_form.html', {'form': form, 'motos_data': motos_data, 'moto_selecionada': moto_selecionada})
 
 @login_required
 def controle_chave_devolver(request, pk):

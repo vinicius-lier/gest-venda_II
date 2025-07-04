@@ -1,0 +1,279 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if documento %}Editar Documento{% else %}Novo Documento{% endif %} - Sistema de Gestão
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-paperclip me-1"></i>
+                        {% if documento %}Editar Documento{% else %}Novo Documento{% endif %}
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'core:documento_motocicleta_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Motocicleta -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.moto.id_for_label }}" class="form-label">
+                                    <i class="fas fa-motorcycle me-1"></i>{{ form.moto.label }}
+                                </label>
+                                {{ form.moto }}
+                                {% if form.moto.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.moto.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Selecione a motocicleta relacionada ao documento</div>
+                            </div>
+
+                            <!-- Venda (opcional) -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.venda.id_for_label }}" class="form-label">
+                                    <i class="fas fa-shopping-cart me-1"></i>{{ form.venda.label }}
+                                </label>
+                                {{ form.venda }}
+                                {% if form.venda.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.venda.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Opcional - Selecione a venda relacionada</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Tipo -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag me-1"></i>{{ form.tipo.label }}
+                                </label>
+                                {{ form.tipo }}
+                                {% if form.tipo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.tipo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Arquivo -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.arquivo.id_for_label }}" class="form-label">
+                                    <i class="fas fa-file me-1"></i>{{ form.arquivo.label }}
+                                </label>
+                                {{ form.arquivo }}
+                                {% if form.arquivo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.arquivo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">PDF, imagem ou outros arquivos</div>
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.observacao.id_for_label }}" class="form-label">
+                                    <i class="fas fa-comment me-1"></i>{{ form.observacao.label }}
+                                </label>
+                                {{ form.observacao }}
+                                {% if form.observacao.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.observacao.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Descrição ou observações sobre o documento</div>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'core:documento_motocicleta_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {% if documento %}Atualizar{% else %}Salvar{% endif %} Documento
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar com informações -->
+        <div class="col-lg-4">
+            <!-- Informações da motocicleta selecionada -->
+            <div class="card mb-4" id="motoInfo" style="display: none;">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-motorcycle me-1"></i>Informações da Motocicleta
+                    </h6>
+                </div>
+                <div class="card-body" id="motoInfoContent">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Informações da venda selecionada -->
+            <div class="card mb-4" id="vendaInfo" style="display: none;">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-shopping-cart me-1"></i>Informações da Venda
+                    </h6>
+                </div>
+                <div class="card-body" id="vendaInfoContent">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Tipos de documento -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-1"></i>Tipos de Documento
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>Compra:</strong> Documentos de compra da motocicleta</li>
+                        <li><strong>Venda:</strong> Documentos relacionados à venda</li>
+                        <li><strong>Consignação:</strong> Documentos de consignação</li>
+                        <li><strong>Ficha do Cliente:</strong> Documentação do cliente</li>
+                        <li><strong>Recibo:</strong> Recibos de pagamento</li>
+                        <li><strong>Seguro:</strong> Documentos de seguro</li>
+                        <li><strong>Financiamento:</strong> Documentos de financiamento</li>
+                        <li><strong>Intenção de Compra/Venda:</strong> Documentos de intenção</li>
+                        <li><strong>Outro:</strong> Outros tipos de documento</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const motoSelect = document.getElementById('{{ form.moto.id_for_label }}');
+    const vendaSelect = document.getElementById('{{ form.venda.id_for_label }}');
+
+    // Função para carregar informações da moto
+    function carregarInfoMoto() {
+        const motoId = motoSelect.value;
+        if (motoId) {
+            fetch(`/api/motocicletas/${motoId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const motoInfo = document.getElementById('motoInfo');
+                    const motoInfoContent = document.getElementById('motoInfoContent');
+                    
+                    motoInfoContent.innerHTML = `
+                        <div class="text-center mb-3">
+                            ${data.foto_principal ? 
+                                `<img src="${data.foto_principal}" class="img-fluid rounded" style="max-height: 150px;">` :
+                                `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">
+                                    <i class="fas fa-motorcycle fa-3x text-muted"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="mb-2">
+                            <strong>${data.marca} ${data.modelo}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Ano: ${data.ano}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Placa: ${data.placa || 'N/A'}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Chassi: ${data.chassi}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Cor: ${data.cor}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Status: <strong>${data.status}</strong></small>
+                        </div>
+                    `;
+                    motoInfo.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar informações da moto:', error);
+                });
+        } else {
+            document.getElementById('motoInfo').style.display = 'none';
+        }
+    }
+
+    // Função para carregar informações da venda
+    function carregarInfoVenda() {
+        const vendaId = vendaSelect.value;
+        if (vendaId) {
+            fetch(`/api/vendas/${vendaId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const vendaInfo = document.getElementById('vendaInfo');
+                    const vendaInfoContent = document.getElementById('vendaInfoContent');
+                    
+                    vendaInfoContent.innerHTML = `
+                        <div class="mb-2">
+                            <strong>Venda #${data.id}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Comprador: ${data.comprador}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Valor: R$ ${data.valor_venda}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Status: ${data.status}</small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Data: ${data.data_venda || data.data_atendimento}</small>
+                        </div>
+                    `;
+                    vendaInfo.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar informações da venda:', error);
+                });
+        } else {
+            document.getElementById('vendaInfo').style.display = 'none';
+        }
+    }
+
+    // Event listeners
+    motoSelect.addEventListener('change', carregarInfoMoto);
+    vendaSelect.addEventListener('change', carregarInfoVenda);
+
+    // Carregar informações iniciais se já há valores selecionados
+    if (motoSelect.value) {
+        carregarInfoMoto();
+    }
+    if (vendaSelect.value) {
+        carregarInfoVenda();
+    }
+});
+</script>
+{% endblock %} 

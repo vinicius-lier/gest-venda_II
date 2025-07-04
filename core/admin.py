@@ -7,7 +7,8 @@ from .models import (
     Venda, Consignacao, Seguradora, PlanoSeguro, Bem,
     CotacaoSeguro, Seguro, Repasse, AssinaturaDigital, 
     Ocorrencia, ComentarioOcorrencia, MenuUsuario, MenuPerfil,
-    VendaFinanceira, Despesa, ReceitaExtra, Pagamento
+    VendaFinanceira, Despesa, ReceitaExtra, Pagamento,
+    DocumentoMotocicleta
 )
 from django.utils import timezone
 
@@ -311,6 +312,31 @@ class HistoricoProprietarioAdmin(admin.ModelAdmin):
     search_fields = ['moto__marca', 'moto__modelo', 'proprietario__nome']
     ordering = ['-data_inicio']
     readonly_fields = ['data_inicio']
+
+# ============================================================================
+# ADMINISTRAÇÃO DE DOCUMENTOS DE MOTOCICLETAS
+# ============================================================================
+
+@admin.register(DocumentoMotocicleta)
+class DocumentoMotocicletaAdmin(admin.ModelAdmin):
+    list_display = ['tipo', 'moto', 'venda', 'data_upload', 'arquivo']
+    list_filter = ['tipo', 'data_upload', 'moto__marca', 'moto__modelo']
+    search_fields = ['moto__marca', 'moto__modelo', 'moto__chassi', 'venda__comprador__nome', 'observacao']
+    ordering = ['-data_upload']
+    readonly_fields = ['data_upload']
+    
+    fieldsets = (
+        ('Relacionamentos', {
+            'fields': ('moto', 'venda')
+        }),
+        ('Documento', {
+            'fields': ('tipo', 'arquivo', 'observacao')
+        }),
+        ('Metadados', {
+            'fields': ('data_upload',),
+            'classes': ('collapse',)
+        }),
+    )
 
 # ============================================================================
 # ADMINISTRAÇÃO DE VENDAS

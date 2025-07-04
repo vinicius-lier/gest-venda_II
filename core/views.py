@@ -11,13 +11,13 @@ from .models import (
     Cliente, Motocicleta, Venda, Consignacao, Seguro, CotacaoSeguro, 
     Seguradora, PlanoSeguro, Bem, Usuario, Loja, Ocorrencia, 
     MenuPerfil, Perfil, MenuUsuario, VendaFinanceira, Despesa, 
-    ReceitaExtra, Pagamento, ComunicacaoVenda, Notificacao
+    ReceitaExtra, Pagamento, ComunicacaoVenda, Notificacao, DocumentoMotocicleta
 )
 from .forms import (
     MotocicletaForm, VendaForm, ConsignacaoForm, SeguroForm, 
     CotacaoSeguroForm, SeguradoraForm, PlanoSeguroForm, BemForm, 
     UsuarioForm, LojaForm, OcorrenciaForm, ComentarioOcorrenciaForm, 
-    ClienteForm, ComunicacaoVendaForm
+    ClienteForm, ComunicacaoVendaForm, DocumentoMotocicletaForm
 )
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
@@ -401,6 +401,8 @@ def motocicleta_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    funcionarios = Usuario.objects.filter(status='ativo').order_by('user__first_name', 'user__last_name')
+    
     context = {
         'motocicletas': page_obj,
         'query': query,
@@ -410,6 +412,7 @@ def motocicleta_list(request):
         'status': status,
         'ativo': ativo,
         'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+        'funcionarios': funcionarios,
     }
     return render(request, 'core/motocicleta_list.html', context)
 
@@ -569,7 +572,7 @@ def venda_list(request):
 def venda_create(request):
     """Criação de nova venda"""
     if request.method == 'POST':
-        form = VendaForm(request.POST)
+        form = VendaForm(request.POST, request.FILES)
         if form.is_valid():
             venda = form.save(commit=False)
             # Definir o vendedor como o usuário logado se não foi especificado
@@ -586,6 +589,18 @@ def venda_create(request):
                     pass
             
             venda.save()
+            
+            # Processar documento de intenção se fornecido
+            documento_intencao = form.cleaned_data.get('documento_intencao')
+            if documento_intencao:
+                DocumentoMotocicleta.objects.create(
+                    moto=venda.moto,
+                    venda=venda,
+                    tipo='intencao_venda',
+                    arquivo=documento_intencao,
+                    observacao='Documento de intenção enviado na venda'
+                )
+                messages.info(request, 'Documento de intenção foi salvo e vinculado à motocicleta.')
             
             # Tentar associar pré-venda
             pre_venda_associada = venda.associar_pre_venda()
@@ -641,11 +656,23 @@ def venda_update(request, pk):
     """Atualização de venda"""
     venda = get_object_or_404(Venda, pk=pk)
     if request.method == 'POST':
-        form = VendaForm(request.POST, instance=venda)
+        form = VendaForm(request.POST, request.FILES, instance=venda)
         if form.is_valid():
             # Verificar se o status está sendo alterado para 'vendido'
             status_anterior = venda.status
             venda_atualizada = form.save(commit=False)
+            
+            # Processar documento de intenção se fornecido
+            documento_intencao = form.cleaned_data.get('documento_intencao')
+            if documento_intencao:
+                DocumentoMotocicleta.objects.create(
+                    moto=venda_atualizada.moto,
+                    venda=venda_atualizada,
+                    tipo='intencao_venda',
+                    arquivo=documento_intencao,
+                    observacao='Documento de intenção enviado na venda'
+                )
+                messages.info(request, 'Documento de intenção foi salvo e vinculado à motocicleta.')
             
             # Se o status foi alterado para 'vendido', criar comunicações obrigatórias
             if venda_atualizada.status == 'vendido' and status_anterior != 'vendido':
@@ -2313,6 +2340,7 @@ def usuario_menu_manage(request, usuario_id):
             ('cotacoes', 'Cotações'),
             ('financeiro', 'Financeiro'),
             ('pre_venda', 'Pré-Venda'),
+            ('documentos_motocicleta', 'Documentos de Motocicletas'),
         ]
         
         # Limpar configurações existentes do usuário
@@ -2353,6 +2381,7 @@ def usuario_menu_manage(request, usuario_id):
         ('cotacoes', 'Cotações'),
         ('financeiro', 'Financeiro'),
         ('pre_venda', 'Pré-Venda'),
+        ('documentos_motocicleta', 'Documentos de Motocicletas'),
     ]
     
     # Verificar quais módulos estão ativos para o usuário
@@ -3967,3 +3996,173 @@ def notificacao_count(request):
     ).count()
     
     return JsonResponse({'count': count})
+
+# ============================================================================
+# VIEWS DE DOCUMENTOS DE MOTOCICLETAS
+# ============================================================================
+
+@login_required
+def documento_motocicleta_list(request):
+    """Lista de documentos de motocicletas com filtros"""
+    query = request.GET.get('q', '').strip()
+    tipo = request.GET.get('tipo', '')
+    moto_id = request.GET.get('moto', '')
+    
+    documentos = DocumentoMotocicleta.objects.all().order_by('-data_upload')
+    
+    # Filtro de busca
+    if query:
+        documentos = documentos.filter(
+            Q(moto__marca__icontains=query) |
+            Q(moto__modelo__icontains=query) |
+            Q(moto__chassi__icontains=query) |
+            Q(observacao__icontains=query)
+        )
+    
+    # Filtro de tipo
+    if tipo:
+        documentos = documentos.filter(tipo=tipo)
+    
+    # Filtro de motocicleta
+    if moto_id:
+        documentos = documentos.filter(moto_id=moto_id)
+    
+    # Paginação
+    paginator = Paginator(documentos, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Dados para filtros
+    tipos = DocumentoMotocicleta.TIPO_CHOICES
+    motocicletas = Motocicleta.objects.filter(ativo=True).order_by('marca', 'modelo')
+    
+    context = {
+        'page_obj': page_obj,
+        'tipos': tipos,
+        'motocicletas': motocicletas,
+        'filtros': {
+            'query': query,
+            'tipo': tipo,
+            'moto': moto_id,
+        },
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/documento_motocicleta_list.html', context)
+
+@login_required
+def documento_motocicleta_create(request):
+    """Criação de novo documento de motocicleta"""
+    moto_id = request.GET.get('moto')
+    venda_id = request.GET.get('venda')
+    
+    if request.method == 'POST':
+        form = DocumentoMotocicletaForm(request.POST, request.FILES, moto_id=moto_id, venda_id=venda_id)
+        if form.is_valid():
+            documento = form.save()
+            messages.success(request, 'Documento cadastrado com sucesso!')
+            return redirect('core:documento_motocicleta_detail', pk=documento.pk)
+    else:
+        form = DocumentoMotocicletaForm(moto_id=moto_id, venda_id=venda_id)
+    
+    context = {
+        'form': form,
+        'moto_id': moto_id,
+        'venda_id': venda_id,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/documento_motocicleta_form.html', context)
+
+@login_required
+def documento_motocicleta_detail(request, pk):
+    """Detalhes do documento de motocicleta"""
+    documento = get_object_or_404(DocumentoMotocicleta, pk=pk)
+    
+    context = {
+        'documento': documento,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/documento_motocicleta_detail.html', context)
+
+@login_required
+def documento_motocicleta_update(request, pk):
+    """Atualização de documento de motocicleta"""
+    documento = get_object_or_404(DocumentoMotocicleta, pk=pk)
+    
+    if request.method == 'POST':
+        form = DocumentoMotocicletaForm(request.POST, request.FILES, instance=documento)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Documento atualizado com sucesso!')
+            return redirect('core:documento_motocicleta_detail', pk=documento.pk)
+    else:
+        form = DocumentoMotocicletaForm(instance=documento)
+    
+    context = {
+        'form': form,
+        'documento': documento,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/documento_motocicleta_form.html', context)
+
+@login_required
+def documento_motocicleta_delete(request, pk):
+    """Exclusão de documento de motocicleta"""
+    documento = get_object_or_404(DocumentoMotocicleta, pk=pk)
+    
+    if request.method == 'POST':
+        documento.delete()
+        messages.success(request, 'Documento excluído com sucesso!')
+        return redirect('core:documento_motocicleta_list')
+    
+    context = {
+        'documento': documento,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/documento_motocicleta_confirm_delete.html', context)
+
+@login_required
+def motocicleta_documentos(request, moto_id):
+    """Lista de documentos de uma motocicleta específica"""
+    motocicleta = get_object_or_404(Motocicleta, pk=moto_id)
+    documentos = motocicleta.documentos.all().order_by('-data_upload')
+    
+    context = {
+        'motocicleta': motocicleta,
+        'documentos': documentos,
+        'usuario_sistema': getattr(request.user, 'usuario_sistema', None),
+    }
+    
+    return render(request, 'core/motocicleta_documentos.html', context)
+
+@require_GET
+def buscar_motocicleta_api(request):
+    campo = request.GET.get('campo')
+    valor = request.GET.get('valor')
+    from core.models import Motocicleta
+    moto = None
+    if campo == 'id':
+        try:
+            moto = Motocicleta.objects.filter(id=valor).first()
+        except:
+            moto = None
+    elif campo == 'placa':
+        moto = Motocicleta.objects.filter(placa__iexact=valor).first()
+    elif campo == 'chassi':
+        moto = Motocicleta.objects.filter(chassi__iexact=valor).first()
+    if moto:
+        data = {
+            'id': moto.id,
+            'placa': moto.placa,
+            'chassi': moto.chassi,
+            'marca': moto.marca,
+            'modelo': moto.modelo,
+            'ano': moto.ano,
+        }
+    else:
+        data = {}
+    return JsonResponse(data)

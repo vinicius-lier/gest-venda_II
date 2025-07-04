@@ -280,6 +280,9 @@
                 {% if user|modulo_ativo:'financeiro' %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard_financeiro' %}"><i class="fas fa-chart-line me-2"></i> <span class="d-none d-sm-inline">Financeiro</span><span class="d-sm-none">Fin</span></a></li>
                 {% endif %}
+                {% if user|modulo_ativo:'documentos_motocicleta' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:documento_motocicleta_list' %}"><i class="fas fa-file-alt me-2"></i> <span class="d-none d-sm-inline">Documentos de Motocicletas</span><span class="d-sm-none">Docs Moto</span></a></li>
+                {% endif %}
             </ul>
             
             {% if user|modulo_ativo:'usuarios' or user|modulo_ativo:'lojas' or user|modulo_ativo:'controle_chaves' %}
@@ -340,7 +343,6 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{% static 'core/js/responsive.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -368,7 +370,6 @@
                 sidebarToggle.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    
                     if (sidebar.classList.contains('show')) {
                         closeSidebar();
                     } else {
@@ -410,27 +411,8 @@
                 }, 250);
             });
             
-            // Gerenciamento simples e limpo de modais
-            document.addEventListener('show.bs.modal', function(event) {
-                // Fechar outros modais antes de abrir um novo
-                const currentModal = event.target;
-                const allModals = document.querySelectorAll('.modal.show');
-                allModals.forEach(modal => {
-                    if (modal !== currentModal) {
-                        const bsModal = bootstrap.Modal.getInstance(modal);
-                        if (bsModal) {
-                            bsModal.hide();
-                        }
-                    }
-                });
-            });
-            
-            // Limpar estado residual de modais
-            document.addEventListener('hidden.bs.modal', function() {
-                document.body.classList.remove('modal-open');
-                const backdrops = document.querySelectorAll('.modal-backdrop');
-                backdrops.forEach(backdrop => backdrop.remove());
-            });
+            // Gerenciamento simples de modais - removido código conflitante
+            // Os modais serão gerenciados automaticamente pelo Bootstrap 5
             
             // Sistema de ajuda genérico
             window.showHelp = function(title, content) {
@@ -441,6 +423,7 @@
                 modalLabel.innerHTML = `<i class="fas fa-info-circle text-primary me-2"></i>${title}`;
                 modalBody.innerHTML = content;
                 
+                // Usar Bootstrap 5 nativo
                 const bsModal = new bootstrap.Modal(modal);
                 bsModal.show();
             };

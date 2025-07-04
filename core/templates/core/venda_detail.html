@@ -217,6 +217,47 @@
                 </div>
             </div>
             {% endif %}
+
+            <!-- Documentos da Venda -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-paperclip me-1"></i>Documentos da Venda
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if venda.documentos.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Data de Envio</th>
+                                    <th>Arquivo</th>
+                                    <th>Observação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in venda.documentos.all %}
+                                <tr>
+                                    <td>{{ doc.get_tipo_display }}</td>
+                                    <td>{{ doc.data_upload|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <a href="{{ doc.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download"></i> Baixar
+                                        </a>
+                                    </td>
+                                    <td>{{ doc.observacao|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p>Nenhum documento cadastrado para esta venda.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
         <!-- Sidebar com informações complementares -->

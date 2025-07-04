@@ -375,6 +375,13 @@ class Motocicleta(models.Model):
             'manutencao': 'secondary',
         }
         return colors.get(self.status, 'secondary')
+
+    def get_documentos_por_tipo(self):
+        """Retorna um dicionário com a contagem de documentos por tipo"""
+        from django.db.models import Count
+        return dict(self.documentos.values('tipo').annotate(
+            count=Count('tipo')
+        ).values_list('tipo', 'count'))
     
     def save(self, *args, **kwargs):
         # Gera matrícula se não existir
@@ -1533,3 +1540,70 @@ def notificar_mencoes_ocorrencias_pendentes(usuario):
                     link=f'/ocorrencias/{ocorrencia.id}/',
                     tipo='menção'
                 )
+
+class DocumentoMotocicleta(models.Model):
+    """Modelo para centralizar documentos das transações de motocicletas"""
+    TIPO_CHOICES = [
+        ('compra', 'Compra'),
+        ('venda', 'Venda'),
+        ('consignacao', 'Consignação'),
+        ('ficha_cliente', 'Ficha do Cliente'),
+        ('recibo', 'Recibo'),
+        ('seguro', 'Seguro'),
+        ('financiamento', 'Financiamento'),
+        ('intencao_venda', 'Intenção de Compra/Venda'),
+        ('outro', 'Outro'),
+    ]
+
+    moto = models.ForeignKey('Motocicleta', on_delete=models.CASCADE, related_name='documentos')
+    venda = models.ForeignKey('Venda', on_delete=models.SET_NULL, null=True, blank=True, related_name='documentos')
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    arquivo = models.FileField(upload_to='documentos_motos/')
+    observacao = models.TextField(blank=True, null=True)
+    data_upload = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-data_upload']
+        verbose_name = 'Documento de Motocicleta'
+        verbose_name_plural = 'Documentos de Motocicletas'
+
+    def __str__(self):
+        return f"Documento {self.pk} - {self.get_tipo_display()} - {self.moto}"
+
+    def get_tipo_color(self):
+        """Retorna a cor do badge baseada no tipo do documento"""
+        cores = {
+            'compra': 'success',
+            'venda': 'primary',
+            'consignacao': 'info',
+            'ficha_cliente': 'warning',
+            'recibo': 'secondary',
+            'seguro': 'danger',
+            'financiamento': 'dark',
+            'intencao_venda': 'warning',
+            'outro': 'light',
+        }
+        return cores.get(self.tipo, 'light')
+    
+    class Meta:
+        verbose_name = 'Documento de Motocicleta'
+        verbose_name_plural = 'Documentos de Motocicletas'
+        ordering = ['-data_upload']
+    
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.moto.marca} {self.moto.modelo} ({self.data_upload.strftime('%d/%m/%Y')})"
+    
+    def get_tipo_color(self):
+        """Retorna a cor CSS para o tipo do documento"""
+        colors = {
+            'compra': 'primary',
+            'venda': 'success',
+            'consignacao': 'info',
+            'ficha_cliente': 'warning',
+            'recibo': 'secondary',
+            'seguro': 'danger',
+            'financiamento': 'dark',
+            'intencao_venda': 'success',
+            'outro': 'light',
+        }
+        return colors.get(self.tipo, 'light')

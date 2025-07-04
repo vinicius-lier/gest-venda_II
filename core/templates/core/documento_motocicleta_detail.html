@@ -1,0 +1,202 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Documento #{{ documento.pk }} - Sistema de Gestão{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Cabeçalho da página -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-paperclip me-2"></i>Documento #{{ documento.pk }}
+            </h1>
+            <p class="text-muted">Detalhes do documento de motocicleta</p>
+        </div>
+        <div>
+            <a href="{% url 'core:documento_motocicleta_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+            <a href="{% url 'core:documento_motocicleta_update' documento.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+            <a href="{% url 'core:documento_motocicleta_delete' documento.pk %}" class="btn btn-danger">
+                <i class="fas fa-trash me-1"></i>Excluir
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informações principais -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-1"></i>Informações do Documento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Tipo:</label>
+                                <div>
+                                    <span class="badge bg-{{ documento.get_tipo_color }}">
+                                        {{ documento.get_tipo_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Data de Upload:</label>
+                                <div>{{ documento.data_upload|date:"d/m/Y H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if documento.observacao %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Observações:</label>
+                        <div class="p-3 bg-light rounded">
+                            {{ documento.observacao|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Arquivo:</label>
+                        <div>
+                            <a href="{{ documento.arquivo.url }}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-download me-1"></i>Baixar Arquivo
+                            </a>
+                            <small class="text-muted ms-2">{{ documento.arquivo.name|split:'/'|last }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualização do arquivo -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-eye me-1"></i>Visualização do Arquivo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if documento.arquivo.name|lower|endswith:'.pdf' %}
+                        <embed src="{{ documento.arquivo.url }}" type="application/pdf" width="100%" height="600px">
+                    {% elif documento.arquivo.name|lower|endswith:'.jpg' or documento.arquivo.name|lower|endswith:'.jpeg' or documento.arquivo.name|lower|endswith:'.png' or documento.arquivo.name|lower|endswith:'.gif' %}
+                        <img src="{{ documento.arquivo.url }}" class="img-fluid" alt="Documento">
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Visualização não disponível para este tipo de arquivo</p>
+                            <a href="{{ documento.arquivo.url }}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt me-1"></i>Abrir em Nova Aba
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informações da motocicleta -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-motorcycle me-1"></i>Motocicleta
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if documento.moto.foto_principal %}
+                            <img src="{{ documento.moto.foto_principal.url }}" class="img-fluid rounded" style="max-height: 150px;">
+                        {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">
+                                <i class="fas fa-motorcycle fa-3x text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <strong>{{ documento.moto.marca }} {{ documento.moto.modelo }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Ano: {{ documento.moto.ano }}</small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Placa: {{ documento.moto.placa|default:"N/A" }}</small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Chassi: {{ documento.moto.chassi }}</small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Cor: {{ documento.moto.cor }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Status: <strong>{{ documento.moto.get_status_display }}</strong></small>
+                    </div>
+                    <a href="{% url 'core:motocicleta_detail' documento.moto.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-eye me-1"></i>Ver Motocicleta
+                    </a>
+                </div>
+            </div>
+
+            <!-- Informações da venda (se houver) -->
+            {% if documento.venda %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-shopping-cart me-1"></i>Venda Relacionada
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Venda #{{ documento.venda.pk }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Comprador: {{ documento.venda.comprador.nome }}</small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Valor: R$ {{ documento.venda.valor_venda|floatformat:2 }}</small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Status: {{ documento.venda.get_status_display }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Data: {{ documento.venda.data_venda|date:"d/m/Y"|default:documento.venda.data_atendimento|date:"d/m/Y" }}</small>
+                    </div>
+                    <a href="{% url 'core:venda_detail' documento.venda.pk %}" class="btn btn-outline-success btn-sm w-100">
+                        <i class="fas fa-eye me-1"></i>Ver Venda
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Ações rápidas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-cogs me-1"></i>Ações Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'core:documento_motocicleta_update' documento.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit me-1"></i>Editar Documento
+                        </a>
+                        <a href="{% url 'core:documento_motocicleta_delete' documento.pk %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash me-1"></i>Excluir Documento
+                        </a>
+                        <a href="{% url 'core:motocicleta_documentos' documento.moto.pk %}" class="btn btn-info btn-sm">
+                            <i class="fas fa-list me-1"></i>Ver Todos os Documentos da Moto
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -8,7 +8,7 @@
 
 {% block content %}
 {% if request.user.is_superuser or perms.core.view_motocicleta %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="d-flex align-items-center gap-2">
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="fas fa-motorcycle me-2"></i>Motocicletas
@@ -16,6 +16,7 @@
             <button type="button" class="btn btn-info ms-3" onclick="showHelp('Ajuda - Motocicletas', '<p>Esta tela permite gerenciar todas as motocicletas cadastradas no sistema. Você pode:</p><ul><li>Visualizar, adicionar, editar e excluir motocicletas</li><li>Filtrar motocicletas por modelo, ano, status, etc.</li><li>Exportar a lista de motocicletas para XLSX</li></ul><p>O cadastro correto das motocicletas é essencial para o controle de estoque e vendas.</p>')">
                 <i class="fas fa-info-circle me-1"></i>Ajuda
             </button>
+
         </div>
     <div>
         <a href="{% url 'core:exportar_motocicletas_xlsx' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
@@ -173,6 +174,11 @@
                                            class="btn btn-sm btn-outline-danger" title="Excluir">
                                             <i class="fas fa-trash"></i>
                                         </a>
+                                        {% endif %}
+                                        {% if perms.administrativo.add_controlechave %}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" title="Retirar Chave" data-bs-toggle="modal" data-bs-target="#modalRetirarChave" data-moto-id="{{ moto.id }}" data-moto-placa="{{ moto.placa }}" data-moto-chassi="{{ moto.chassi }}" data-moto-modelo="{{ moto.marca }} {{ moto.modelo }} {{ moto.ano }}">
+                                            <i class="fas fa-key"></i>
+                                        </button>
                                         {% endif %}
                                     </div>
                                 </td>
@@ -353,4 +359,74 @@ document.getElementById('marca').addEventListener('input', function() {
     }, 500);
 });
 </script>
+
+<!-- Modal para retirada de chave -->
+<div class="modal fade" id="modalRetirarChave" tabindex="-1" aria-labelledby="modalRetirarChaveLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="formRetirarChave" method="post" action="{% url 'administrativo:controle_chave_create' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalRetirarChaveLabel"><i class="fas fa-key me-2"></i>Nova Retirada de Chave</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="id_id_moto" id="modal_id_id_moto">
+          <input type="hidden" name="id_placa_moto" id="modal_id_placa_moto">
+          <input type="hidden" name="id_chassi_moto" id="modal_id_chassi_moto">
+          <div class="mb-2">
+            <label class="form-label">Motocicleta</label>
+            <input type="text" class="form-control" id="modal_moto_desc" readonly>
+          </div>
+          <div class="mb-2">
+            <label for="modal_funcionario" class="form-label">Funcionário</label>
+            <select name="funcionario" id="modal_funcionario" class="form-select" required>
+              {% for user in funcionarios %}
+                <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Confirmar Retirada</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// Preencher modal com dados da moto selecionada
+document.addEventListener('DOMContentLoaded', function() {
+  var modalRetirarChave = document.getElementById('modalRetirarChave');
+  
+  if (modalRetirarChave) {
+    modalRetirarChave.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      
+      if (button) {
+        var id = button.getAttribute('data-moto-id');
+        var placa = button.getAttribute('data-moto-placa');
+        var chassi = button.getAttribute('data-moto-chassi');
+        var modelo = button.getAttribute('data-moto-modelo');
+        
+        var idInput = document.getElementById('modal_id_id_moto');
+        var placaInput = document.getElementById('modal_id_placa_moto');
+        var chassiInput = document.getElementById('modal_id_chassi_moto');
+        var descInput = document.getElementById('modal_moto_desc');
+        
+        if (idInput) idInput.value = id || '';
+        if (placaInput) placaInput.value = placa || '';
+        if (chassiInput) chassiInput.value = chassi || '';
+        if (descInput) descInput.value = `ID: ${id || ''} | Placa: ${placa || '-'} | Chassi: ${chassi || ''} | ${modelo || ''}`;
+      }
+    });
+  }
+});
+</script>
+
+
+
 {% endblock %} 

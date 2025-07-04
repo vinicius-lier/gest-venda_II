@@ -17,9 +17,6 @@ import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Forçar DEBUG=True para ambiente de desenvolvimento local
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -69,6 +66,23 @@ else:
     TEMP_DIR = os.path.join(BASE_DIR, 'media', 'temp_uploads')
     FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
     DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+
+# Configuração de DEBUG baseada em variável de ambiente
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true' or DEBUG
+
+# Configuração de ALLOWED_HOSTS mais flexível para desenvolvimento
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    # Em produção, usar apenas os hosts permitidos
+    ALLOWED_HOSTS = [
+        'www.pradomotorsangra.com',
+        'pradomotorsangra.com',
+        'localhost',
+        '127.0.0.1',
+        'testserver',
+        '.herokuapp.com'
+    ]
 
 # Application definition
 
@@ -165,7 +179,12 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Configuração do WhiteNoise para servir static files
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+# Configuração adicional para WhiteNoise
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -202,13 +221,42 @@ CACHES = {
 }
 
 # Configurações de banco de dados otimizadas
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+try:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+
+    # Configuração de fallback para SQLite se não houver DATABASE_URL
+    if not os.environ.get('DATABASE_URL'):
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+
+    # Configurações adicionais para PostgreSQL no Heroku
+    if os.environ.get('DATABASE_URL'):
+        DATABASES['default']['OPTIONS'] = {
+            'sslmode': 'require',
+        }
+
+    # Configuração de SSL para AWS RDS
+    if os.path.exists(os.path.join(BASE_DIR, 'certs', 'rds-combined-ca-bundle.pem')):
+        DATABASES['default']['OPTIONS'] = {
+            'sslmode': 'verify-full',
+            'sslrootcert': os.path.join(BASE_DIR, 'certs', 'rds-combined-ca-bundle.pem'),
+        }
+except Exception as e:
+    # Fallback para SQLite em caso de erro
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Configurações de logging otimizadas
 LOGGING = {

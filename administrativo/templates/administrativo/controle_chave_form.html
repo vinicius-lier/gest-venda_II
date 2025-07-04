@@ -1,40 +1,134 @@
 {% extends 'core/base.html' %}
 {% load static %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>Nova Retirada de Chave</h2>
-    <form method="post">
-        {% csrf_token %}
-        <div class="mb-3">
-            {{ form.busca_moto.label_tag }}
-            {{ form.busca_moto }}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white text-dark d-flex align-items-center border-bottom">
+                    <i class="fas fa-key fa-lg me-2"></i>
+                    <h4 class="mb-0">Nova Retirada de Chave</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="id_busca_moto" class="form-label">{{ form.busca_moto.label }}</label>
+                                {{ form.busca_moto }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_funcionario" class="form-label">{{ form.funcionario.label }}</label>
+                                {{ form.funcionario }}
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-4">
+                                <label for="id_id_moto" class="form-label">ID da Motocicleta</label>
+                                <select id="id_id_moto" name="id_id_moto" class="form-select">
+                                    <option value="">----------</option>
+                                    {% for moto in motos_data %}
+                                        <option value="{{ moto.id }}">{{ moto.id }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_placa_moto" class="form-label">Placa</label>
+                                <select id="id_placa_moto" name="id_placa_moto" class="form-select">
+                                    <option value="">----------</option>
+                                    {% for moto in motos_data %}
+                                        <option value="{{ moto.placa }}">{{ moto.placa }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_chassi_moto" class="form-label">Chassi</label>
+                                <select id="id_chassi_moto" name="id_chassi_moto" class="form-select">
+                                    <option value="">----------</option>
+                                    {% for moto in motos_data %}
+                                        <option value="{{ moto.chassi }}">{{ moto.chassi }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-12">
+                                <label class="form-label">Motocicleta</label>
+                                <input type="text" id="descricao_moto" class="form-control" value="{% if moto_selecionada %}{{ moto_selecionada.descricao }}{% endif %}" readonly>
+                                <div id="erro_moto" class="text-danger mt-1" style="display:none;"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'controle_chave_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i> Salvar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            {{ form.funcionario.label_tag }}
-            {{ form.funcionario }}
-        </div>
-        <div class="mb-3">
-            {{ form.id_moto.label_tag }}
-            {{ form.id_moto }}
-        </div>
-        <div class="mb-3">
-            {{ form.placa_moto.label_tag }}
-            {{ form.placa_moto }}
-        </div>
-        <div class="mb-3">
-            {{ form.chassi_moto.label_tag }}
-            {{ form.chassi_moto }}
-        </div>
-        <div class="mb-3">
-            {{ form.motocicleta.label_tag }}
-            {{ form.motocicleta }}
-        </div>
-        <button type="submit" class="btn btn-success">Salvar</button>
-        <a href="{% url 'controle_chave_list' %}" class="btn btn-secondary">Cancelar</a>
-    </form>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'administrativo/js/controle_chave_autocomplete.js' %}"></script>
+<script>
+const motosData = {{ motos_data|safe }};
+
+function atualizarCamposPorMoto(moto) {
+    document.getElementById('id_id_moto').value = moto.id;
+    document.getElementById('id_placa_moto').value = moto.placa;
+    document.getElementById('id_chassi_moto').value = moto.chassi;
+    document.getElementById('descricao_moto').value = moto.descricao;
+    document.getElementById('erro_moto').style.display = 'none';
+}
+
+function limparCamposMoto() {
+    document.getElementById('id_id_moto').value = '';
+    document.getElementById('id_placa_moto').value = '';
+    document.getElementById('id_chassi_moto').value = '';
+    document.getElementById('descricao_moto').value = '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    function validarSelecao() {
+        const id = document.getElementById('id_id_moto').value;
+        const placa = document.getElementById('id_placa_moto').value;
+        const chassi = document.getElementById('id_chassi_moto').value;
+        let moto = null;
+        if (id) {
+            moto = motosData.find(m => m.id === id);
+        } else if (placa) {
+            moto = motosData.find(m => m.placa === placa);
+        } else if (chassi) {
+            moto = motosData.find(m => m.chassi === chassi);
+        }
+        if (moto) {
+            // Só aceita se todos os campos preenchidos forem da mesma moto
+            if ((id && moto.id !== id) || (placa && moto.placa !== placa) || (chassi && moto.chassi !== chassi)) {
+                limparCamposMoto();
+                document.getElementById('erro_moto').innerText = 'Selecione ID, Placa e Chassi da mesma motocicleta!';
+                document.getElementById('erro_moto').style.display = 'block';
+            } else {
+                atualizarCamposPorMoto(moto);
+            }
+        } else {
+            limparCamposMoto();
+            if (id || placa || chassi) {
+                document.getElementById('erro_moto').innerText = 'Motocicleta não encontrada!';
+                document.getElementById('erro_moto').style.display = 'block';
+            } else {
+                document.getElementById('erro_moto').style.display = 'none';
+            }
+        }
+    }
+    document.getElementById('id_id_moto').addEventListener('change', validarSelecao);
+    document.getElementById('id_placa_moto').addEventListener('change', validarSelecao);
+    document.getElementById('id_chassi_moto').addEventListener('change', validarSelecao);
+});
+</script>
 {% endblock %} 

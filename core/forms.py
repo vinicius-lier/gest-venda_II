@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia, VendaFinanceira, Despesa, ReceitaExtra, Pagamento, ComunicacaoVenda
+from .models import Motocicleta, Venda, Consignacao, Cliente, Loja, Seguradora, PlanoSeguro, Bem, CotacaoSeguro, Seguro, Usuario, Perfil, Ocorrencia, ComentarioOcorrencia, VendaFinanceira, Despesa, ReceitaExtra, Pagamento, ComunicacaoVenda, DocumentoMotocicleta
 from django.utils import timezone
 from django.db import models
 
@@ -752,6 +752,76 @@ class ComunicacaoVendaForm(forms.ModelForm):
         # Verificar se o prazo limite não é no passado
         if prazo_limite and prazo_limite < timezone.now():
             raise forms.ValidationError('O prazo limite não pode ser no passado.')
+        
+        return cleaned_data
+
+# ============================================================================
+# FORMULÁRIOS DE DOCUMENTOS DE MOTOCICLETAS
+# ============================================================================
+
+class DocumentoMotocicletaForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        moto_id = kwargs.pop('moto_id', None)
+        venda_id = kwargs.pop('venda_id', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filtrar motocicletas ativas
+        self.fields['moto'].queryset = Motocicleta.objects.filter(ativo=True).order_by('marca', 'modelo')
+        
+        # Filtrar vendas ativas
+        self.fields['venda'].queryset = Venda.objects.filter(status__in=['pendente', 'em_negociacao', 'vendido']).order_by('-data_atendimento')
+        
+        # Definir valores iniciais se fornecidos
+        if moto_id:
+            self.fields['moto'].initial = moto_id
+        if venda_id:
+            self.fields['venda'].initial = venda_id
+
+    class Meta:
+        model = DocumentoMotocicleta
+        fields = ['moto', 'venda', 'tipo', 'arquivo', 'observacao']
+        widgets = {
+            'moto': forms.Select(attrs={'class': 'form-select'}),
+            'venda': forms.Select(attrs={'class': 'form-select'}),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'arquivo': forms.FileInput(attrs={'class': 'form-control'}),
+            'observacao': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+        labels = {
+            'moto': 'Motocicleta',
+            'venda': 'Venda (Opcional)',
+            'tipo': 'Tipo de Documento',
+            'arquivo': 'Arquivo',
+            'observacao': 'Observações',
+        }
+
+    def __init__(self, *args, **kwargs):
+        moto_id = kwargs.pop('moto_id', None)
+        venda_id = kwargs.pop('venda_id', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filtrar motocicletas ativas
+        self.fields['moto'].queryset = Motocicleta.objects.filter(ativo=True).order_by('marca', 'modelo')
+        self.fields['moto'].label_from_instance = lambda obj: f"{obj.marca} {obj.modelo} {obj.ano} - {obj.placa or obj.chassi}"
+        
+        # Filtrar vendas
+        self.fields['venda'].queryset = Venda.objects.all().order_by('-data_venda')
+        self.fields['venda'].label_from_instance = lambda obj: f"{obj.comprador.nome} - {obj.moto} ({obj.data_venda})"
+        
+        # Definir valores iniciais se fornecidos
+        if moto_id:
+            self.fields['moto'].initial = moto_id
+        if venda_id:
+            self.fields['venda'].initial = venda_id
+
+    def clean(self):
+        cleaned_data = super().clean()
+        moto = cleaned_data.get('moto')
+        venda = cleaned_data.get('venda')
+        
+        # Se uma venda foi selecionada, verificar se a moto da venda corresponde
+        if venda and moto and venda.moto != moto:
+            raise forms.ValidationError('A motocicleta selecionada deve corresponder à motocicleta da venda.')
         
         return cleaned_data
 

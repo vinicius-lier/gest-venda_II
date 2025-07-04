@@ -11,36 +11,12 @@ MENUS = [
         "url": "core:cliente_list",
         "icon": "bi-people",
         "perms": ["core.view_cliente"],
-        "submenus": [
-            {
-                "label": "Lista de Clientes",
-                "url": "core:cliente_list",
-                "perms": ["core.view_cliente"],
-            },
-            {
-                "label": "Novo Cliente",
-                "url": "core:cliente_create",
-                "perms": ["core.add_cliente"],
-            },
-        ]
     },
     {
         "label": "Motocicletas",
         "url": "core:motocicleta_list",
         "icon": "bi-bicycle",
         "perms": ["core.view_motocicleta"],
-        "submenus": [
-            {
-                "label": "Lista de Motocicletas",
-                "url": "core:motocicleta_list",
-                "perms": ["core.view_motocicleta"],
-            },
-            {
-                "label": "Nova Motocicleta",
-                "url": "core:motocicleta_create",
-                "perms": ["core.add_motocicleta"],
-            },
-        ]
     },
     {
         "label": "Vendas",
@@ -49,19 +25,28 @@ MENUS = [
         "perms": ["core.view_venda"],
         "submenus": [
             {
-                "label": "Nova Venda",
-                "url": "core:venda_create",
-                "perms": ["core.add_venda"],
+                "label": "Lista de Vendas",
+                "url": "core:venda_list",
+                "perms": ["core.view_venda"],
+                "submenus": [
+                    {
+                        "label": "Nova Venda",
+                        "url": "core:venda_create",
+                        "perms": ["core.add_venda"],
+                    },
+                ]
             },
             {
                 "label": "Consignações",
                 "url": "core:consignacao_list",
                 "perms": ["core.view_consignacao"],
-            },
-            {
-                "label": "Nova Consignação",
-                "url": "core:consignacao_create",
-                "perms": ["core.add_consignacao"],
+                "submenus": [
+                    {
+                        "label": "Nova Consignação",
+                        "url": "core:consignacao_create",
+                        "perms": ["core.add_consignacao"],
+                    },
+                ]
             },
             {
                 "label": "Pré-Venda",

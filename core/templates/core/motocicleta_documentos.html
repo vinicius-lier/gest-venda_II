@@ -137,7 +137,7 @@
                                     <i class="fas fa-download"></i> Baixar
                                 </a>
                                 <br>
-                                <small class="text-muted">{{ documento.arquivo.name|split:'/'|last }}</small>
+                                <small class="text-muted">{{ documento.arquivo.name|slice:"-30:" }}</small>
                             </td>
                             <td>
                                 <div class="btn-group" role="group">

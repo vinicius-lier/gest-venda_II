@@ -25,6 +25,16 @@ def controle_chave_create(request):
         for m in motos
     ]
     moto_selecionada = None
+    moto_id = request.GET.get('moto_id')
+    if moto_id and not request.method == 'POST':
+        moto = Motocicleta.objects.filter(id=moto_id, ativo=True).first()
+        if moto:
+            moto_selecionada = {
+                'id': str(moto.id),
+                'placa': moto.placa or '',
+                'chassi': moto.chassi or '',
+                'descricao': f"ID: {moto.id} | Placa: {moto.placa or '-'} | Chassi: {moto.chassi} | {moto.marca} {moto.modelo} {moto.ano}"
+            }
     if request.method == 'POST':
         form = ControleChaveForm(request.POST)
         id_moto = request.POST.get('id_id_moto')

@@ -56,22 +56,10 @@
                             </td>
                             <td>{{ cotacao.data_cotacao|date:"d/m/Y" }}</td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    {% if perms.core.view_cotacaoseguro %}
-                                    <a href="{% url 'core:cotacao_seguro_detail' cotacao.pk %}" class="btn btn-sm btn-outline-primary" title="Visualizar">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    {% endif %}
-                                    {% if perms.core.change_cotacaoseguro %}
-                                    <a href="{% url 'core:cotacao_seguro_update' cotacao.pk %}" class="btn btn-sm btn-outline-warning" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% endif %}
-                                    {% if perms.core.delete_cotacaoseguro %}
-                                    <a href="{% url 'core:cotacao_seguro_delete' cotacao.pk %}" class="btn btn-sm btn-outline-danger" title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                    {% endif %}
+                                <div class="btn-action-group">
+                                    <a href="{% url 'core:cotacao_seguro_detail' cotacao.pk %}" class="btn-action" title="Visualizar"><i class="bi bi-eye"></i></a>
+                                    <a href="{% url 'core:cotacao_seguro_update' cotacao.pk %}" class="btn-action" title="Editar"><i class="bi bi-pencil"></i></a>
+                                    <a href="{% url 'core:cotacao_seguro_delete' cotacao.pk %}" class="btn-action btn-action-red" title="Excluir"><i class="bi bi-trash"></i></a>
                                 </div>
                             </td>
                         </tr>

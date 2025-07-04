@@ -222,33 +222,40 @@ CACHES = {
 
 # Configurações de banco de dados otimizadas
 try:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-
-    # Configuração de fallback para SQLite se não houver DATABASE_URL
-    if not os.environ.get('DATABASE_URL'):
-        DATABASES['default'] = {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+    # Verificar se há uma DATABASE_URL configurada
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if database_url:
+        # Se há DATABASE_URL, usar dj_database_url para configurar
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=database_url,
+                conn_max_age=600,
+                conn_health_checks=True,
+            )
         }
-
-    # Configurações adicionais para PostgreSQL no Heroku
-    if os.environ.get('DATABASE_URL'):
-        DATABASES['default']['OPTIONS'] = {
-            'sslmode': 'require',
+        
+        # Adicionar configurações SSL apenas para PostgreSQL
+        if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+            DATABASES['default']['OPTIONS'] = {
+                'sslmode': 'require',
+            }
+            
+            # Configuração de SSL para AWS RDS se o certificado existir
+            if os.path.exists(os.path.join(BASE_DIR, 'certs', 'rds-combined-ca-bundle.pem')):
+                DATABASES['default']['OPTIONS'] = {
+                    'sslmode': 'verify-full',
+                    'sslrootcert': os.path.join(BASE_DIR, 'certs', 'rds-combined-ca-bundle.pem'),
+                }
+    else:
+        # Se não há DATABASE_URL, usar SQLite
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
         }
-
-    # Configuração de SSL para AWS RDS
-    if os.path.exists(os.path.join(BASE_DIR, 'certs', 'rds-combined-ca-bundle.pem')):
-        DATABASES['default']['OPTIONS'] = {
-            'sslmode': 'verify-full',
-            'sslrootcert': os.path.join(BASE_DIR, 'certs', 'rds-combined-ca-bundle.pem'),
-        }
+        
 except Exception as e:
     # Fallback para SQLite em caso de erro
     DATABASES = {

@@ -1,16 +1,121 @@
+/* Autocomplete adaptado ao tema do projeto */
 .autocomplete-container {
     position: relative;
 }
 
+/* Estilo principal do autocomplete */
+div.autocomplete {
+    position: absolute;
+    width: 360px;
+    background-color: var(--background-color);
+    box-shadow: 0 1px 7px 0 rgba(0, 0, 0, .28);
+    z-index: 50;
+    border-radius: var(--border-radius);
+    max-height: 304px;
+    border: 1px solid #ced4da;
+}
+
+div.autocomplete ul {
+    padding-left: 0;
+    margin: 0;
+    list-style: none;
+}
+
+div.autocomplete ul li {
+    padding: 10px 20px;
+    cursor: pointer;
+    color: var(--text-color);
+    font-size: 13px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: var(--transition);
+    border-bottom: 1px solid #f0f0f0;
+}
+
+div.autocomplete ul li:last-child {
+    border-bottom: none;
+}
+
+/* Estilo para links dentro do autocomplete */
+div.autocomplete ul li.btn-adicionar-item-autocomplete.sel>a,
+div.autocomplete ul li.btn-adicionar-item-autocomplete>a,
+div.autocomplete ul li.btn-adicionar-produto-autocomplete.sel>a,
+div.autocomplete ul li.btn-adicionar-produto-autocomplete>a {
+    color: var(--secondary-color);
+    text-decoration: none;
+}
+
+/* Estados de hover e seleção */
+div.autocomplete ul li.sel,
+div.autocomplete ul li:hover {
+    background: var(--light-color);
+    color: var(--primary-color);
+}
+
+div.autocomplete ul li:active {
+    background: #d8d8d8;
+}
+
+/* Estilo para botões de adicionar */
+div.autocomplete ul li.btn-adicionar-item-autocomplete,
+div.autocomplete ul li.btn-adicionar-produto-autocomplete {
+    padding: 13px 0 13px 40px;
+    border-radius: 0 0 3px 3px;
+    border-top: 1px solid #eaeaea;
+    box-shadow: 0 2px 0 #cecece;
+    background-color: #f5f5f5;
+    background-image: none;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    background-position: left 15px center;
+    line-height: normal;
+    color: var(--secondary-color);
+    font-weight: 500;
+    position: relative;
+}
+
+/* Ícone de adicionar usando CSS */
+div.autocomplete ul li.btn-adicionar-item-autocomplete::before,
+div.autocomplete ul li.btn-adicionar-produto-autocomplete::before {
+    content: "+";
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--secondary-color);
+}
+
+div.autocomplete ul li.btn-adicionar-item-autocomplete.sel,
+div.autocomplete ul li.btn-adicionar-produto-autocomplete.sel {
+    background-color: var(--light-color);
+    color: var(--primary-color);
+}
+
+/* Autocomplete pequeno */
+.autocomplete-small ~ .autocomplete {
+    max-height: 115px;
+}
+
+/* Estados de carregamento */
+input.load {
+    background: url(/images/load.gif) 98% 50% no-repeat var(--background-color);
+}
+
+textarea.load {
+    background: url(/images/load.gif) 98% 8% no-repeat var(--background-color);
+}
+
+/* Estilos alternativos para compatibilidade */
 .autocomplete-results {
     position: absolute;
     z-index: 1000;
-    background-color: white;
+    background-color: var(--background-color);
     width: 100%;
     max-height: 300px;
     overflow-y: auto;
     border: 1px solid #ced4da;
-    border-radius: 0.375rem;
+    border-radius: var(--border-radius);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: none;
 }
@@ -23,11 +128,14 @@
     padding: 8px 12px;
     cursor: pointer;
     border-bottom: 1px solid #f0f0f0;
+    color: var(--text-color);
+    transition: var(--transition);
 }
 
 .autocomplete-item:hover,
 .autocomplete-item.selected {
-    background-color: #f8f9fa;
+    background-color: var(--light-color);
+    color: var(--primary-color);
 }
 
 .autocomplete-item:last-child {
@@ -46,9 +154,21 @@
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
-    color: #6c757d;
+    color: var(--secondary-color);
 }
 
 .autocomplete-input-group {
     position: relative;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    div.autocomplete {
+        width: 100%;
+        max-width: 360px;
+    }
+    
+    .autocomplete-small ~ .autocomplete {
+        max-height: 100px;
+    }
 } 

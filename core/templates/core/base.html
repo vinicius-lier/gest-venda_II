@@ -4,319 +4,116 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'core/css/responsive.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Gestão Operacional{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="icon" type="image/png" href="{% static 'core/images/logo.png' %}">
-    <title>{% block title %}{% endblock %}</title>
     <style>
+        body {
+            background-color: #f5f6fa;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #e74c3c 0%, #2c3e50 100%);
+        }
+        .navbar-nav .nav-link {
+            color: #ffffff;
+        }
+        .navbar-nav .nav-link.active {
+            color: #333333;
+            font-weight: bold;
+        }
+        .form-control::placeholder {
+            color: #ccc;
+        }
         .main-content {
-            margin-left: 240px;
-            padding: 2rem;
-            padding-top: 80px;
-            transition: margin-left 0.3s ease;
+            margin-top: 64px;
+            padding: 32px 24px 24px 24px;
             min-height: 100vh;
-        }
-        
-        .sidebar {
-            width: 240px;
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            z-index: 1000;
-            overflow-y: auto;
-            transition: transform 0.3s ease;
-            background: linear-gradient(135deg, #e74c3c 0%, #34495e 100%);
-        }
-        
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            backdrop-filter: blur(2px);
-        }
-        
-        .sidebar-overlay.show {
-            display: block;
-        }
-        
-        /* Responsividade para telas médias */
-        @media (max-width: 1199px) {
-            .sidebar {
-                width: 220px;
-            }
-            .main-content {
-                margin-left: 220px;
-            }
-        }
-        
-        /* Responsividade para telas pequenas */
-        @media (max-width: 991px) {
-            .sidebar {
-                transform: translateX(-100%);
-                width: 280px;
-                z-index: 1100;
-            }
-            
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                padding-top: 70px;
-            }
-            
-            .navbar {
-                padding: 0.5rem 0;
-            }
-            
-            .navbar-brand {
-                font-size: 1.1rem;
-            }
-        }
-        
-        /* Responsividade para telas muito pequenas */
-        @media (max-width: 576px) {
-            .sidebar {
-                width: 100%;
-                max-width: 320px;
-            }
-            
-            .main-content {
-                padding: 0.75rem;
-                padding-top: 60px;
-            }
-            
-            .navbar-brand {
-                font-size: 1rem;
-            }
-            
-            .container-fluid {
-                padding-left: 0.5rem;
-                padding-right: 0.5rem;
-            }
-        }
-        
-        /* Melhorias para o botão toggle */
-        .navbar-toggler {
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #fff;
-            padding: 0.375rem 0.75rem;
-            margin-right: 0.75rem;
-            transition: all 0.3s ease;
-        }
-        
-        .navbar-toggler:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .navbar-toggler:focus {
-            box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
-        }
-        
-        /* Melhorias para o conteúdo da sidebar */
-        .sidebar .nav-link {
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            margin: 0.125rem 0.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            transform: translateX(5px);
-        }
-        
-        .sidebar .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.2);
-            color: #fff !important;
-        }
-        
-        /* Melhorias para o header da sidebar */
-        .sidebar h5 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .sidebar .text-white-50 {
-            font-size: 0.875rem;
-        }
-        
-        /* Melhorias para seções administrativas */
-        .admin-section h6 {
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
-        }
-        
-        /* Scrollbar personalizada para a sidebar */
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        
-        .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-        }
-        
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg border-bottom mb-4">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg px-3 border-bottom">
         <div class="container-fluid">
-            <div class="d-flex align-items-center">
-                <button class="navbar-toggler d-lg-none me-3" type="button" id="sidebarToggle" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <span class="navbar-brand mb-0">
-                    {% block page_title %}{% endblock %}
-                </span>
-            </div>
-            <div class="navbar-nav ms-auto">
+            <a class="navbar-brand text-white d-flex align-items-center gap-2" href="#" id="logo-btn" style="border-radius: 6px; transition: background 0.2s;">
+                <img src="{% static 'core/images/logo.png' %}" alt="Logo" height="32" id="logo-img">
+                <strong>Gestão Operacional</strong>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="/dashboard/">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'clientes' in request.path %}active{% endif %}" href="/clientes/">Clientes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'motocicleta' in request.path %}active{% endif %}" href="/motocicletas/">Motocicletas</a>
+                    </li>
+                    <!-- Vendas Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'vendas' in request.path or 'pre_venda' in request.path or 'consignacao' in request.path %}active{% endif %}" href="#" id="vendasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Vendas
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="vendasDropdown">
+                            <li><a class="dropdown-item" href="/pre-venda/">Pré-Venda</a></li>
+                            <li><a class="dropdown-item" href="/vendas/">+Vendas</a></li>
+                            <li><a class="dropdown-item" href="/consignacoes/">Consignações</a></li>
+                        </ul>
+                    </li>
+                    <!-- Seguros Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'seguradora' in request.path or 'bem' in request.path or 'cotacao' in request.path %}active{% endif %}" href="#" id="segurosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Seguros
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="segurosDropdown">
+                            <li><a class="dropdown-item" href="/seguradoras/">Seguradoras</a></li>
+                            <li><a class="dropdown-item" href="/bens/">Bens</a></li>
+                            <li><a class="dropdown-item" href="/cotacoes-seguro/">Cotações</a></li>
+                        </ul>
+                    </li>
+                    <!-- Administrativo Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'financeiro' in request.path or 'administrativo' in request.path or 'usuarios' in request.path or 'lojas' in request.path or 'controle_chave' in request.path or 'importar' in request.path %}active{% endif %}" href="#" id="administrativoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Administrativo
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="administrativoDropdown">
+                            <li><a class="dropdown-item" href="/financeiro/"><i class="bi bi-cash-coin me-2"></i>Financeiro</a></li>
+                            <!-- <li><a class="dropdown-item" href="/administrativo/">Administrativo</a></li> -->
+                            <li><a class="dropdown-item" href="/usuarios/"><i class="bi bi-people me-2"></i>Usuários</a></li>
+                            <li><a class="dropdown-item" href="/lojas/"><i class="bi bi-shop me-2"></i>Lojas</a></li>
+                            <li><a class="dropdown-item" href="/controle-chaves/"><i class="bi bi-key me-2"></i>Controle de Chaves</a></li>
+                            <li><a class="dropdown-item" href="/importar/"><i class="bi bi-upload me-2"></i>Importar Dados</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                <form class="d-flex me-3" role="search">
+                    <input class="form-control form-control-sm me-2" type="search" placeholder="Buscar..." aria-label="Buscar">
+                    <button class="btn btn-outline-light btn-md" type="submit">Buscar</button>
+                </form>
                 {% if user.is_authenticated %}
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-user-circle me-1"></i>
-                        <span class="d-none d-sm-inline">{{ user.get_full_name|default:user.username }}</span>
+                <div class="dropdown">
+                    <a class="btn btn-dark dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {{ user.get_full_name|default:user.username }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{% url 'core:notificacao_list' %}"><i class="fas fa-bell me-2"></i>Notificações</a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:usuario_detail' user.pk %}">Perfil</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Sair</a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:logout' %}">Sair</a></li>
                     </ul>
                 </div>
                 {% endif %}
             </div>
         </div>
     </nav>
-    
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-    
-    <div class="sidebar">
-        <div class="position-sticky pt-3">
-            <div class="text-center mb-4">
-                <h5 class="text-white">
-                    <img src="{% static 'core/images/logo.png' %}" alt="Logo" style="height: 32px; vertical-align: middle; margin-right: 8px;">
-                    <span class="d-none d-sm-inline">Gestão Operacional</span>
-                    <span class="d-sm-none">GO</span>
-                </h5>
-            </div>
-            <div class="text-center mb-4">
-                <div class="text-white-50 small">
-                    <i class="fas fa-user me-1"></i>
-                    <span class="d-none d-sm-inline">{{ user.get_full_name|default:user.username }}</span>
-                    <span class="d-sm-none">{{ user.get_full_name|default:user.username|truncatechars:15 }}</span>
-                </div>
-                <div class="text-white-50 small">
-                    <i class="fas fa-store me-1"></i>
-                    {% if usuario_sistema %}
-                        <span class="d-none d-sm-inline">{{ usuario_sistema.loja.nome }}</span>
-                        <span class="d-sm-none">{{ usuario_sistema.loja.nome|truncatechars:15 }}</span>
-                    {% endif %}
-                </div>
-                <div class="badge bg-light text-dark">
-                    {% if usuario_sistema %}{{ usuario_sistema.perfil.get_nome_display }}{% endif %}
-                </div>
-            </div>
-            <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i> <span class="d-none d-sm-inline">Dashboard</span><span class="d-sm-none">Dash</span></a></li>
-                
-                {% if user|modulo_ativo:'clientes' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:cliente_list' %}"><i class="fas fa-users me-2"></i> Clientes</a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'motocicletas' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:motocicleta_list' %}"><i class="fas fa-motorcycle me-2"></i> <span class="d-none d-sm-inline">Motocicletas</span><span class="d-sm-none">Motos</span></a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'vendas' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:venda_list' %}"><i class="fas fa-shopping-cart me-2"></i> Vendas</a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'pre_venda' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'pre_venda:dashboard_pre_venda' %}"><i class="fas fa-clipboard-list me-2"></i> <span class="d-none d-sm-inline">Pré-Venda</span><span class="d-sm-none">Pré-V</span></a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'consignacoes' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:consignacao_list' %}"><i class="fas fa-handshake me-2"></i> <span class="d-none d-sm-inline">Consignações</span><span class="d-sm-none">Consig</span></a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'seguradoras' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:seguradora_list' %}"><i class="fas fa-building me-2"></i> <span class="d-none d-sm-inline">Seguradoras</span><span class="d-sm-none">Seguros</span></a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'bens' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:bem_list' %}"><i class="fas fa-home me-2"></i> Bens</a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'cotacoes' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:cotacao_seguro_list' %}"><i class="fas fa-calculator me-2"></i> <span class="d-none d-sm-inline">Cotações</span><span class="d-sm-none">Cot</span></a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'ocorrencias' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:ocorrencia_list' %}"><i class="fas fa-exclamation-triangle me-2"></i> <span class="d-none d-sm-inline">Ocorrências</span><span class="d-sm-none">Ocor</span></a></li>
-                {% endif %}
-                
-                {% if user|modulo_ativo:'financeiro' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard_financeiro' %}"><i class="fas fa-chart-line me-2"></i> <span class="d-none d-sm-inline">Financeiro</span><span class="d-sm-none">Fin</span></a></li>
-                {% endif %}
-                {% if user|modulo_ativo:'documentos_motocicleta' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:documento_motocicleta_list' %}"><i class="fas fa-file-alt me-2"></i> <span class="d-none d-sm-inline">Documentos de Motocicletas</span><span class="d-sm-none">Docs Moto</span></a></li>
-                {% endif %}
-            </ul>
-            
-            {% if user|modulo_ativo:'usuarios' or user|modulo_ativo:'lojas' or user|modulo_ativo:'controle_chaves' %}
-            <div class="admin-section mt-4">
-                <h6 class="text-white-50 text-uppercase small mb-3"><i class="fas fa-cogs me-2"></i> <span class="d-none d-sm-inline">Administrativo</span><span class="d-sm-none">Admin</span></h6>
-                <ul class="nav flex-column">
-                    {% if user|modulo_ativo:'usuarios' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'core:usuario_list' %}"><i class="fas fa-users-cog me-2"></i> <span class="d-none d-sm-inline">Usuários</span><span class="d-sm-none">Users</span></a></li>
-                    {% endif %}
-                    
-                    {% if user|modulo_ativo:'lojas' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'core:loja_list' %}"><i class="fas fa-store me-2"></i> Lojas</a></li>
-                    {% endif %}
-                    
-                    {% if user|modulo_ativo:'importacao' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'core:preview_import_motocicletas' %}"><i class="fas fa-upload me-2"></i> <span class="d-none d-sm-inline">Importar Dados</span><span class="d-sm-none">Import</span></a></li>
-                    {% endif %}
-                    
-                    {% if user|modulo_ativo:'controle_chaves' %}
-                    <li class="nav-item"><a class="nav-link" href="/controle-chaves/chaves/"><i class="fas fa-key me-2"></i> <span class="d-none d-sm-inline">Controle de Chaves</span><span class="d-sm-none">Chaves</span></a></li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% endif %}
-            
-            <hr class="text-white-50">
-            <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Sair</a></li>
-            </ul>
-        </div>
-    </div>
-    
     <main class="main-content">
-        <div class="container-fluid">
+        <div class="container">
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -342,7 +139,7 @@
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'core/js/responsive.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -442,6 +239,22 @@
             }
             
             setActiveNavLink();
+
+            // Efeito de clique na logo
+            var logoBtn = document.getElementById('logo-btn');
+            if (logoBtn) {
+                logoBtn.addEventListener('mousedown', function() {
+                    logoBtn.style.background = '#2c3e50';
+                });
+                logoBtn.addEventListener('mouseup', function() {
+                    setTimeout(function() {
+                        logoBtn.style.background = '';
+                    }, 120);
+                });
+                logoBtn.addEventListener('mouseleave', function() {
+                    logoBtn.style.background = '';
+                });
+            }
         });
     </script>
 </body>

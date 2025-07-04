@@ -55,17 +55,17 @@
                                 <div class="btn-group" role="group">
                                     {% if perms.core.view_loja %}
                                     <a href="{% url 'core:loja_detail' loja.pk %}" class="btn btn-sm btn-outline-primary" title="Visualizar">
-                                        <i class="fas fa-eye"></i>
+                                        <i class="bi bi-eye text-secondary"></i>
                                     </a>
                                     {% endif %}
                                     {% if perms.core.change_loja %}
                                     <a href="{% url 'core:loja_update' loja.pk %}" class="btn btn-sm btn-outline-warning" title="Editar">
-                                        <i class="fas fa-edit"></i>
+                                        <i class="bi bi-pencil text-secondary"></i>
                                     </a>
                                     {% endif %}
                                     {% if perms.core.delete_loja %}
                                     <a href="{% url 'core:loja_delete' loja.pk %}" class="btn btn-sm btn-outline-danger" title="Excluir">
-                                        <i class="fas fa-trash"></i>
+                                        <i class="bi bi-trash text-secondary"></i>
                                     </a>
                                     {% endif %}
                                 </div>

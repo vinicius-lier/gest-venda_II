@@ -91,15 +91,15 @@
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-dark">Chassi</th>
-                                <th class="text-dark">Placa</th>
-                                <th class="text-dark">Marca/Modelo</th>
-                                <th class="text-dark">Ano</th>
-                                <th class="text-dark">Rodagem</th>
-                                <th class="text-dark">Status</th>
-                                <th class="text-dark">Valor Atual</th>
-                                <th class="text-dark">Proprietário</th>
-                                <th class="text-dark">Ações</th>
+                                <th class="text-dark" scope="col">Chassi</th>
+                                <th class="text-dark" scope="col">Placa</th>
+                                <th class="text-dark" scope="col">Marca/Modelo</th>
+                                <th class="text-dark d-none d-md-table-cell" scope="col">Ano</th>
+                                <th class="text-dark d-none d-lg-table-cell" scope="col">Rodagem</th>
+                                <th class="text-dark d-none d-lg-table-cell" scope="col">Status</th>
+                                <th class="text-dark d-none d-lg-table-cell" scope="col">Valor Atual</th>
+                                <th class="text-dark d-none d-md-table-cell" scope="col">Proprietário</th>
+                                <th class="text-dark" scope="col">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -120,15 +120,15 @@
                                     <br>
                                     <small class="text-muted">{{ moto.cor }}</small>
                                 </td>
-                                <td>{{ moto.ano }}</td>
-                                <td>
+                                <td class="d-none d-md-table-cell">{{ moto.ano }}</td>
+                                <td class="d-none d-lg-table-cell">
                                     {% if moto.rodagem %}
                                     <small>{{ moto.rodagem|floatformat:0 }} km</small>
                                     {% else %}
                                     <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td class="d-none d-lg-table-cell">
                                     {% if moto.status == 'estoque' %}
                                     <span class="badge bg-success">Em Estoque</span>
                                     {% elif moto.status == 'vendida' %}
@@ -143,10 +143,10 @@
                                     <span class="badge bg-secondary">{{ moto.get_status_display }}</span>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td class="d-none d-lg-table-cell">
                                     <strong>R$ {{ moto.valor_atual|floatformat:2 }}</strong>
                                 </td>
-                                <td>
+                                <td class="d-none d-md-table-cell">
                                     {% if moto.proprietario %}
                                     <small>{{ moto.proprietario.nome|truncatechars:20 }}</small>
                                     {% else %}
@@ -154,32 +154,13 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div class="btn-group" role="group">
-                                        {% if perms.core.view_motocicleta %}
-                                        <a href="{% url 'core:motocicleta_detail' moto.pk %}" 
-                                           class="btn btn-sm btn-outline-primary" title="Visualizar">
-                                            <i class="fas fa-eye"></i>
+                                    <div class="btn-action-group">
+                                        <a href="{% url 'core:motocicleta_detail' moto.pk %}" class="btn-action" title="Visualizar"><i class="bi bi-eye"></i></a>
+                                        <a href="{% url 'core:motocicleta_update' moto.pk %}" class="btn-action" title="Editar"><i class="bi bi-pencil"></i></a>
+                                        <a href="{% url 'core:motocicleta_delete' moto.pk %}" class="btn-action btn-action-red" title="Excluir"><i class="bi bi-trash"></i></a>
+                                        <a href="{% url 'controle_chave_create' %}?moto_id={{ moto.id }}" class="btn-action" title="Retirar Chave">
+                                            <i class="bi bi-key"></i>
                                         </a>
-                                        {% endif %}
-                                        
-                                        {% if perms.core.change_motocicleta %}
-                                        <a href="{% url 'core:motocicleta_update' moto.pk %}" 
-                                           class="btn btn-sm btn-outline-warning" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        {% endif %}
-                                        
-                                        {% if perms.core.delete_motocicleta and moto.ativo %}
-                                        <a href="{% url 'core:motocicleta_delete' moto.pk %}" 
-                                           class="btn btn-sm btn-outline-danger" title="Excluir">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                        {% endif %}
-                                        {% if perms.administrativo.add_controlechave %}
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" title="Retirar Chave" data-bs-toggle="modal" data-bs-target="#modalRetirarChave" data-moto-id="{{ moto.id }}" data-moto-placa="{{ moto.placa }}" data-moto-chassi="{{ moto.chassi }}" data-moto-modelo="{{ moto.marca }} {{ moto.modelo }} {{ moto.ano }}">
-                                            <i class="fas fa-key"></i>
-                                        </button>
-                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>

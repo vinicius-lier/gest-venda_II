@@ -139,24 +139,10 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'core:seguro_detail' seguro.pk %}" 
-                                       class="btn btn-sm btn-outline-primary" 
-                                       title="Visualizar">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'core:seguro_update' seguro.pk %}" 
-                                       class="btn btn-sm btn-outline-warning" 
-                                       title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% if seguro.status != 'ativo' %}
-                                    <a href="{% url 'core:seguro_delete' seguro.pk %}" 
-                                       class="btn btn-sm btn-outline-danger" 
-                                       title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                    {% endif %}
+                                <div class="btn-action-group">
+                                    <a href="{% url 'core:seguro_detail' seguro.pk %}" class="btn-action" title="Visualizar"><i class="bi bi-eye"></i></a>
+                                    <a href="{% url 'core:seguro_update' seguro.pk %}" class="btn-action" title="Editar"><i class="bi bi-pencil"></i></a>
+                                    <a href="{% url 'core:seguro_delete' seguro.pk %}" class="btn-action btn-action-red" title="Excluir"><i class="bi bi-trash"></i></a>
                                 </div>
                             </td>
                         </tr>

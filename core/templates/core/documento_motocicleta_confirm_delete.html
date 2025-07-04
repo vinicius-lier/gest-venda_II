@@ -41,7 +41,7 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>Arquivo:</strong><br>
-                                <small>{{ documento.arquivo.name|split:'/'|last }}</small>
+                                <small>{{ documento.arquivo.name|slice:"-30:" }}</small>
                             </div>
                         </div>
                         {% if documento.observacao %}

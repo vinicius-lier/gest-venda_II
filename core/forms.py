@@ -8,20 +8,20 @@ from django.db import models
 class MotocicletaForm(forms.ModelForm):
     documento_motocicleta = forms.FileField(
         required=False,
-        label='Documento da Motocicleta',
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+        label='Documentos da Motocicleta',
+        widget=forms.ClearableFileInput(attrs={'multiple': False, 'class': 'form-control'})
     )
     class Meta:
         model = Motocicleta
         fields = [
             'marca', 'modelo', 'ano', 'ano_fabricacao', 'cor', 'cilindrada', 'rodagem', 'chassi', 'placa', 'renavam',
             'tipo_entrada', 'origem', 'status', 'proprietario', 'fornecedor', 'loja_origem',
-            'valor_entrada', 'valor_atual', 'data_entrada', 'observacoes',
-            'foto_principal', 'foto_frontal', 'foto_traseira', 'foto_lado_esquerdo', 'foto_lado_direito',
-            'data_venda'
+            'valor_entrada', 'valor_atual', 'data_entrada', 'data_venda', 'observacoes',
+            'foto_principal', 'foto_frontal', 'foto_traseira', 'foto_lado_esquerdo', 'foto_lado_direito'
         ]
         widgets = {
-            'data_entrada': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data_entrada': forms.DateInput(attrs={'type': 'date', 'class': 'form-control', 'placeholder': 'dd/mm/aaaa'}),
+            'data_venda': forms.DateInput(attrs={'type': 'date', 'class': 'form-control', 'placeholder': 'dd/mm/aaaa'}),
             'proprietario': forms.Select(attrs={'class': 'form-select'}),
             'fornecedor': forms.Select(attrs={'class': 'form-select'}),
             'loja_origem': forms.Select(attrs={'class': 'form-select'}),

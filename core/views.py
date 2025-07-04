@@ -424,7 +424,22 @@ def motocicleta_create(request):
         if form.is_valid():
             motocicleta = form.save(commit=False)
             motocicleta.save()
-            messages.success(request, 'Motocicleta registrada com sucesso!')
+            # Processar upload de documento, se fornecido
+            documento = form.cleaned_data.get('documento_motocicleta')
+            if documento:
+                try:
+                    from .models import DocumentoMotocicleta
+                    DocumentoMotocicleta.objects.create(
+                        moto=motocicleta,
+                        arquivo=documento,
+                        tipo='outro',
+                        observacao='Documento enviado no cadastro da motocicleta.'
+                    )
+                    messages.success(request, 'Motocicleta registrada e documento salvo com sucesso!')
+                except Exception as e:
+                    messages.error(request, f'Motocicleta registrada, mas houve um erro ao salvar o documento: {str(e)}')
+            else:
+                messages.success(request, 'Motocicleta registrada com sucesso!')
             return redirect('core:motocicleta_list')
         else:
             messages.error(request, 'Erro ao registrar motocicleta. Verifique os dados.')
@@ -445,7 +460,25 @@ def motocicleta_update(request, pk):
         form = MotocicletaForm(request.POST, request.FILES, instance=motocicleta)
         if form.is_valid():
             form.save()
+            # Processar upload de documento, se fornecido
+            documento = form.cleaned_data.get('documento_motocicleta')
+            if documento:
+                try:
+                    from .models import DocumentoMotocicleta
+                    DocumentoMotocicleta.objects.create(
+                        moto=motocicleta,
+                        arquivo=documento,
+                        tipo='outro',
+                        observacao='Documento enviado na edição da motocicleta.'
+                    )
+                    messages.success(request, 'Motocicleta atualizada e documento salvo com sucesso!')
+                except Exception as e:
+                    messages.error(request, f'Motocicleta atualizada, mas houve um erro ao salvar o documento: {str(e)}')
+            else:
+                messages.success(request, 'Motocicleta atualizada com sucesso!')
             return redirect('core:motocicleta_list')
+        else:
+            messages.error(request, 'Erro ao atualizar motocicleta. Verifique os dados.')
     else:
         form = MotocicletaForm(instance=motocicleta)
     return render(request, 'core/motocicleta_form.html', {

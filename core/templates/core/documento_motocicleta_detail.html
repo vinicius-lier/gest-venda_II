@@ -70,7 +70,7 @@
                             <a href="{{ documento.arquivo.url }}" target="_blank" class="btn btn-primary">
                                 <i class="fas fa-download me-1"></i>Baixar Arquivo
                             </a>
-                            <small class="text-muted ms-2">{{ documento.arquivo.name|split:'/'|last }}</small>
+                            <small class="text-muted ms-2">{{ documento.arquivo.name|slice:"-30:" }}</small>
                         </div>
                     </div>
                 </div>
@@ -84,9 +84,9 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if documento.arquivo.name|lower|endswith:'.pdf' %}
+                    {% if documento.arquivo.name|lower|slice:"-4:" == ".pdf" %}
                         <embed src="{{ documento.arquivo.url }}" type="application/pdf" width="100%" height="600px">
-                    {% elif documento.arquivo.name|lower|endswith:'.jpg' or documento.arquivo.name|lower|endswith:'.jpeg' or documento.arquivo.name|lower|endswith:'.png' or documento.arquivo.name|lower|endswith:'.gif' %}
+                    {% elif documento.arquivo.name|lower|slice:"-4:" == ".jpg" or documento.arquivo.name|lower|slice:"-5:" == ".jpeg" or documento.arquivo.name|lower|slice:"-4:" == ".png" or documento.arquivo.name|lower|slice:"-4:" == ".gif" %}
                         <img src="{{ documento.arquivo.url }}" class="img-fluid" alt="Documento">
                     {% else %}
                         <div class="text-center py-4">

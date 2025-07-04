@@ -205,40 +205,6 @@ body, html {
     width: 80%;
 }
 
-.btn-acao {
-    min-width: 40px;
-    min-height: 36px;
-    font-size: 1.2em;
-    padding: 0.25rem 0.7rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-pill-group {
-  display: inline-flex;
-  border-radius: 999px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px #0001;
-}
-.btn-pill {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  padding: 0.4rem 1.1rem;
-  font-size: 1.25em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  transition: background 0.2s, border-color 0.2s;
-}
-.btn-pill:not(:last-child) { border-right: none; }
-.btn-pill.btn-outline-primary   { border-color: #0d6efd; color: #0d6efd; }
-.btn-pill.btn-outline-warning  { border-color: #ffc107; color: #ffc107; }
-.btn-pill.btn-outline-danger   { border-color: #dc3545; color: #dc3545; }
-.btn-pill.btn-outline-secondary{ border-color: #6c757d; color: #6c757d; }
-.btn-pill:hover { background: #f8f9fa; }
-
 .btn-action {
   width: 15px;
   height: 15px;
@@ -267,4 +233,31 @@ body, html {
 .btn-action:focus {
   outline: none;
   box-shadow: none;
-} 
+}
+
+/* Ícones de ação customizados */
+.acao-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1.5px solid #e0e0e0;
+  background: #fff;
+  color: #1976d2;
+  font-size: 1.15rem;
+  margin-right: 4px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+}
+.acao-icone:hover {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border-color: #90caf9;
+}
+.acao-icone.icone-editar { color: #ffc107; }
+.acao-icone.icone-editar:hover { background: #fffbe6; border-color: #ffe082; color: #ff9800; }
+.acao-icone.icone-excluir { color: #e74c3c; }
+.acao-icone.icone-excluir:hover { background: #ffebee; border-color: #ffcdd2; color: #c0392b; } 

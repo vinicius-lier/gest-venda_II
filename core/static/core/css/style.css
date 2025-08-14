@@ -103,6 +103,17 @@ body .navbar .dropdown-item {
     color: #fff !important;
 }
 
+body .navbar .dropdown-item {
+    color: #212529 !important;
+}
+
+body .navbar .dropdown-menu .dropdown-item {
+    color: #212529 !important;
+}
+body .navbar .dropdown-menu .dropdown-item i {
+    color: #212529 !important;
+}
+
 .navbar-brand {
     color: #212529 !important;
 }
@@ -462,4 +473,117 @@ th {
         transform: translateZ(0);
         backface-visibility: hidden;
     }
+}
+
+/* Garantir que o dropdown fique dentro da tela */
+.dropdown-menu {
+    left: auto !important;
+    right: 0 !important;
+    min-width: 180px;
+    max-width: 90vw;
+    word-break: break-word;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    z-index: 9999 !important;
+}
+
+/* Garantir que o dropdown fique na frente de todos os elementos */
+.navbar .dropdown-menu {
+    z-index: 9999 !important;
+    position: absolute !important;
+}
+
+.navbar .dropdown-menu.show {
+    z-index: 9999 !important;
+    position: absolute !important;
+}
+
+/* Garantir que o dropdown seja sempre visível na frente de qualquer elemento */
+.dropdown-menu,
+.dropdown-menu.show,
+.navbar .dropdown-menu,
+.navbar .dropdown-menu.show {
+    z-index: 9999 !important;
+    position: absolute !important;
+    transform: translateZ(0) !important;
+}
+
+/* Garantir que o dropdown fique na frente da sidebar e qualquer outro elemento */
+.navbar .nav-item .dropdown-menu,
+.navbar .nav-item .dropdown-menu.show {
+    z-index: 10000 !important;
+    position: absolute !important;
+    transform: translateZ(0) !important;
+}
+
+/* Garantir que o dropdown seja sempre visível e bem posicionado */
+.navbar .dropdown .dropdown-menu {
+    z-index: 10000 !important;
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    margin-top: 0.125rem !important;
+}
+
+/* Garantir que os itens do dropdown tenham letra preta */
+.dropdown-menu .dropdown-item,
+.navbar .dropdown-menu .dropdown-item,
+.navbar .nav-item .dropdown-menu .dropdown-item {
+    color: #212529 !important;
+    font-weight: 500 !important;
+}
+
+.dropdown-menu .dropdown-item:hover,
+.navbar .dropdown-menu .dropdown-item:hover,
+.navbar .nav-item .dropdown-menu .dropdown-item:hover {
+    color: #212529 !important;
+    background-color: #f8f9fa !important;
+}
+
+/* Garantir que os ícones dos itens do dropdown também sejam pretos */
+.dropdown-menu .dropdown-item i,
+.navbar .dropdown-menu .dropdown-item i,
+.navbar .nav-item .dropdown-menu .dropdown-item i {
+    color: #212529 !important;
+}
+
+.dropdown-menu .dropdown-item:hover i,
+.navbar .dropdown-menu .dropdown-item:hover i,
+.navbar .nav-item .dropdown-menu .dropdown-item:hover i {
+    color: #212529 !important;
+}
+
+/* Garantir que o divider do dropdown tenha a cor correta */
+.dropdown-menu .dropdown-divider,
+.navbar .dropdown-menu .dropdown-divider,
+.navbar .nav-item .dropdown-menu .dropdown-divider {
+    border-color: #dee2e6 !important;
+    margin: 0.5rem 0 !important;
+}
+
+/* Regra mais específica para garantir que os itens do dropdown sejam pretos */
+.navbar .nav-item.dropdown .dropdown-menu .dropdown-item,
+.navbar .nav-item.dropdown .dropdown-menu .dropdown-item i {
+    color: #212529 !important;
+}
+
+.navbar .nav-item.dropdown .dropdown-menu .dropdown-item:hover,
+.navbar .nav-item.dropdown .dropdown-menu .dropdown-item:hover i {
+    color: #212529 !important;
+    background-color: #f8f9fa !important;
+}
+
+/* Forçar cor preta nos itens do dropdown do usuário em todos os estados */
+.navbar .nav-item.dropdown .dropdown-menu.show .dropdown-item,
+.navbar .nav-item.dropdown .dropdown-menu.show .dropdown-item:active,
+.navbar .nav-item.dropdown .dropdown-menu.show .dropdown-item:focus,
+.navbar .nav-item.dropdown .dropdown-menu.show .dropdown-item:visited,
+.navbar .nav-item.dropdown .dropdown-menu.show .dropdown-item:hover {
+    color: #212529 !important;
+    background: #f8f9fa !important;
+    text-shadow: none !important;
+}
+
+.navbar .nav-item.dropdown .dropdown-menu.show .dropdown-item i {
+    color: #212529 !important;
 } 

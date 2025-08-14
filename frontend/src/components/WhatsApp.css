@@ -1,0 +1,138 @@
+.cursor-pointer {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.cursor-pointer:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.whatsapp-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.whatsapp-template-button {
+  text-align: left;
+  white-space: normal;
+  height: auto;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+}
+
+.whatsapp-template-button:hover {
+  transform: translateX(2px);
+}
+
+.motocicleta-card {
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease-in-out;
+}
+
+.motocicleta-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.motocicleta-card.selected {
+  border-color: #007bff;
+  background-color: #f8f9ff;
+}
+
+.motocicleta-card .card-body {
+  padding: 0.75rem;
+}
+
+.motocicleta-info {
+  font-size: 0.875rem;
+}
+
+.motocicleta-valor {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.whatsapp-textarea {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.whatsapp-actions {
+  border-top: 1px solid #dee2e6;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.whatsapp-telefone {
+  font-family: monospace;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+/* Animações */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.whatsapp-button {
+  animation: pulse 2s infinite;
+}
+
+.whatsapp-button:hover {
+  animation: none;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .whatsapp-modal .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  
+  .whatsapp-modal .modal-body {
+    padding: 1rem;
+  }
+  
+  .whatsapp-template-button {
+    font-size: 0.8rem;
+    padding: 6px 8px;
+  }
+  
+  .motocicleta-card .card-body {
+    padding: 0.5rem;
+  }
+}
+
+/* Scrollbar personalizada */
+.whatsapp-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.whatsapp-modal .modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.whatsapp-modal .modal-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.whatsapp-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
